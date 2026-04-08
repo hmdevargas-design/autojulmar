@@ -113,7 +113,7 @@ export async function processarMensagem(telefone: string, mensagem: string): Pro
     .single()
 
   const tipoClienteId = (clienteExistente?.tipo_cliente_id as string | null) ?? tipoDefault?.id ?? ''
-  const tipoNome      = (clienteExistente?.tipos_cliente as { nome: string } | null)?.nome ?? 'NORMAL'
+  const tipoNome      = (clienteExistente?.tipos_cliente as unknown as { nome: string } | null)?.nome ?? 'NORMAL'
 
   // Chama a API interna de criação de pedido
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'

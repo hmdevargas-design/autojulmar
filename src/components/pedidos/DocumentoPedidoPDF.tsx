@@ -43,6 +43,8 @@ interface Props {
   tipoCliente: string
   matricula: string
   viatura: string
+  ano: string
+  combustivel: string
   material: string
   tipoTapete: string[]
   extras: string[]
