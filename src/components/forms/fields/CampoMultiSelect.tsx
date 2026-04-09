@@ -2,7 +2,6 @@ interface Props {
   value: string[]
   onChange: (value: string[]) => void
   opcoes: string[]
-  // Opções que suportam quantidade (ex: ["velcro"])
   comQuantidade?: string[]
   quantidades?: Record<string, number>
   onQuantidadeChange?: (opcao: string, qtd: number) => void
@@ -33,17 +32,16 @@ export default function CampoMultiSelect({
               type="button"
               onClick={() => toggle(opcao)}
               className={`px-2.5 py-1 text-xs font-medium border transition-colors ${
-                temQtd && activo ? 'rounded-l' : 'rounded'
+                temQtd && activo ? 'rounded-l' : 'rounded-lg'
               } ${
                 activo
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                  ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400'
               }`}
             >
               {opcao}
             </button>
 
-            {/* Input de quantidade — visível só quando activo e suporta quantidade */}
             {temQtd && activo && (
               <input
                 type="number"
@@ -52,7 +50,7 @@ export default function CampoMultiSelect({
                 value={qtd}
                 onChange={(e) => onQuantidadeChange?.(opcao, Math.max(1, Number(e.target.value)))}
                 onClick={(e) => e.stopPropagation()}
-                className="w-10 text-center text-xs border border-l-0 border-blue-600 rounded-r py-1 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50"
+                className="w-10 text-center text-xs border border-l-0 border-indigo-600 dark:border-indigo-500 rounded-r py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-indigo-50 dark:bg-indigo-950"
               />
             )}
           </div>

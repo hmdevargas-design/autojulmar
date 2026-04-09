@@ -20,7 +20,7 @@ export default async function PaginaNovoPedido({ params }: Props) {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Novo Pedido</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">Novo Pedido</h1>
       <FormularioPedido config={config} configPreco={configPreco} tenantId={tenant.id} tenantSlug={slug} />
     </div>
   )

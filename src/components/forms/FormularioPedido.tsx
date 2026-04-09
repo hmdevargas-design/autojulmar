@@ -41,6 +41,10 @@ interface Props {
   tenantSlug: string
 }
 
+// Classes reutilizáveis para consistência
+const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'
+
 export default function FormularioPedido({ config, configPreco, tenantId, tenantSlug }: Props) {
   const [submetido, setSubmetido] = useState(false)
   const [numeroPedido, setNumeroPedido] = useState<number | null>(null)
@@ -65,7 +69,6 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
     },
   })
 
-  // Observa campos que afectam o preço
   const material       = watch('material')
   const tipoTapete     = watch('tipoTapete')
   const extras         = watch('extras')
@@ -74,7 +77,6 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
   const descontoManual = watch('descontoManual')
   const sinal          = watch('sinal')
 
-  // Calcula preço em tempo real sempre que os campos mudam
   const inputPreco: InputPreco = {
     campo1Valor:       material        || '',
     campo2Valor:       tipoTapete?.[0] || '',
@@ -88,7 +90,6 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
   const resultado = calcularPreco(inputPreco, configPreco)
 
-  // Lookup de cliente por contacto ou código de identificação
   async function lookupCliente(input: string) {
     const trimmed = input.trim()
     if (!trimmed) return
@@ -106,7 +107,6 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
       const cliente = await res.json()
       if (!cliente) return
       setValue('nomeCliente', cliente.nome)
-      // Se lookup por código, preenche também o contacto
       if (!pareceContacto && cliente.contacto) setValue('contacto', cliente.contacto)
       if (cliente.tipo_cliente_id) setValue('tipoClienteId', cliente.tipo_cliente_id)
       setClienteAutoPreenchido(true)
@@ -115,7 +115,6 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
     }
   }
 
-  // Sincroniza o campo "valor" com o valorFinal calculado
   useEffect(() => {
     setValue('valor', resultado.valorFinal)
   }, [resultado.valorFinal, setValue])
@@ -130,7 +129,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           clienteNome:     data.nomeCliente,
           clienteContacto: data.contacto,
           tipoClienteId:   data.tipoClienteId,
-          estadoId:        '',  // API descobre o estado inicial
+          estadoId:        '',
           dados: {
             matricula:   data.matricula,
             viatura:     data.viatura,
@@ -138,26 +137,26 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             combustivel: data.combustivel,
             maisInfo:    data.maisInfo,
           },
-          material:       data.material,
-          tipoTapete:     data.tipoTapete,
-          extras:             data.extras,
-          extrasQuantidades:  extrasQuantidades,
-          quantidade:         data.quantidade,
-          descontoManual: data.descontoManual,
-          sinal:          data.sinal,
-          formaPagamento: data.formaPagamento,
-          origem:         'web',
+          material:          data.material,
+          tipoTapete:        data.tipoTapete,
+          extras:            data.extras,
+          extrasQuantidades,
+          quantidade:        data.quantidade,
+          descontoManual:    data.descontoManual,
+          sinal:             data.sinal,
+          formaPagamento:    data.formaPagamento,
+          origem:            'web',
         }),
       })
 
-      const resultado = await response.json()
+      const resultadoAPI = await response.json()
 
       if (!response.ok) {
-        const detalhe = resultado.detalhes ? '\n' + JSON.stringify(resultado.detalhes) : ''
-        throw new Error((resultado.erro ?? 'Erro ao criar pedido') + detalhe)
+        const detalhe = resultadoAPI.detalhes ? '\n' + JSON.stringify(resultadoAPI.detalhes) : ''
+        throw new Error((resultadoAPI.erro ?? 'Erro ao criar pedido') + detalhe)
       }
 
-      setNumeroPedido(resultado.numeroPedido)
+      setNumeroPedido(resultadoAPI.numeroPedido)
       setSubmetido(true)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Erro ao criar pedido')
@@ -166,22 +165,22 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
   if (submetido && numeroPedido) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+      <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6 text-center">
         <div className="text-3xl mb-2">✅</div>
-        <h2 className="text-xl font-bold text-green-800">Pedido #{numeroPedido} criado</h2>
-        <p className="text-green-700 mt-1">
+        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">Pedido #{numeroPedido} criado</h2>
+        <p className="text-emerald-700 dark:text-emerald-400 mt-1">
           Valor final: <strong>{resultado.valorFinal.toFixed(2)}€</strong>
         </p>
         <div className="mt-4 flex gap-3 justify-center">
           <a
             href={`/${tenantSlug}/pedidos`}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
           >
             Ver listagem
           </a>
           <button
             onClick={() => { setSubmetido(false); setNumeroPedido(null) }}
-            className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
           >
             Novo pedido
           </button>
@@ -195,7 +194,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
       {/* Matrícula */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Matrícula <span className="text-red-500">*</span>
         </label>
         <Controller
@@ -214,55 +213,43 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           )}
         />
         {errors.matricula && (
-          <p className="mt-1 text-xs text-red-600">{errors.matricula.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.matricula.message}</p>
         )}
       </div>
 
       {/* Viatura + Ano + Combustível */}
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Viatura</label>
-          <input
-            {...register('viatura')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Automático"
-          />
+          <label className={labelCls}>Viatura</label>
+          <input {...register('viatura')} className={inputCls} placeholder="Automático" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-          <input
-            {...register('ano')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Automático"
-          />
+          <label className={labelCls}>Ano</label>
+          <input {...register('ano')} className={inputCls} placeholder="Automático" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Combustível</label>
-          <input
-            {...register('combustivel')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Automático"
-          />
+          <label className={labelCls}>Combustível</label>
+          <input {...register('combustivel')} className={inputCls} placeholder="Automático" />
         </div>
       </div>
 
       {/* Cliente */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className={labelCls}>
             Cliente <span className="text-red-500">*</span>
           </label>
           <input
             {...register('nomeCliente')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
             placeholder="Nome do cliente"
           />
           {errors.nomeCliente && (
-            <p className="mt-1 text-xs text-red-600">{errors.nomeCliente.message}</p>
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.nomeCliente.message}</p>
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className={labelCls}>
             Contacto <span className="text-red-500">*</span>
           </label>
           <input
@@ -275,21 +262,21 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
               register('contacto').onChange(e)
               setClienteAutoPreenchido(false)
             }}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
             placeholder="9XXXXXXXX ou código (ex: c12)"
           />
           {clienteAutoPreenchido && (
-            <p className="mt-1 text-xs text-green-600">✓ Cliente encontrado no histórico</p>
+            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">✓ Cliente encontrado no histórico</p>
           )}
           {errors.contacto && (
-            <p className="mt-1 text-xs text-red-600">{errors.contacto.message}</p>
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.contacto.message}</p>
           )}
         </div>
       </div>
 
       {/* Material */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Material <span className="text-red-500">*</span>
         </label>
         <Controller
@@ -309,13 +296,13 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           )}
         />
         {errors.material && (
-          <p className="mt-1 text-xs text-red-600">{errors.material.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.material.message}</p>
         )}
       </div>
 
       {/* Tipo Tapete */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Tipo Tapete <span className="text-red-500">*</span>
         </label>
         <Controller
@@ -335,13 +322,13 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           )}
         />
         {errors.tipoTapete && (
-          <p className="mt-1 text-xs text-red-600">{errors.tipoTapete.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.tipoTapete.message}</p>
         )}
       </div>
 
       {/* Extras */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Extras</label>
+        <label className={labelCls}>Extras</label>
         <Controller
           name="extras"
           control={control}
@@ -365,7 +352,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
       {/* Tipo Cliente */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Tipo Cliente <span className="text-red-500">*</span>
         </label>
         <Controller
@@ -387,28 +374,28 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           )}
         />
         {errors.tipoClienteId && (
-          <p className="mt-1 text-xs text-red-600">{errors.tipoClienteId.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.tipoClienteId.message}</p>
         )}
       </div>
 
       {/* Quantidade */}
       <div className="w-32">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+        <label className={labelCls}>Quantidade</label>
         <input
           {...register('quantidade', { valueAsNumber: true })}
           type="number"
           min="1"
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls}
         />
       </div>
 
       {/* Mais Info */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Mais Info</label>
+        <label className={labelCls}>Mais Info</label>
         <textarea
           {...register('maisInfo')}
           rows={2}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls}
           placeholder="Observações adicionais"
         />
       </div>
@@ -416,39 +403,35 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
       {/* Resumo de preço em tempo real */}
       <ResumoPreco resultado={resultado} />
 
-      {/* Desconto manual */}
+      {/* Desconto manual + Sinal */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Desconto Manual (€)
-          </label>
+          <label className={labelCls}>Desconto Manual (€)</label>
           <input
             {...register('descontoManual', { valueAsNumber: true })}
             type="number"
             min="0"
             step="0.01"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Sinal (€)
-          </label>
+          <label className={labelCls}>Sinal (€)</label>
           <input
             {...register('sinal', { valueAsNumber: true })}
             type="number"
             min="0"
             step="0.01"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
         </div>
       </div>
 
-      {/* Valor final (editável, mas calculado é sempre visível) */}
+      {/* Valor final */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Valor Final (€)
-          <span className="ml-2 text-xs text-gray-400 font-normal">
+          <span className="ml-2 text-xs text-slate-400 dark:text-slate-500 font-normal">
             calculado: {resultado.valorFinal.toFixed(2)}€
           </span>
         </label>
@@ -457,13 +440,13 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           type="number"
           min="0"
           step="0.01"
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls}
         />
       </div>
 
       {/* Forma de pagamento */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Forma de Pagamento <span className="text-red-500">*</span>
         </label>
         <Controller
@@ -485,7 +468,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           )}
         />
         {errors.formaPagamento && (
-          <p className="mt-1 text-xs text-red-600">{errors.formaPagamento.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.formaPagamento.message}</p>
         )}
       </div>
 
@@ -493,7 +476,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isSubmitting ? 'A criar pedido…' : 'Criar Pedido'}
       </button>
