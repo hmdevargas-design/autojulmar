@@ -48,32 +48,32 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left px-4 py-3 font-medium text-gray-600 w-8">Ordem</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Cor</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-600">Final</th>
-            <th className="px-4 py-3 w-24"></th>
+          <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+            <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400 w-16">Ordem</th>
+            <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Nome</th>
+            <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cor</th>
+            <th className="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Final</th>
+            <th className="px-4 py-3 w-28"></th>
           </tr>
         </thead>
         <tbody>
           {estados.map((estado) => (
-            <tr key={estado.id} className="border-b border-gray-100">
-              <td className="px-4 py-3 text-gray-400 text-center">{estado.ordem}</td>
+            <tr key={estado.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <td className="px-4 py-3 text-slate-400 dark:text-slate-500 text-center">{estado.ordem}</td>
               <td className="px-4 py-3">
                 {editando === estado.id ? (
                   <input
                     value={nomeEdit}
                     onChange={e => setNomeEdit(e.target.value)}
-                    className="border border-blue-400 rounded px-2 py-0.5 text-sm text-gray-900 focus:outline-none w-full"
+                    className="border border-indigo-400 dark:border-indigo-600 rounded-lg px-2 py-0.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
                     autoFocus
                     onKeyDown={e => { if (e.key === 'Enter') guardar(estado.id); if (e.key === 'Escape') setEditando(null) }}
                   />
                 ) : (
-                  <span className="font-medium text-gray-900">{estado.nome}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{estado.nome}</span>
                 )}
               </td>
               <td className="px-4 py-3">
@@ -82,19 +82,19 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                     type="color"
                     value={corEdit}
                     onChange={e => setCorEdit(e.target.value)}
-                    className="h-7 w-14 cursor-pointer rounded border border-gray-300"
+                    className="h-7 w-14 cursor-pointer rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-4 h-4 rounded-full inline-block"
+                      className="w-4 h-4 rounded-full inline-block shrink-0"
                       style={{ backgroundColor: estado.cor }}
                     />
-                    <span className="text-gray-500 font-mono text-xs">{estado.cor}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-mono text-xs">{estado.cor}</span>
                   </div>
                 )}
               </td>
-              <td className="px-4 py-3 text-center text-gray-500">
+              <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-400">
                 {estado.isFinal ? '✓' : '—'}
               </td>
               <td className="px-4 py-3 text-right">
@@ -103,13 +103,13 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                     <button
                       onClick={() => guardar(estado.id)}
                       disabled={guardando === estado.id}
-                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                      className="px-2.5 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
                       Guardar
                     </button>
                     <button
                       onClick={() => setEditando(null)}
-                      className="px-2 py-1 text-gray-500 text-xs rounded hover:bg-gray-100"
+                      className="px-2.5 py-1 text-slate-500 dark:text-slate-400 text-xs rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
                       Cancelar
                     </button>
@@ -117,7 +117,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                 ) : (
                   <button
                     onClick={() => iniciarEdicao(estado)}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
                   >
                     Editar
                   </button>

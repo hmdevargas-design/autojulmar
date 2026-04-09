@@ -28,8 +28,8 @@ export default async function PaginaTiposCliente({ params }: Props) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Tipos de Cliente</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Tipos de Cliente</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Define o desconto aplicado automaticamente a cada tipo de cliente.
       </p>
       <TiposClienteEditor tenantId={tenant.id} tiposIniciais={tipos} />

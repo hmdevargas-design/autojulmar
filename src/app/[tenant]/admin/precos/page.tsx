@@ -34,7 +34,6 @@ export default async function PaginaPrecos({ params }: Props) {
       .order('ordem'),
   ])
 
-  // Extrai os eixos da tabela base a partir dos campos com papel_preco
   const campoCampo1 = camposRes.data?.find(c => c.papel_preco === 'base_campo1')
   const campoCampo2 = camposRes.data?.find(c => c.papel_preco === 'base_campo2')
 
@@ -56,8 +55,8 @@ export default async function PaginaPrecos({ params }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Tabela de Preços</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tabela de Preços</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Clica numa célula para editar o preço. As alterações são guardadas automaticamente.
         </p>
       </div>
