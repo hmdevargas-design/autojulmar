@@ -58,8 +58,8 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{clientesRes.count ?? 0} registos</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{clientesRes.count ?? 0} registos</p>
         </div>
       </div>
 
@@ -68,20 +68,20 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
       {/* Cards mobile */}
       <div className="md:hidden space-y-2">
         {clientes.map((c) => (
-          <div key={c.id} className="bg-white rounded-2xl border border-slate-200 px-4 py-3 shadow-sm">
+          <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-medium text-slate-900">{c.nome}</div>
-                <div className="text-xs text-slate-400 font-mono mt-0.5">{c.contacto}</div>
+                <div className="font-medium text-slate-900 dark:text-slate-100">{c.nome}</div>
+                <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{c.contacto}</div>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
-                <div className="text-xs text-slate-400 mt-1">{c.numPedidos} pedidos</div>
+                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
+                <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">{c.numPedidos} pedidos</div>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2">
               {c.codigo
-                ? <span className="font-mono text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded">{c.codigo}</span>
+                ? <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">{c.codigo}</span>
                 : <span />
               }
               <EditarCliente tenantId={tenant.id} cliente={{ id: c.id, nome: c.nome, contacto: c.contacto, tipoClienteId: c.tipoClienteId, codigo: c.codigo }} tipos={tipos} />
@@ -89,40 +89,40 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
           </div>
         ))}
         {clientes.length === 0 && (
-          <div className="text-center py-8 text-slate-400 text-sm">
+          <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
             {q ? `Nenhum cliente encontrado para "${q}".` : 'Nenhum cliente registado.'}
           </div>
         )}
       </div>
 
       {/* Tabela desktop */}
-      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Código</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Nome</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Contacto</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Tipo</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600">Pedidos</th>
+            <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Código</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Nome</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Contacto</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Tipo</th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Pedidos</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {clientes.map((c) => (
-              <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+              <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <td className="px-4 py-3">
                   {c.codigo
-                    ? <span className="font-mono text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded">{c.codigo}</span>
-                    : <span className="text-slate-300">—</span>
+                    ? <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">{c.codigo}</span>
+                    : <span className="text-slate-300 dark:text-slate-600">—</span>
                   }
                 </td>
-                <td className="px-4 py-3 font-medium text-slate-900">{c.nome}</td>
-                <td className="px-4 py-3 font-mono text-slate-600">{c.contacto}</td>
+                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{c.nome}</td>
+                <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{c.contacto}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
+                  <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
                 </td>
-                <td className="px-4 py-3 text-right text-slate-500">{c.numPedidos}</td>
+                <td className="px-4 py-3 text-right text-slate-500 dark:text-slate-400">{c.numPedidos}</td>
                 <td className="px-4 py-3 text-right">
                   <EditarCliente tenantId={tenant.id} cliente={{ id: c.id, nome: c.nome, contacto: c.contacto, tipoClienteId: c.tipoClienteId, codigo: c.codigo }} tipos={tipos} />
                 </td>
@@ -131,14 +131,14 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
           </tbody>
         </table>
         {clientes.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
+          <div className="text-center py-12 text-slate-400 dark:text-slate-500">
             {q ? `Nenhum cliente encontrado para "${q}".` : 'Nenhum cliente registado.'}
           </div>
         )}
       </div>
 
       {(clientesRes.count ?? 0) > 50 && (
-        <p className="text-xs text-gray-400 text-center">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
           A mostrar 50 de {clientesRes.count} resultados — use a pesquisa para filtrar.
         </p>
       )}

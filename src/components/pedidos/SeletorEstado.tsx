@@ -60,18 +60,18 @@ export default function SeletorEstado({ pedidoId, tenantId, estadoAtual, estados
       {aberto && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-36">
+          <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 min-w-36">
             {estados.map((estado) => (
               <button
                 key={estado.id}
                 onClick={() => mudarEstado(estado)}
-                className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${
                   estado.id === atual.id ? 'font-semibold' : ''
                 }`}
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: estado.cor }} />
-                {estado.nome}
-                {estado.id === atual.id && <span className="ml-auto text-gray-400">✓</span>}
+                <span className="text-slate-700 dark:text-slate-300">{estado.nome}</span>
+                {estado.id === atual.id && <span className="ml-auto text-slate-400 dark:text-slate-500">✓</span>}
               </button>
             ))}
           </div>

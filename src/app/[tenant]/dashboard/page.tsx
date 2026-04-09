@@ -12,10 +12,10 @@ interface Props {
 
 function CardMetrica({ titulo, valor, sub, cor }: { titulo: string; valor: string; sub?: string; cor: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-      <div className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{titulo}</div>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+      <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">{titulo}</div>
       <div className={`text-2xl font-bold ${cor}`}>{valor}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</div>}
     </div>
   )
 }
@@ -106,28 +106,28 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
 
       {/* Métricas */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}           cor="text-slate-900" />
-        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`} cor="text-indigo-700" />
-        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}   sub={`${pedidosMes} pedidos`} cor="text-emerald-700" />
-        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}             sub="pedidos"        cor="text-violet-700" />
-        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`} sub="em aberto"    cor="text-amber-600" />
+        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}           cor="text-slate-900 dark:text-slate-100" />
+        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`} cor="text-indigo-700 dark:text-indigo-400" />
+        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}   sub={`${pedidosMes} pedidos`} cor="text-emerald-700 dark:text-emerald-400" />
+        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}             sub="pedidos"        cor="text-violet-700 dark:text-violet-400" />
+        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`} sub="em aberto"    cor="text-amber-600 dark:text-amber-400" />
       </div>
 
       {/* Pipeline */}
       {estadosOrdenados.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Pipeline</h2>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">Pipeline</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {estadosOrdenados.map(e => (
-              <div key={e.nome} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm">
+              <div key={e.nome} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 shadow-sm">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: e.cor }} />
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{e.total}</div>
-                  <div className="text-xs text-slate-500 leading-tight">{e.nome}</div>
+                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{e.total}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{e.nome}</div>
                 </div>
               </div>
             ))}
@@ -138,32 +138,32 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Materiais */}
       <div>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Materiais</h2>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Materiais</h2>
           <Suspense>
             <FiltrosPeriodo periodoActual={periodo} />
           </Suspense>
         </div>
         {materiais.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 py-10 text-center text-sm text-slate-400">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-10 text-center text-sm text-slate-400 dark:text-slate-500">
             Sem pedidos no período seleccionado.
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {materiais.map((m, i) => {
               const pct = Math.round((m.total / maxTotal) * 100)
               return (
-                <div key={m.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
-                  <span className="text-xs font-mono text-slate-400 w-5 shrink-0">{i + 1}</span>
+                <div key={m.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-900 truncate">{m.nome}</span>
-                      <span className="text-xs text-slate-500 ml-2 shrink-0">{m.faturado.toFixed(2)}€</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{m.nome}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 shrink-0">{m.faturado.toFixed(2)}€</span>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 dark:bg-indigo-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-900 w-8 text-right shrink-0">{m.total}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{m.total}</span>
                 </div>
               )
             })}
@@ -174,8 +174,8 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Pedidos recentes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Recentes</h2>
-          <Link href={`/${slug}/pedidos`} className="text-sm text-indigo-600 hover:underline font-medium">Ver todos →</Link>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Recentes</h2>
+          <Link href={`/${slug}/pedidos`} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium">Ver todos →</Link>
         </div>
 
         {/* Cards mobile */}
@@ -184,13 +184,13 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
             const cliente = p.clientes as unknown as { nome: string } | null
             const estado  = p.estados_fluxo as unknown as { nome: string; cor: string } | null
             return (
-              <div key={p.numero_pedido} className="bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
+              <div key={p.numero_pedido} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
                 <div>
-                  <div className="text-sm font-medium text-slate-900">{cliente?.nome ?? '—'}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">#{p.numero_pedido}</div>
+                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">#{p.numero_pedido}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-bold text-slate-900">{Number(p.valor_final).toFixed(2)}€</div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</div>
                   {estado && (
                     <span className="text-xs font-medium" style={{ color: estado.cor }}>{estado.nome}</span>
                   )}
@@ -201,14 +201,14 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
         </div>
 
         {/* Tabela desktop */}
-        <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600">#</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600">Cliente</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600">Estado</th>
-                <th className="text-right px-4 py-2.5 font-medium text-slate-600">Valor</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">#</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Cliente</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Estado</th>
+                <th className="text-right px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Valor</th>
               </tr>
             </thead>
             <tbody>
@@ -216,9 +216,9 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                 const cliente = p.clientes as unknown as { nome: string } | null
                 const estado  = p.estados_fluxo as unknown as { nome: string; cor: string } | null
                 return (
-                  <tr key={p.numero_pedido} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-2.5 font-mono text-slate-400">#{p.numero_pedido}</td>
-                    <td className="px-4 py-2.5 text-slate-900">{cliente?.nome ?? '—'}</td>
+                  <tr key={p.numero_pedido} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-slate-400 dark:text-slate-500">#{p.numero_pedido}</td>
+                    <td className="px-4 py-2.5 text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</td>
                     <td className="px-4 py-2.5">
                       {estado && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: estado.cor + '20', color: estado.cor }}>
@@ -227,7 +227,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-slate-900">{Number(p.valor_final).toFixed(2)}€</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</td>
                   </tr>
                 )
               })}

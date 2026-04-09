@@ -2,6 +2,7 @@
 import type { Tenant } from '@/core/entities'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import ThemeToggle from '@/components/theme/ThemeToggle'
 
 interface Props {
   tenant: Tenant
@@ -56,11 +57,11 @@ export default function NavTenant({ tenant }: Props) {
   return (
     <>
       {/* ── Top bar ── */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo / nome */}
-            <span className="font-bold text-slate-900 text-base tracking-tight">
+            <span className="font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">
               {tenant.nome}
             </span>
 
@@ -72,8 +73,8 @@ export default function NavTenant({ tenant }: Props) {
                   href={link.href}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     pathname.startsWith(link.href)
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   {link.label}
@@ -81,21 +82,22 @@ export default function NavTenant({ tenant }: Props) {
               ))}
             </div>
 
-            {/* Botão novo pedido — desktop */}
-            <Link
-              href={`/${tenant.slug}/pedidos/novo`}
-              className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              <span className="text-base leading-none">+</span> Novo Pedido
-            </Link>
-
-            {/* Mobile: só o nome visível no topo */}
+            {/* Direita: toggle + botão novo pedido */}
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Link
+                href={`/${tenant.slug}/pedidos/novo`}
+                className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <span className="text-base leading-none">+</span> Novo Pedido
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* ── Bottom nav — mobile only ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-slate-200 safe-area-pb">
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
         <div className="grid grid-cols-4 h-16">
           {navLinks.map((link) => {
             const activo = pathname.startsWith(link.href)
@@ -104,10 +106,12 @@ export default function NavTenant({ tenant }: Props) {
                 key={link.href}
                 href={link.href}
                 className={`flex flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors ${
-                  activo ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                  activo
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
                 }`}
               >
-                <span className={activo ? 'text-indigo-600' : 'text-slate-400'}>
+                <span className={activo ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}>
                   {link.icon}
                 </span>
                 {link.label}
