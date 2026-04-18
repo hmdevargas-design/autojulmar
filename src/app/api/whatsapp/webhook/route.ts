@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
       .replace('@c.us', '')
 
     // Processa em background — responde imediatamente ao uazapi
+    console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
     processarMensagem(telefone, msg.text.trim()).catch(err =>
-      console.error('[WhatsApp] Erro ao processar mensagem:', err)
+      console.error('[WhatsApp] Erro ao processar mensagem:', String(err), err?.stack ?? '')
     )
 
     return NextResponse.json({ ok: true })
