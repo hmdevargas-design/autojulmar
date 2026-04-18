@@ -55,14 +55,22 @@ export async function processarMensagem(telefone: string, mensagem: string): Pro
   // Recupera sessão existente
   const sessao = await obterSessao(tenant.id, telefone)
 
-  // Saudação inicial — apenas na primeira mensagem (sem sessão prévia)
-  if (!sessao) {
+  // Saudação inicial — primeira mensagem de qualquer fluxo novo (sem sessão ou sessão no estado inicial)
+  const ehNovaConversa = !sessao || sessao.step === 'aguarda_pedido'
+  if (ehNovaConversa && !sessao) {
     await guardarSessao(tenant.id, telefone, { step: 'aguarda_pedido', dados: {} })
-    await enviarMensagem(telefone, 'Boa tarde! 👋 Como podemos ajudar?\nSe pretende fazer um pedido, envie os dados do cliente e do tapete.')
+    await enviarMensagem(telefone, 'Boa tarde! 👋 Como podemos ajudar?\nEnvie os dados do pedido e criamos de imediato.')
   }
 
-  // Parse da mensagem actual
-  const extraido = await parsearMensagem(mensagem, materiais, tiposTapete, extrasDisp)
+  // Parse da mensagem — com fallback para não silenciar o cliente se a API falhar
+  let extraido: Awaited<ReturnType<typeof parsearMensagem>>
+  try {
+    extraido = await parsearMensagem(mensagem, materiais, tiposTapete, extrasDisp)
+  } catch (err) {
+    console.error('[WhatsApp] Erro no parser LLM:', String(err))
+    // Continua com dados vazios — o bot vai pedir o próximo campo em falta
+    extraido = { clienteNome: null, contacto: null, matricula: null, viatura: null, material: null, tipoTapete: [], extras: [], quantidade: 1, formaPagamento: null }
+  }
 
   // Funde com dados da sessão anterior
   const dados: Record<string, unknown> = { ...(sessao?.dados ?? {}), }
