@@ -108,7 +108,6 @@ export async function processarMensagem(telefone: string, mensagem: string): Pro
     .from('tipos_cliente')
     .select('id')
     .eq('tenant_id', tenant.id)
-    .order('ordem')
     .limit(1)
     .single()
 
