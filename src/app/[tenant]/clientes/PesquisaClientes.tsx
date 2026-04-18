@@ -26,11 +26,11 @@ export default function PesquisaClientes({ q }: { q: string }) {
         value={valor}
         onChange={e => setValor(e.target.value)}
         placeholder="Pesquisar por nome ou contacto…"
-        className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
       />
       <button
         type="submit"
-        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white text-sm font-medium rounded transition-colors"
       >
         Pesquisar
       </button>
@@ -38,7 +38,7 @@ export default function PesquisaClientes({ q }: { q: string }) {
         <button
           type="button"
           onClick={limpar}
-          className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+          className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           Limpar
         </button>

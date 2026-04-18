@@ -5,6 +5,11 @@ import type { Tenant } from '@/core/entities'
 // Cache em memória para a duração do processo (evita N queries por request)
 const cache = new Map<string, Tenant | null>()
 
+/** Invalida o cache do resolver para um slug (chamar após alterações ao tenant) */
+export function limparCacheTenant(slug: string): void {
+  cache.delete(slug)
+}
+
 export async function resolverTenant(slug: string): Promise<Tenant | null> {
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return null
 

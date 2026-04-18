@@ -1,28 +1,21 @@
-// Envia mensagens de texto via WhatsApp Cloud API (Meta)
+// Envia mensagens de texto via uazapi
 
 export async function enviarMensagem(para: string, texto: string): Promise<void> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  const token        = process.env.WHATSAPP_API_TOKEN
+  const baseUrl = process.env.UAZAPI_URL
+  const token   = process.env.UAZAPI_TOKEN
 
-  if (!phoneNumberId || !token) {
-    console.warn('[WhatsApp] Credenciais não configuradas — mensagem não enviada')
+  if (!baseUrl || !token) {
+    console.warn('[WhatsApp] Credenciais uazapi não configuradas — mensagem não enviada')
     return
   }
 
-  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`
-
-  const res = await fetch(url, {
+  const res = await fetch(`${baseUrl}/send/text`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type':  'application/json',
+      'token':        token,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to:   para,
-      type: 'text',
-      text: { body: texto },
-    }),
+    body: JSON.stringify({ number: para, text: texto }),
   })
 
   if (!res.ok) {

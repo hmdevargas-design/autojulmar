@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
+import { limparCacheConfig } from '@/lib/tenant/config'
 import { z } from 'zod'
 
 const schemaPut = z.object({
@@ -37,6 +38,7 @@ export async function PUT(request: NextRequest) {
       .eq('tenant_id', input.tenantId)
 
     if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+    limparCacheConfig(input.tenantId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ erro: 'Dados inválidos' }, { status: 400 })

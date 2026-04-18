@@ -61,25 +61,34 @@ export default function NavTenant({ tenant }: Props) {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo / nome */}
-            <span className="font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">
-              {tenant.nome}
-            </span>
+            {tenant.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tenant.logoUrl} alt={tenant.nome} className="h-7 object-contain" />
+            ) : (
+              <span className="font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">
+                {tenant.nome}
+              </span>
+            )}
 
             {/* Links desktop */}
             <div className="hidden md:flex gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    pathname.startsWith(link.href)
-                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const activo = pathname.startsWith(link.href)
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      activo
+                        ? 'bg-slate-100 dark:bg-slate-800'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                    style={activo ? { color: tenant.corPrimaria } : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
             </div>
 
             {/* Direita: toggle + botão novo pedido */}
@@ -87,7 +96,8 @@ export default function NavTenant({ tenant }: Props) {
               <ThemeToggle />
               <Link
                 href={`/${tenant.slug}/pedidos/novo`}
-                className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+                style={{ backgroundColor: tenant.corPrimaria }}
               >
                 <span className="text-base leading-none">+</span> Novo Pedido
               </Link>
@@ -107,13 +117,12 @@ export default function NavTenant({ tenant }: Props) {
                 href={link.href}
                 className={`flex flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors ${
                   activo
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? ''
                     : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
                 }`}
+                style={activo ? { color: tenant.corPrimaria } : undefined}
               >
-                <span className={activo ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}>
-                  {link.icon}
-                </span>
+                {link.icon}
                 {link.label}
               </Link>
             )
@@ -124,7 +133,8 @@ export default function NavTenant({ tenant }: Props) {
       {/* ── FAB Novo Pedido — mobile only ── */}
       <Link
         href={`/${tenant.slug}/pedidos/novo`}
-        className="fixed bottom-20 right-4 z-50 md:hidden flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors text-2xl font-light"
+        className="fixed bottom-20 right-4 z-50 md:hidden flex items-center justify-center w-14 h-14 text-white rounded-full shadow-lg transition-colors text-2xl font-light"
+        style={{ backgroundColor: tenant.corPrimaria }}
         aria-label="Novo Pedido"
       >
         +

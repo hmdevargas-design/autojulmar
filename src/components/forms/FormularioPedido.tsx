@@ -51,6 +51,28 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
   const [extrasQuantidades, setExtrasQuantidades] = useState<Record<string, number>>({})
   const [clienteAutoPreenchido, setClienteAutoPreenchido] = useState(false)
 
+  // Extrai valores activos de um campo da configuração do tenant
+  function valoresDeCampo(nomeCampo: string): string[] {
+    return config.campos
+      .find(c => c.nome === nomeCampo)
+      ?.opcoes.filter(o => o.activo)
+      .map(o => o.valor) ?? []
+  }
+
+  // Labels (valor → label legível) para campos onde valor ≠ label
+  function labelsDeCampo(nomeCampo: string): Record<string, string> {
+    return Object.fromEntries(
+      config.campos
+        .find(c => c.nome === nomeCampo)
+        ?.opcoes.filter(o => o.activo)
+        .map(o => [o.valor, o.label]) ?? []
+    )
+  }
+
+  const opcoesMaterial  = valoresDeCampo('material')
+  const opcoesTipoTap   = valoresDeCampo('tipo_tapete')
+  const opcoesExtras    = valoresDeCampo('extras')
+
   const {
     register,
     handleSubmit,
@@ -286,11 +308,8 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             <CampoSelect
               value={field.value}
               onChange={field.onChange}
-              opcoes={[
-                'ECO PRETO','CINZA CABRIO','GTI PRETO','GTI CINZA',
-                'VELUDO PRETO','VELUDO CINZA','BORRACHA','CANELADO',
-                'OUTROS','CAPAS','REPARAÇÃO','CHUVENTOS','TAPETES',
-              ]}
+              opcoes={opcoesMaterial}
+              labels={labelsDeCampo('material')}
               placeholder="Selecciona o material"
             />
           )}
@@ -312,12 +331,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             <CampoMultiSelect
               value={field.value}
               onChange={field.onChange}
-              opcoes={[
-                'JOGO','JOGO EM 3','JOGO EM 4','JOGO EM 5',
-                'FRENTES','FRENTE COMERCIAL','MALA','3º','CONDUTOR',
-                'TRASEIRO','TRASEIRO INTEIRO','TRÁS EM 3',
-                'PENDURA','TECIDO DAIANA','TAP VIGUESA','REITAPETES','OUTROS',
-              ]}
+              opcoes={opcoesTipoTap}
             />
           )}
         />
@@ -336,10 +350,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             <CampoMultiSelect
               value={field.value}
               onChange={field.onChange}
-              opcoes={[
-                'reforço borracha','reforço alcatifa','molas condutor',
-                'molas pendura','velcro','sem reforço','Ilhoses','Debrum em Lã',
-              ]}
+              opcoes={opcoesExtras}
               comQuantidade={['velcro']}
               quantidades={extrasQuantidades}
               onQuantidadeChange={(opcao, qtd) =>

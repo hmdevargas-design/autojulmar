@@ -71,7 +71,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
     return (
       <button
         onClick={abrir}
-        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+        className="text-xs text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
       >
         editar
       </button>
@@ -80,48 +80,48 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAberto(false)}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
-        <h3 className="font-semibold text-gray-900">Editar cliente</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100">Editar cliente</h3>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Nome</label>
           <input
             value={nome}
             onChange={e => setNome(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
             autoFocus
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Contacto</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Contacto</label>
           <input
             value={contacto}
             onChange={e => setContacto(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
             Código de identificação
-            <span className="ml-1 font-normal text-gray-400">(opcional — ex: c12, miguel)</span>
+            <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">(opcional — ex: c12, miguel)</span>
           </label>
           <input
             value={codigo}
             onChange={e => setCodigo(e.target.value)}
             placeholder="ex: c12"
             maxLength={20}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de cliente</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Tipo de cliente</label>
           <select
             value={tipoClienteId}
             onChange={e => setTipoClienteId(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
           >
             <option value="">— sem tipo —</option>
             {tipos.map(t => (
@@ -130,19 +130,19 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
           </select>
         </div>
 
-        {erro && <p className="text-xs text-red-600">{erro}</p>}
+        {erro && <p className="text-xs text-red-600 dark:text-red-400">{erro}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
           <button
             onClick={() => setAberto(false)}
-            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cancelar
           </button>
           <button
             onClick={guardar}
             disabled={a_guardar || !nome.trim() || !contacto.trim()}
-            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded disabled:opacity-50"
           >
             {a_guardar ? 'A guardar…' : 'Guardar'}
           </button>

@@ -1,3 +1,17 @@
+// Estrutura esperada do campo `dados` (JSONB) para o template Automóvel.
+// Não é validado pelo Supabase — garantido pelo formulário e pelo parser WhatsApp.
+export interface DadosPedido {
+  matricula?:         string          // ex: "AB-12-CD"
+  viatura?:           string          // ex: "Volkswagen Golf"
+  ano?:               string          // ex: "2019"
+  combustivel?:       string          // ex: "Gasolina"
+  material?:          string          // ex: "GTI PRETO"
+  tipoTapete?:        string[]        // ex: ["JOGO EM 4"]
+  extras?:            string[]        // ex: ["reforço borracha", "molas condutor"]
+  extrasQuantidades?: Record<string, number>  // ex: { "molas condutor": 2 }
+  maisInfo?:          string          // campo livre
+}
+
 // Entidade Pedido
 
 export interface Pedido {
@@ -6,7 +20,7 @@ export interface Pedido {
   clienteId: string
   numeroPedido: number       // começa em 2000
   estadoId: string
-  dados: Record<string, unknown>  // campos dinâmicos do formulário
+  dados: DadosPedido         // campos dinâmicos do formulário (template Automóvel)
   precoBase: number
   somaExtras: number
   subtotal: number
@@ -35,7 +49,7 @@ export interface CriarPedidoInput {
   tenantId: string
   clienteId: string
   estadoId: string
-  dados: Record<string, unknown>
+  dados: DadosPedido
   precoBase: number
   somaExtras: number
   subtotal: number

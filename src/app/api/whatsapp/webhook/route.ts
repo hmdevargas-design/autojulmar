@@ -1,56 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processarMensagem } from '@/lib/whatsapp/conversa'
 
-// GET — verificação do webhook pelo Meta
-export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl
-  const mode      = searchParams.get('hub.mode')
-  const token     = searchParams.get('hub.verify_token')
-  const challenge = searchParams.get('hub.challenge')
-
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 })
-  }
-
-  return NextResponse.json({ erro: 'Token inválido' }, { status: 403 })
+// Payload que o uazapi envia para este webhook (evento "messages")
+interface PayloadUazapi {
+  event:   string           // "messages"
+  fromMe:  boolean          // true = enviada pelo próprio número
+  number?: string           // remetente: "351912345678"
+  from?:   string           // alternativa: "351912345678@c.us"
+  body?:   string           // texto da mensagem
+  text?:   string           // alternativa ao body
+  [key: string]: unknown
 }
 
-// POST — recebe mensagens do WhatsApp
+// GET — health check
+export async function GET() {
+  return NextResponse.json({ ok: true, servico: 'uazapi' })
+}
+
+// POST — recebe eventos do uazapi
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const payload = await request.json() as PayloadUazapi
 
-    // Estrutura do payload da Meta Cloud API
-    const entry   = body?.entry?.[0]
-    const changes = entry?.changes?.[0]
-    const value   = changes?.value
+    // Debug: log do payload completo nas primeiras mensagens
+    if (process.env.WHATSAPP_DEBUG === '1') {
+      console.log('[WhatsApp] Payload uazapi:', JSON.stringify(payload, null, 2))
+    }
 
-    // Ignora eventos que não sejam mensagens (ex: status de entrega)
-    if (!value?.messages?.length) {
+    // Só processa evento de mensagens recebidas
+    if (payload.event !== 'messages') {
       return NextResponse.json({ ok: true })
     }
 
-    const mensagem = value.messages[0]
-
-    // Só processa mensagens de texto
-    if (mensagem.type !== 'text') {
+    // Ignorar mensagens enviadas pelo próprio número (evita loops)
+    if (payload.fromMe === true) {
       return NextResponse.json({ ok: true })
     }
 
-    const telefone = mensagem.from          // número do remetente (ex: 351912345678)
-    const texto    = mensagem.text?.body ?? ''
+    // Extrair número — normaliza removendo sufixo do WhatsApp se presente
+    const telefone = (payload.number ?? payload.from ?? '')
+      .replace('@c.us', '')
+      .replace('@s.whatsapp.net', '')
 
-    if (!texto.trim()) return NextResponse.json({ ok: true })
+    // Extrair texto
+    const texto = payload.body ?? payload.text ?? ''
 
-    // Processa em background para responder imediatamente ao Meta (evita timeout)
+    if (!telefone || !texto.trim()) {
+      return NextResponse.json({ ok: true })
+    }
+
+    // Processa em background — responde imediatamente ao uazapi
     processarMensagem(telefone, texto).catch(err =>
       console.error('[WhatsApp] Erro ao processar mensagem:', err)
     )
 
-    // Meta exige resposta 200 em menos de 20s
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[WhatsApp] Erro no webhook:', err)
-    return NextResponse.json({ ok: true }) // sempre 200 para o Meta não reenviar
+    return NextResponse.json({ ok: true }) // sempre 200 para o uazapi não reenviar
   }
 }

@@ -13,6 +13,8 @@ const links = (slug: string) => [
   { href: `/${slug}/admin/precos`,        label: 'Tabela de Preços' },
   { href: `/${slug}/admin/tipos-cliente`, label: 'Tipos de Cliente' },
   { href: `/${slug}/admin/estados`,       label: 'Estados' },
+  { href: `/${slug}/admin/campos`,        label: 'Campos e Opções' },
+  { href: `/${slug}/admin/visual`,        label: 'Identidade Visual' },
 ]
 
 export default function AdminNav({ slug, mobile }: Props) {

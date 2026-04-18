@@ -59,12 +59,12 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
           value={valor}
           onChange={e => setValor(e.target.value)}
           placeholder="Pesquisar por cliente, contacto ou matrícula…"
-          className="flex-1 min-w-48 border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 min-w-48 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
         />
         <select
           value={estadoId}
           onChange={e => aplicar(construirParams(valor, e.target.value, dataDE, dataATE))}
-          className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
         >
           <option value="">Todos os estados</option>
           {estados.map(e => (
@@ -75,23 +75,23 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
 
       {/* Linha 2: datas + botões */}
       <div className="flex gap-2 flex-wrap items-center">
-        <label className="text-xs text-gray-500 shrink-0">De</label>
+        <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">De</label>
         <input
           type="date"
           value={dataDE}
           onChange={e => setDataDE(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
         />
-        <label className="text-xs text-gray-500 shrink-0">Até</label>
+        <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Até</label>
         <input
           type="date"
           value={dataATE}
           onChange={e => setDataATE(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-600"
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white text-sm font-medium rounded transition-colors"
         >
           Pesquisar
         </button>
@@ -99,7 +99,7 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
           <button
             type="button"
             onClick={limpar}
-            className="px-3 py-2 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             Limpar
           </button>

@@ -3,10 +3,17 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { limparCacheConfig } from '@/lib/tenant/config'
 import { z } from 'zod'
 
+const schemaOpcao = z.object({
+  valor:   z.string().min(1),
+  label:   z.string().min(1),
+  ordem:   z.number().int().min(0),
+  activo:  z.boolean(),
+})
+
 const schemaPut = z.object({
-  id:          z.string().min(1),
-  tenantId:    z.string().min(1),
-  descontoPct: z.coerce.number().min(0).max(100),
+  tenantId:   z.string().min(1),
+  nomeCampo:  z.string().min(1),
+  opcoes:     z.array(schemaOpcao),
 })
 
 export async function GET(request: NextRequest) {
@@ -15,9 +22,10 @@ export async function GET(request: NextRequest) {
 
   const supabase = criarClienteAdmin()
   const { data, error } = await supabase
-    .from('tipos_cliente')
-    .select('id, nome, desconto_pct, usa_tabela_propria')
+    .from('campos_definicao')
+    .select('id, nome, label, tipo, opcoes, obrigatorio, ordem, e_variavel_preco, papel_preco')
     .eq('tenant_id', tenantId)
+    .eq('activo', true)
     .order('ordem')
 
   if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
@@ -31,10 +39,10 @@ export async function PUT(request: NextRequest) {
     const supabase = criarClienteAdmin()
 
     const { error } = await supabase
-      .from('tipos_cliente')
-      .update({ desconto_pct: input.descontoPct })
-      .eq('id', input.id)
+      .from('campos_definicao')
+      .update({ opcoes: input.opcoes })
       .eq('tenant_id', input.tenantId)
+      .eq('nome', input.nomeCampo)
 
     if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
     limparCacheConfig(input.tenantId)

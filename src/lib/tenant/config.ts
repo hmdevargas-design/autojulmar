@@ -5,6 +5,11 @@ import type { ConfigPreco } from '@/core/pricing/types'
 
 const cacheConfig = new Map<string, ConfigTenant>()
 
+/** Invalida o cache de configuração de um tenant (chamar após alterações no admin) */
+export function limparCacheConfig(tenantId: string): void {
+  cacheConfig.delete(tenantId)
+}
+
 export async function carregarConfigTenant(tenantId: string): Promise<ConfigTenant | null> {
   if (cacheConfig.has(tenantId)) return cacheConfig.get(tenantId)!
 
