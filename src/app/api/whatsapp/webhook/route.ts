@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { processarMensagem } from '@/lib/whatsapp/conversa'
 
@@ -59,11 +60,13 @@ export async function POST(request: NextRequest) {
       .replace('@c.us', '')
 
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
-    try {
-      await processarMensagem(telefone, msg.text.trim())
-    } catch (err) {
-      console.error('[WhatsApp] Erro ao processar mensagem:', String(err))
-    }
+
+    // Processa em background — responde 200 imediatamente para evitar retries do uazapi
+    after(() => {
+      processarMensagem(telefone, msg.text.trim()).catch(err =>
+        console.error('[WhatsApp] Erro ao processar mensagem:', String(err))
+      )
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err) {

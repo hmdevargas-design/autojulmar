@@ -55,6 +55,12 @@ export async function processarMensagem(telefone: string, mensagem: string): Pro
   // Recupera sessão existente
   const sessao = await obterSessao(tenant.id, telefone)
 
+  // Saudação inicial — apenas na primeira mensagem (sem sessão prévia)
+  if (!sessao) {
+    await guardarSessao(tenant.id, telefone, { step: 'aguarda_pedido', dados: {} })
+    await enviarMensagem(telefone, 'Boa tarde! 👋 Como podemos ajudar?\nSe pretende fazer um pedido, envie os dados do cliente e do tapete.')
+  }
+
   // Parse da mensagem actual
   const extraido = await parsearMensagem(mensagem, materiais, tiposTapete, extrasDisp)
 
