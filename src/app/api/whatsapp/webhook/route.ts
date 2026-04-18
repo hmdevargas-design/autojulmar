@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json() as PayloadUazapi
 
+    console.log('[WhatsApp] Webhook recebido — EventType:', payload.EventType, '| fromMe:', payload.message?.fromMe)
+
     // Só processa evento de mensagens
     if (payload.EventType !== 'messages') {
       return NextResponse.json({ ok: true })
