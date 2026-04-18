@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processarMensagem } from '@/lib/whatsapp/conversa'
 
-// Payload que o uazapi envia para este webhook (evento "messages")
+// Payload confirmado via logs reais do uazapi (2026-04-18)
+interface MensagemUazapi {
+  fromMe:      boolean  // true = enviada pelo próprio número
+  isGroup:     boolean
+  sender:      string   // "351916958780@s.whatsapp.net"
+  senderName:  string
+  text:        string   // conteúdo da mensagem
+  type:        string   // "text" | "image" | ...
+  wasSentByApi: boolean
+}
+
 interface PayloadUazapi {
-  event:   string           // "messages"
-  fromMe:  boolean          // true = enviada pelo próprio número
-  number?: string           // remetente: "351912345678"
-  from?:   string           // alternativa: "351912345678@c.us"
-  body?:   string           // texto da mensagem
-  text?:   string           // alternativa ao body
+  EventType: string          // "messages"
+  message:   MensagemUazapi
+  owner:     string          // número do dono da instância
   [key: string]: unknown
 }
 
@@ -22,35 +29,35 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json() as PayloadUazapi
 
-    // Debug: log do payload completo nas primeiras mensagens
-    if (process.env.WHATSAPP_DEBUG === '1') {
-      console.log('[WhatsApp] Payload uazapi:', JSON.stringify(payload, null, 2))
-    }
-
-    // Só processa evento de mensagens recebidas
-    if (payload.event !== 'messages') {
+    // Só processa evento de mensagens
+    if (payload.EventType !== 'messages') {
       return NextResponse.json({ ok: true })
     }
+
+    const msg = payload.message
 
     // Ignorar mensagens enviadas pelo próprio número (evita loops)
-    if (payload.fromMe === true) {
+    if (msg.fromMe === true) {
       return NextResponse.json({ ok: true })
     }
 
-    // Extrair número — normaliza removendo sufixo do WhatsApp se presente
-    const telefone = (payload.number ?? payload.from ?? '')
-      .replace('@c.us', '')
+    // Ignorar grupos
+    if (msg.isGroup === true) {
+      return NextResponse.json({ ok: true })
+    }
+
+    // Só processar mensagens de texto
+    if (msg.type !== 'text' || !msg.text?.trim()) {
+      return NextResponse.json({ ok: true })
+    }
+
+    // Normalizar número — remover sufixo WhatsApp
+    const telefone = msg.sender
       .replace('@s.whatsapp.net', '')
-
-    // Extrair texto
-    const texto = payload.body ?? payload.text ?? ''
-
-    if (!telefone || !texto.trim()) {
-      return NextResponse.json({ ok: true })
-    }
+      .replace('@c.us', '')
 
     // Processa em background — responde imediatamente ao uazapi
-    processarMensagem(telefone, texto).catch(err =>
+    processarMensagem(telefone, msg.text.trim()).catch(err =>
       console.error('[WhatsApp] Erro ao processar mensagem:', err)
     )
 
