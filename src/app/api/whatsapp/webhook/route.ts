@@ -59,9 +59,18 @@ export async function POST(request: NextRequest) {
     if (msg.fromMe === true)  return NextResponse.json({ ok: true })
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
 
-    const telefone = msg.sender
+    // Quando o sender e @lid, tenta extrair o numero real de campos alternativos
+    const senderRaw = msg.sender ?? ''
+    const isLid     = senderRaw.includes('@lid')
+    if (isLid) {
+      console.log('[WhatsApp] Sender @lid detectado — payload completo:', JSON.stringify(payload))
+    }
+
+    const telefone = (msg.phone ?? msg.number ?? senderRaw)
       .replace('@s.whatsapp.net', '')
       .replace('@c.us', '')
+      .replace('@lid', '')
+      .replace(/\D/g, '')
 
     // Audio — so aceita de admins; tenta transcrever
     const tipoAudio = msg.type === 'ptt' || msg.type === 'audio'
