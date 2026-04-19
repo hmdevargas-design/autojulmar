@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processarMensagem } from '@/lib/whatsapp/conversa'
+import { criarClienteAdmin } from '@/lib/supabase/admin'
 
 // Payload confirmado via logs reais do uazapi (2026-04-18)
 interface MensagemUazapi {
@@ -18,26 +19,6 @@ interface PayloadUazapi {
   message:   MensagemUazapi
   owner:     string
   [key: string]: unknown
-}
-
-// Cache de deduplicação — evita processar o mesmo webhook duas vezes
-// O uazapi envia duplicados em janelas de ~200ms; esta cache protege dentro da mesma instância
-const dedupCache = new Map<string, number>()
-const DEDUP_TTL_MS = 30_000
-
-function isDuplicado(chave: string): boolean {
-  const ultimo = dedupCache.get(chave)
-  const agora  = Date.now()
-  if (ultimo && agora - ultimo < DEDUP_TTL_MS) return true
-  dedupCache.set(chave, agora)
-  // Limpeza periódica para não crescer indefinidamente
-  if (dedupCache.size > 200) {
-    const corte = agora - DEDUP_TTL_MS
-    for (const [k, v] of dedupCache) {
-      if (v < corte) dedupCache.delete(k)
-    }
-  }
-  return false
 }
 
 // GET — health check
@@ -73,10 +54,27 @@ export async function POST(request: NextRequest) {
     const chaveDedup = msg.messageId
       ?? `${telefone}:${msg.text.trim()}:${Math.floor(Date.now() / 10_000)}`
 
-    if (isDuplicado(chaveDedup)) {
-      console.log('[WhatsApp] Dedup — ignorando duplicado:', telefone)
-      return NextResponse.json({ ok: true })
+    // Dedup atómico via Supabase — funciona em múltiplas instâncias Vercel
+    const supabase = criarClienteAdmin()
+    const { error: errDedup } = await supabase
+      .from('msg_dedup')
+      .insert({ hash: chaveDedup })
+
+    if (errDedup) {
+      // Código 23505 = unique_violation (duplicado); outros erros deixam passar para não silenciar mensagens
+      if (errDedup.code === '23505') {
+        console.log('[WhatsApp] Dedup — duplicado ignorado:', telefone)
+        return NextResponse.json({ ok: true })
+      }
+      console.warn('[WhatsApp] Dedup falhou (continuando):', errDedup.message)
     }
+
+    // Limpa registos com mais de 60s para não crescer indefinidamente
+    supabase
+      .from('msg_dedup')
+      .delete()
+      .lt('criado_em', new Date(Date.now() - 60_000).toISOString())
+      .then(() => {/* fire-and-forget */})
 
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
 
