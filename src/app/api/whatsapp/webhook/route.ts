@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { processarMensagem } from '@/lib/whatsapp/conversa'
+import { processarComAgente } from '@/lib/whatsapp/agente'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 
 // Payload confirmado via logs reais do uazapi (2026-04-18)
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
 
     try {
-      await processarMensagem(telefone, msg.text.trim())
+      await processarComAgente(telefone, msg.text.trim())
     } catch (err) {
       console.error('[WhatsApp] Erro ao processar mensagem:', String(err))
     }

@@ -120,10 +120,10 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
           return (
             <div key={pedido.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+                <Link href={`/${slug}/pedidos/${pedido.id}`} className="min-w-0 flex-1">
                   <div className="font-medium text-slate-900 dark:text-slate-100 truncate">{cliente?.nome ?? '—'}</div>
                   <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">{dados?.matricula ?? ''} · #{pedido.numero_pedido}</div>
-                </div>
+                </Link>
                 <div className="text-right shrink-0">
                   <div className="font-bold text-slate-900 dark:text-slate-100">{Number(pedido.valor_final).toFixed(2)}€</div>
                   <div className="text-xs text-slate-400 dark:text-slate-500">{data}</div>
@@ -174,10 +174,16 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
 
               return (
                 <tr key={pedido.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-slate-400 dark:text-slate-500">#{pedido.numero_pedido}</td>
+                  <td className="px-4 py-3 font-mono text-slate-400 dark:text-slate-500">
+                    <Link href={`/${slug}/pedidos/${pedido.id}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      #{pedido.numero_pedido}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</div>
-                    <div className="text-xs text-slate-400 dark:text-slate-500">{cliente?.contacto}</div>
+                    <Link href={`/${slug}/pedidos/${pedido.id}`} className="block hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      <div className="font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500">{cliente?.contacto}</div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-300">{dados?.matricula ?? '—'}</td>
                   <td className="px-4 py-3">

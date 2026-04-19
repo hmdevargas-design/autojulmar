@@ -48,18 +48,20 @@ export async function processarMensagem(telefone: string, mensagem: string): Pro
   const msgNorm = mensagem.trim().toUpperCase()
   if (msgNorm === 'CANCELAR') {
     await eliminarSessao(tenant.id, telefone)
-    await enviarMensagem(telefone, '❌ Operação cancelada.')
+    await enviarMensagem(telefone, 'Operacao cancelada.')
     return
   }
 
   // Recupera sessão existente
   const sessao = await obterSessao(tenant.id, telefone)
 
-  // Saudação inicial — primeira mensagem de qualquer fluxo novo (sem sessão ou sessão no estado inicial)
-  const ehNovaConversa = !sessao || sessao.step === 'aguarda_pedido'
-  if (ehNovaConversa && !sessao) {
+  // Saudação inicial — apenas quando não existe sessão activa
+  if (!sessao) {
+    const hora  = new Date().getHours()
+    const cumpr = hora < 12 ? 'Bom dia' : hora < 19 ? 'Boa tarde' : 'Boa noite'
     await guardarSessao(tenant.id, telefone, { step: 'aguarda_pedido', dados: {} })
-    await enviarMensagem(telefone, 'Boa tarde! 👋 Como podemos ajudar?\nEnvie os dados do pedido e criamos de imediato.')
+    await enviarMensagem(telefone, `${cumpr}! 👋 Como podemos ajudar?\nEnvie os dados do pedido e criamos de imediato.`)
+    return // aguarda a próxima mensagem com os dados do pedido
   }
 
   // Parse da mensagem — com fallback para não silenciar o cliente se a API falhar
