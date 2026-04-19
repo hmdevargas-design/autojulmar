@@ -3,7 +3,7 @@
 
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 
-const TTL = Number(process.env.WHATSAPP_SESSION_TTL ?? 300) // segundos
+const TTL = Number(process.env.WHATSAPP_SESSION_TTL ?? 86400) // segundos (default 24h)
 
 export interface EstadoSessao {
   step: string          // campo que estamos a aguardar (ex: 'aguarda_tipo_tapete')

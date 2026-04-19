@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processarComAgente } from '@/lib/whatsapp/agente'
-import { criarClienteAdmin } from '@/lib/supabase/admin'
+import { enviarMensagem }     from '@/lib/whatsapp/sender'
+import { criarClienteAdmin }  from '@/lib/supabase/admin'
+import { transcreverAudio }   from '@/lib/whatsapp/transcricao'
 
-// Payload confirmado via logs reais do uazapi (2026-04-18)
 interface MensagemUazapi {
-  fromMe:      boolean
-  isGroup:     boolean
-  sender:      string    // "351916958780@s.whatsapp.net"
-  senderName:  string
-  text:        string
-  type:        string    // "text" | "image" | ...
+  fromMe:       boolean
+  isGroup:      boolean
+  sender:       string
+  senderName:   string
+  text:         string
+  type:         string       // "text" | "ptt" | "audio" | "image" | ...
   wasSentByApi: boolean
-  messageId?:  string    // ID único da mensagem (se disponível)
+  messageId?:   string
+  mediaUrl?:    string       // URL do ficheiro de audio/imagem
+  mimetype?:    string       // ex: "audio/ogg; codecs=opus"
+  caption?:     string       // legenda (audio com texto)
+  phone?:       string       // numero real (quando sender e @lid)
+  number?:      string
+  [key: string]: unknown
 }
 
 interface PayloadUazapi {
@@ -21,67 +28,98 @@ interface PayloadUazapi {
   [key: string]: unknown
 }
 
-// GET — health check
+function numerosAdmin(): string[] {
+  return (process.env.WHATSAPP_ADMIN_NUMEROS ?? '')
+    .split(',')
+    .map(n => n.trim().replace(/\D/g, ''))
+    .filter(Boolean)
+}
+
+function eAdmin(telefone: string): boolean {
+  const t = telefone.replace(/\D/g, '')
+  const owner = (process.env.WHATSAPP_NUMERO_HUMANO ?? '').replace(/\D/g, '')
+  if (owner && t.endsWith(owner)) return true
+  return numerosAdmin().some(n => t.endsWith(n))
+}
+
 export async function GET() {
   return NextResponse.json({ ok: true, servico: 'uazapi' })
 }
 
-// POST — recebe eventos do uazapi
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json() as PayloadUazapi
 
-    console.log('[WhatsApp] Webhook recebido — EventType:', payload.EventType, '| fromMe:', payload.message?.fromMe)
+    console.log('[WhatsApp] Webhook — EventType:', payload.EventType, '| fromMe:', payload.message?.fromMe)
 
-    if (payload.EventType !== 'messages') {
-      return NextResponse.json({ ok: true })
-    }
+    if (payload.EventType !== 'messages') return NextResponse.json({ ok: true })
 
     const msg = payload.message
 
     if (msg.fromMe === true)  return NextResponse.json({ ok: true })
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
 
-    if (msg.type !== 'text' || !msg.text?.trim()) {
-      return NextResponse.json({ ok: true })
-    }
-
     const telefone = msg.sender
       .replace('@s.whatsapp.net', '')
       .replace('@c.us', '')
 
-    // Chave de dedup: prefere messageId único; fallback para sender+texto+janela de 10s
+    // Audio — so aceita de admins; tenta transcrever
+    const tipoAudio = msg.type === 'ptt' || msg.type === 'audio'
+    if (tipoAudio) {
+      if (!eAdmin(telefone)) {
+        await enviarMensagem(telefone, 'Por favor envie a mensagem em texto.')
+        return NextResponse.json({ ok: true })
+      }
+
+      if (!msg.mediaUrl) {
+        await enviarMensagem(telefone, 'Nao consegui aceder ao audio. Pode escrever o pedido em texto?')
+        return NextResponse.json({ ok: true })
+      }
+
+      const transcricao = await transcreverAudio(msg.mediaUrl, msg.mimetype)
+      if (!transcricao) {
+        await enviarMensagem(telefone, 'Nao consegui transcrever o audio. Pode escrever o pedido em texto?')
+        return NextResponse.json({ ok: true })
+      }
+
+      console.log('[WhatsApp] Audio transcrito:', telefone, '|', transcricao)
+      await processarComAgente(telefone, transcricao)
+      return NextResponse.json({ ok: true })
+    }
+
+    // Texto
+    if (msg.type !== 'text' || !msg.text?.trim()) {
+      return NextResponse.json({ ok: true })
+    }
+
+    // Dedup atomico
     const chaveDedup = msg.messageId
       ?? `${telefone}:${msg.text.trim()}:${Math.floor(Date.now() / 10_000)}`
 
-    // Dedup atómico via Supabase — funciona em múltiplas instâncias Vercel
     const supabase = criarClienteAdmin()
     const { error: errDedup } = await supabase
       .from('msg_dedup')
       .insert({ hash: chaveDedup })
 
     if (errDedup) {
-      // Código 23505 = unique_violation (duplicado); outros erros deixam passar para não silenciar mensagens
       if (errDedup.code === '23505') {
-        console.log('[WhatsApp] Dedup — duplicado ignorado:', telefone)
+        console.log('[WhatsApp] Dedup — ignorado:', telefone)
         return NextResponse.json({ ok: true })
       }
       console.warn('[WhatsApp] Dedup falhou (continuando):', errDedup.message)
     }
 
-    // Limpa registos com mais de 60s para não crescer indefinidamente
-    supabase
-      .from('msg_dedup')
+    supabase.from('msg_dedup')
       .delete()
       .lt('criado_em', new Date(Date.now() - 60_000).toISOString())
-      .then(() => {/* fire-and-forget */})
+      .then(() => { /* fire-and-forget */ })
 
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
 
     try {
       await processarComAgente(telefone, msg.text.trim())
     } catch (err) {
-      console.error('[WhatsApp] Erro ao processar mensagem:', String(err))
+      console.error('[WhatsApp] Erro:', String(err))
     }
 
     return NextResponse.json({ ok: true })
