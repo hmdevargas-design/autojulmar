@@ -8,16 +8,19 @@ interface MensagemUazapi {
   fromMe:       boolean
   isGroup:      boolean
   sender:       string
+  sender_pn?:   string       // numero real em formato @s.whatsapp.net (quando sender e @lid)
   senderName:   string
   text:         string
-  type:         string       // "text" | "ptt" | "audio" | "image" | ...
+  type:         string       // "text" | "media" | "ptt" | "audio" | ...
+  mediaType?:   string       // "ptt" | "audio" | "image" | ... (quando type="media")
+  messageType?: string       // "AudioMessage" | "ImageMessage" | ...
   wasSentByApi: boolean
   messageId?:   string
-  mediaUrl?:    string       // URL do ficheiro de audio/imagem
-  mimetype?:    string       // ex: "audio/ogg; codecs=opus"
-  caption?:     string       // legenda (audio com texto)
-  phone?:       string       // numero real (quando sender e @lid)
-  number?:      string
+  messageid?:   string
+  mediaUrl?:    string
+  content?:     { URL?: string; mimetype?: string; [key: string]: unknown }
+  mimetype?:    string
+  caption?:     string
   [key: string]: unknown
 }
 
@@ -59,33 +62,36 @@ export async function POST(request: NextRequest) {
     if (msg.fromMe === true)  return NextResponse.json({ ok: true })
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
 
-    // Quando o sender e @lid, tenta extrair o numero real de campos alternativos
+    // Extrai numero real: sender_pn tem o formato @s.whatsapp.net mesmo quando sender e @lid
     const senderRaw = msg.sender ?? ''
-    const isLid     = senderRaw.includes('@lid')
-    if (isLid) {
-      console.log('[WhatsApp] Sender @lid detectado — payload completo:', JSON.stringify(payload))
-    }
-
-    const telefone = (msg.phone ?? msg.number ?? senderRaw)
+    const telefone  = (msg.sender_pn ?? senderRaw)
       .replace('@s.whatsapp.net', '')
       .replace('@c.us', '')
       .replace('@lid', '')
       .replace(/\D/g, '')
 
     // Audio — so aceita de admins; tenta transcrever
+    // uazapi envia type="media" com mediaType="ptt"/"audio" ou messageType="AudioMessage"
     const tipoAudio = msg.type === 'ptt' || msg.type === 'audio'
+      || msg.mediaType === 'ptt' || msg.mediaType === 'audio'
+      || msg.messageType === 'AudioMessage'
+
     if (tipoAudio) {
       if (!eAdmin(telefone)) {
         await enviarMensagem(telefone, 'Por favor envie a mensagem em texto.')
         return NextResponse.json({ ok: true })
       }
 
-      if (!msg.mediaUrl) {
+      // URL do audio pode estar em mediaUrl ou content.URL
+      const audioUrl = msg.mediaUrl ?? msg.content?.URL
+      const mimeType = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
+
+      if (!audioUrl) {
         await enviarMensagem(telefone, 'Nao consegui aceder ao audio. Pode escrever o pedido em texto?')
         return NextResponse.json({ ok: true })
       }
 
-      const transcricao = await transcreverAudio(msg.mediaUrl, msg.mimetype)
+      const transcricao = await transcreverAudio(audioUrl, mimeType)
       if (!transcricao) {
         await enviarMensagem(telefone, 'Nao consegui transcrever o audio. Pode escrever o pedido em texto?')
         return NextResponse.json({ ok: true })
