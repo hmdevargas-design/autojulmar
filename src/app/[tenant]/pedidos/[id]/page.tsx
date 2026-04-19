@@ -8,6 +8,15 @@ interface Props {
   params: Promise<{ tenant: string; id: string }>
 }
 
+interface ClienteRow {
+  id: string
+  nome: string
+  contacto: string
+  email: string | null
+  nif: string | null
+  tipos_cliente: { nome: string } | null
+}
+
 export default async function PaginaDetalhe({ params }: Props) {
   const { tenant: slug, id } = await params
 
@@ -38,9 +47,9 @@ export default async function PaginaDetalhe({ params }: Props) {
 
   if (!pedidoRes.data) notFound()
 
-  const p      = pedidoRes.data
-  const dados  = (p.dados ?? {}) as Record<string, unknown>
-  const cliente = p.clientes as unknown as { id: string; nome: string; contacto: string; email?: string; nif?: string; tipos_cliente?: { nome: string } | null } | null
+  const p       = pedidoRes.data
+  const dados   = (p.dados ?? {}) as Record<string, unknown>
+  const cliente = p.clientes as unknown as ClienteRow | null
   const estado  = p.estados_fluxo as unknown as { id: string; nome: string; cor: string } | null
   const estados = (estadosRes.data ?? []).map(e => ({ id: e.id, nome: e.nome, cor: e.cor }))
 
@@ -48,25 +57,33 @@ export default async function PaginaDetalhe({ params }: Props) {
     ? String(dados.matricula).replace(/([A-Z0-9]{2})([A-Z0-9]{2})([A-Z0-9]+)/, '$1-$2-$3')
     : null
 
-  const tipoTapetes = Array.isArray(dados.tipoTapete) ? (dados.tipoTapete as string[]).join(' + ') : String(dados.tipoTapete ?? '')
-  const extras      = Array.isArray(dados.extras) && (dados.extras as string[]).length > 0
+  const tipoTapetes = Array.isArray(dados.tipoTapete)
+    ? (dados.tipoTapete as string[]).join(' + ')
+    : String(dados.tipoTapete ?? '')
+
+  const extras = Array.isArray(dados.extras) && (dados.extras as string[]).length > 0
     ? (dados.extras as string[]).join(', ')
     : null
+
+  const viatura    = dados.viatura  != null ? String(dados.viatura)  : null
+  const ano        = dados.ano      != null ? String(dados.ano)      : null
+  const maisInfo   = dados.maisInfo != null ? String(dados.maisInfo) : null
+  const quantidade = dados.quantidade != null ? Number(dados.quantidade) : 1
 
   const origemLabel: Record<string, string> = { web: 'Web', whatsapp: 'WhatsApp', api: 'API' }
 
   return (
     <div className="max-w-2xl">
-      {/* Cabeçalho */}
+      {/* Cabecalho */}
       <div className="flex items-center gap-3 mb-6">
         <Link href={`/${slug}/pedidos`} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-          ← Pedidos
+          &larr; Pedidos
         </Link>
         <span className="text-slate-300 dark:text-slate-700">/</span>
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
           Pedido #{p.numero_pedido}
         </h1>
-        {estado && (
+        {estado != null && (
           <div className="ml-auto">
             <SeletorEstado pedidoId={p.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} />
           </div>
@@ -78,25 +95,25 @@ export default async function PaginaDetalhe({ params }: Props) {
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Cliente</h2>
           <div className="grid grid-cols-2 gap-3">
-            <Campo label="Nome" valor={cliente?.nome} />
-            <Campo label="Contacto" valor={cliente?.contacto} />
-            <Campo label="Tipo" valor={cliente?.tipos_cliente?.nome} />
-            {cliente?.email && <Campo label="Email" valor={cliente.email} />}
-            {cliente?.nif   && <Campo label="NIF"   valor={cliente.nif} />}
+            <Campo label="Nome"     valor={cliente?.nome ?? null} />
+            <Campo label="Contacto" valor={cliente?.contacto ?? null} />
+            <Campo label="Tipo"     valor={cliente?.tipos_cliente?.nome ?? null} />
+            {cliente?.email != null ? <Campo label="Email" valor={cliente.email} /> : null}
+            {cliente?.nif   != null ? <Campo label="NIF"   valor={cliente.nif}   /> : null}
           </div>
         </section>
 
         {/* Viatura */}
-        {(matriculaFmt || dados.viatura) && (
+        {(matriculaFmt != null || viatura != null) ? (
           <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
             <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Viatura</h2>
             <div className="grid grid-cols-2 gap-3">
-              {matriculaFmt && <Campo label="Matrícula" valor={matriculaFmt} mono />}
-              {dados.viatura && <Campo label="Viatura"  valor={String(dados.viatura)} />}
-              {dados.ano     && <Campo label="Ano"      valor={String(dados.ano)} />}
+              {matriculaFmt != null ? <Campo label="Matricula" valor={matriculaFmt} mono /> : null}
+              {viatura != null      ? <Campo label="Viatura"   valor={viatura} />           : null}
+              {ano != null          ? <Campo label="Ano"       valor={ano} />               : null}
             </div>
           </section>
-        )}
+        ) : null}
 
         {/* Tapete */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
@@ -104,35 +121,33 @@ export default async function PaginaDetalhe({ params }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Material"    valor={String(dados.material ?? '—')} />
             <Campo label="Tipo tapete" valor={tipoTapetes || '—'} />
-            {extras   && <Campo label="Extras"    valor={extras} />}
-            {(dados.quantidade && Number(dados.quantidade) > 1) && (
-              <Campo label="Quantidade" valor={String(dados.quantidade)} />
-            )}
-            {dados.maisInfo && <Campo label="Notas" valor={String(dados.maisInfo)} className="col-span-2" />}
+            {extras != null   ? <Campo label="Extras"    valor={extras} />                                 : null}
+            {quantidade > 1   ? <Campo label="Quantidade" valor={String(quantidade)} />                   : null}
+            {maisInfo != null ? <Campo label="Notas"     valor={maisInfo} className="col-span-2" />       : null}
           </div>
         </section>
 
-        {/* Preços */}
+        {/* Precos */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Valores</h2>
           <div className="space-y-2 text-sm">
-            <LinhaPoco label="Preço base"   valor={`${Number(p.preco_base).toFixed(2)}€`} />
-            {Number(p.soma_extras) > 0 && (
-              <LinhaPoco label="Extras"     valor={`+${Number(p.soma_extras).toFixed(2)}€`} />
-            )}
-            {Number(p.desconto_tipo_pct) > 0 && (
-              <LinhaPoco label={`Desc. tipo (${p.desconto_tipo_pct}%)`} valor={`-${(Number(p.subtotal) * Number(p.desconto_tipo_pct) / 100).toFixed(2)}€`} />
-            )}
-            {Number(p.desconto_manual) > 0 && (
-              <LinhaPoco label="Desc. manual" valor={`-${Number(p.desconto_manual).toFixed(2)}€`} />
-            )}
+            <LinhaPoco label="Preco base" valor={`${Number(p.preco_base).toFixed(2)}€`} />
+            {Number(p.soma_extras) > 0
+              ? <LinhaPoco label="Extras" valor={`+${Number(p.soma_extras).toFixed(2)}€`} />
+              : null}
+            {Number(p.desconto_tipo_pct) > 0
+              ? <LinhaPoco label={`Desc. tipo (${p.desconto_tipo_pct}%)`} valor={`-${(Number(p.subtotal) * Number(p.desconto_tipo_pct) / 100).toFixed(2)}€`} />
+              : null}
+            {Number(p.desconto_manual) > 0
+              ? <LinhaPoco label="Desc. manual" valor={`-${Number(p.desconto_manual).toFixed(2)}€`} />
+              : null}
             <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2 flex justify-between font-bold text-slate-900 dark:text-slate-100">
               <span>Total</span>
               <span>{Number(p.valor_final).toFixed(2)}€</span>
             </div>
-            {Number(p.sinal) > 0 && (
-              <LinhaPoco label="Sinal pago" valor={`-${Number(p.sinal).toFixed(2)}€`} />
-            )}
+            {Number(p.sinal) > 0
+              ? <LinhaPoco label="Sinal pago" valor={`-${Number(p.sinal).toFixed(2)}€`} />
+              : null}
           </div>
           <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
             <Campo label="Forma pagamento" valor={p.forma_pagamento ?? '—'} />
@@ -140,7 +155,7 @@ export default async function PaginaDetalhe({ params }: Props) {
           </div>
         </section>
 
-        {/* Acções */}
+        {/* Accoes */}
         <div className="flex gap-3">
           <a
             href={`/api/pedidos/${p.id}/pdf`}
@@ -160,10 +175,10 @@ export default async function PaginaDetalhe({ params }: Props) {
 
 function Campo({ label, valor, mono, className }: { label: string; valor?: string | null; mono?: boolean; className?: string }) {
   return (
-    <div className={className}>
+    <div className={className ?? ''}>
       <div className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">{label}</div>
-      <div className={`text-sm font-medium text-slate-900 dark:text-slate-100 ${mono ? 'font-mono' : ''}`}>
-        {valor || '—'}
+      <div className={`text-sm font-medium text-slate-900 dark:text-slate-100${mono ? ' font-mono' : ''}`}>
+        {valor ?? '—'}
       </div>
     </div>
   )
