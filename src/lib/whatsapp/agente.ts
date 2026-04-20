@@ -3,13 +3,13 @@
 // Suporta: delay humano, admin parcial, audio, instrucoes dinamicas, palavra-chave SISTEMA
 
 import Anthropic from '@anthropic-ai/sdk'
-import { enviarMensagem }                            from './sender'
-import { obterSessao, guardarSessao, eliminarSessao } from './session'
-import { resolverTenant }                            from '@/lib/tenant/resolver'
-import { criarClienteAdmin }                         from '@/lib/supabase/admin'
+import { enviarMensagem, enviarImagem }                  from './sender'
+import { obterSessao, guardarSessao, eliminarSessao }    from './session'
+import { resolverTenant }                                from '@/lib/tenant/resolver'
+import { criarClienteAdmin }                             from '@/lib/supabase/admin'
 
 const claude              = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const MAX_HISTORICO       = 10
+const MAX_HISTORICO       = 14
 const TELEFONE_INSTRUCOES = '__instrucoes_agente__'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
@@ -26,17 +26,10 @@ interface DadosPedidoPendente {
   formaPagamento?: string
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers de identidade ─────────────────────────────────────────────────────
 
 function obterNumeroHumano(): string {
   return (process.env.WHATSAPP_NUMERO_HUMANO ?? '').replace(/\D/g, '')
-}
-
-function obterAdminsParcias(): string[] {
-  return (process.env.WHATSAPP_ADMIN_NUMEROS ?? '')
-    .split(',')
-    .map(n => n.trim().replace(/\D/g, ''))
-    .filter(Boolean)
 }
 
 function eOwner(telefone: string): boolean {
@@ -47,10 +40,23 @@ function eOwner(telefone: string): boolean {
 function eAdmin(telefone: string): boolean {
   if (eOwner(telefone)) return true
   const t = telefone.replace(/\D/g, '')
-  return obterAdminsParcias().some(n => t.endsWith(n))
+  return (process.env.WHATSAPP_ADMIN_NUMEROS ?? '')
+    .split(',').map(n => n.trim().replace(/\D/g, '')).filter(Boolean)
+    .some(n => t.endsWith(n))
 }
 
-// Delay aleatorio entre MIN e MAX segundos para parecer mais humano
+// Envia mensagem para o owner E para todos os admins parciais
+async function notificarTodosAdmins(mensagem: string): Promise<void> {
+  const owner  = obterNumeroHumano()
+  const admins = (process.env.WHATSAPP_ADMIN_NUMEROS ?? '')
+    .split(',').map(n => n.trim().replace(/\D/g, '')).filter(Boolean)
+
+  const destinos = [...new Set([owner, ...admins].filter(Boolean))]
+  await Promise.all(destinos.map(n => enviarMensagem(n, mensagem)))
+}
+
+// ─── Delay humano ─────────────────────────────────────────────────────────────
+
 async function delayHumano(): Promise<void> {
   const min = Number(process.env.WHATSAPP_DELAY_MIN ?? 5) * 1000
   const max = Number(process.env.WHATSAPP_DELAY_MAX ?? 10) * 1000
@@ -58,10 +64,29 @@ async function delayHumano(): Promise<void> {
   await new Promise(r => setTimeout(r, ms))
 }
 
-// Envia com delay humano (apenas para respostas a clientes)
 async function enviarComDelay(para: string, texto: string): Promise<void> {
   await delayHumano()
   await enviarMensagem(para, texto)
+}
+
+// ─── Fotos de material ─────────────────────────────────────────────────────────
+
+async function enviarFotosMaterial(telefone: string): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ''
+  const materiais = [
+    { nome: 'ECO PRETO',    arquivo: 'eco-preto'    },
+    { nome: 'GTI PRETO',    arquivo: 'gti-preto'    },
+    { nome: 'GTI CINZA',    arquivo: 'gti-cinza'    },
+    { nome: 'VELUDO PRETO', arquivo: 'veludo-preto' },
+    { nome: 'VELUDO CINZA', arquivo: 'veludo-cinza' },
+    { nome: 'BORRACHA',     arquivo: 'borracha'     },
+    { nome: 'CANELADO',     arquivo: 'canelado'     },
+    { nome: 'CINZA CABRIO', arquivo: 'cinza-cabrio' },
+  ]
+  for (const mat of materiais) {
+    await enviarImagem(telefone, `${baseUrl}/materiais/${mat.arquivo}.jpg`, mat.nome)
+    await new Promise(r => setTimeout(r, 600))
+  }
 }
 
 // ─── Instrucoes persistentes ──────────────────────────────────────────────────
@@ -78,10 +103,10 @@ async function carregarInstrucoes(tenantId: string): Promise<string> {
 }
 
 async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promise<void> {
-  const supabase       = criarClienteAdmin()
+  const supabase        = criarClienteAdmin()
   const instrucaoActual = await carregarInstrucoes(tenantId)
-  const timestamp      = new Date().toLocaleDateString('pt-PT')
-  const actualizado    = instrucaoActual
+  const timestamp       = new Date().toLocaleDateString('pt-PT')
+  const actualizado     = instrucaoActual
     ? `${instrucaoActual}\n- [${timestamp}] ${novaInstrucao}`
     : `- [${timestamp}] ${novaInstrucao}`
 
@@ -94,9 +119,33 @@ async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promis
     )
 }
 
+// ─── Verificar se cliente e VIP ───────────────────────────────────────────────
+
+async function verificarEhVip(tenantId: string, contacto: string): Promise<boolean> {
+  const tiposVip = (process.env.WHATSAPP_TIPOS_VIP ?? '')
+    .split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
+  if (tiposVip.length === 0) return false
+
+  const supabase  = criarClienteAdmin()
+  const contactoN = contacto.replace(/\D/g, '').slice(-9)
+  const { data }  = await supabase
+    .from('clientes')
+    .select('tipos_cliente ( nome )')
+    .eq('tenant_id', tenantId)
+    .eq('contacto', contactoN)
+    .single()
+
+  const tipoNome = (data?.tipos_cliente as unknown as { nome: string } | null)?.nome?.toUpperCase() ?? ''
+  return tiposVip.some(v => tipoNome.includes(v))
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-function buildSystemPrompt(instrucoes: string, tipoUtilizador: 'owner' | 'admin' | 'cliente', nomeOwner: string): string {
+function buildSystemPrompt(
+  instrucoes:      string,
+  tipoUtilizador:  'owner' | 'admin' | 'cliente',
+  nomeOwner:       string
+): string {
   const nomeLoja = process.env.WHATSAPP_LOJA_NOME    ?? 'Autojulmar'
   const morada   = process.env.WHATSAPP_LOJA_MORADA  ?? 'R. Camara de Lobos 7 Loja C, 2670-489 Loures'
   const horario  = process.env.WHATSAPP_LOJA_HORARIO ?? 'segunda a sexta, 9h30-13h e 15h-18h'
@@ -112,7 +161,7 @@ function buildSystemPrompt(instrucoes: string, tipoUtilizador: 'owner' | 'admin'
     ? `\nINSTRUCOES ADICIONAIS DO DONO:\n${instrucoes}\n`
     : ''
 
-  return `${secaoUtilizador}Representas a ${nomeLoja}, loja de tapetes para automovel em Loures, Portugal.
+  return `${secaoUtilizador}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
 
 IDENTIDADE:
 - Nunca digas que es uma IA, robot, assistente virtual, chatbot ou sistema automatico
@@ -127,36 +176,59 @@ SOBRE A LOJA:
 - Nao abrimos aos sabados (excepto ocasionalmente de manha)
 
 MATERIAIS E PRECOS ORIENTATIVOS:
-- Eco Preto: a partir de 24 euros/jogo
-- GTI Preto/Cinza: 33-39 euros/jogo
-- Veludo Preto/Cinza: 39-45 euros/jogo
-- Borracha: 39-65 euros/jogo (depende da viatura)
-- Canelado: 28-39 euros/jogo
+- Eco Preto: a partir de 24€/jogo
+- GTI Preto/Cinza: 33-39€/jogo
+- Veludo Preto/Cinza: 39-45€/jogo
+- Borracha: 39-65€/jogo (depende da viatura)
+- Canelado: 28-39€/jogo
+- Cinza Cabrio: consultar
 - Capas, volantes, reparacoes: orcamento personalizado
-- EXTRAS: molas condutor (+2 euros), reforco plastico, velcro, traseiro inteiro
+- EXTRAS: molas condutor (+2€), reforco plastico, velcro, traseiro inteiro
+
+FLUXO PARA CLIENTES (fora de loja):
+1. Cumprimento e apresentacao breve da loja
+2. Pergunta pela viatura (matricula ou modelo)
+3. Pede o nome do cliente
+4. Pede o contacto telefonico — explica que e "para registo e para envio de confirmacao do pedido"
+5. Apresenta os materiais disponiveis e INCLUI SEMPRE o marcador [ENVIAR_FOTOS_MATERIAL] na mesma mensagem para enviar as fotos automaticamente
+   Exemplo de mensagem: "Temos os seguintes materiais disponiveis. Veja as fotos:\n\n1. ECO PRETO\n2. GTI PRETO\n3. GTI CINZA\n4. VELUDO PRETO\n5. VELUDO CINZA\n6. BORRACHA\n7. CANELADO\n8. CINZA CABRIO\n\n[ENVIAR_FOTOS_MATERIAL]"
+6. Cliente escolhe material → apresenta os tipos de tapete e preco estimado para esse material
+7. Cliente escolhe tipo → confirma o pedido completo com preco total
+8. Cliente diz que quer prosseguir → gera o bloco [PEDIDO_PENDENTE]
 
 CRIACAO DE PEDIDOS:
-Quando receberes dados completos de um pedido, responde APENAS com o bloco:
+Quando tiveres todos os dados e o cliente confirmar que quer prosseguir, responde APENAS com:
 
 [PEDIDO_PENDENTE]
 {"clienteNome":"...","contacto":"...","matricula":"...","viatura":"...","material":"...","tipoTapete":["..."],"extras":[],"quantidade":1,"formaPagamento":"PAGAR NA ENTREGA"}
 
 Campos OBRIGATORIOS: clienteNome, contacto, material, tipoTapete
-Se faltar campo obrigatorio, pede-o de forma natural.
 Tipos de tapete: JOGO, JOGO EM 3, JOGO EM 4, FRENTES, CONDUTOR, TRASEIRO, MALA
 
 REGRAS:
-1. Resposta curta — maximo 3 linhas
+1. Resposta curta — maximo 3 linhas (excepto quando apresentas materiais/precos)
 2. Adapta o tom ao cliente
 3. Sem emojis em nenhuma resposta
 4. Responde sempre em portugues de Portugal
 5. Nunca uses as palavras: IA, inteligencia artificial, bot, chatbot, assistente virtual, sistema automatico${secaoInstrucoes}
 
-QUANDO ESCALAR — responder com [ESCALAR] motivo:
+QUANDO ESCALAR — responder APENAS com [ESCALAR] motivo:
+Usa SEMPRE o formato: [ESCALAR] descricao do pedido do cliente
+
+Escala obrigatoriamente quando:
+- Cliente pede orcamento de MALA (que nao seja MALAS 3D — estas tem preco fixo)
+  Exemplo: [ESCALAR] Orcamento de mala — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
+- Cliente pede orcamento de REPARACAO
+  Exemplo: [ESCALAR] Orcamento reparacao — cliente: [nome] | avaria: [descricao] | contacto: [contacto]
+- Cliente pede orcamento de CAPAS (banco, volante, etc.)
+  Exemplo: [ESCALAR] Orcamento capas — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
+- Cliente pede orcamento de ACESSORIOS ou outros servicos sem preco fixo
+  Exemplo: [ESCALAR] Orcamento acessorio — cliente: [nome] | pedido: [descricao] | contacto: [contacto]
 - Reclamacoes, devolucoes, reembolsos
-- Orcamentos complexos (capas, volantes, restauro)
 - Cliente pede para falar com pessoa
-- Situacao que nao sabes resolver`
+- Situacao que nao consegues resolver
+
+Antes de escalar, recolhe sempre: nome do cliente, contacto e detalhes do pedido.`
 }
 
 // ─── Keyword SISTEMA ──────────────────────────────────────────────────────────
@@ -174,7 +246,6 @@ async function tratarKeywordSistema(tenantId: string, telefone: string): Promise
       `SISTEMA | Lead interessado no sistema ${nomeLoja}. Numero: ${telefone}`)
   }
 
-  // Guarda no historico para continuidade da conversa
   const sessao    = await obterSessao(tenantId, telefone)
   const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
   historico.push({ role: 'user',      content: 'SISTEMA' })
@@ -182,7 +253,141 @@ async function tratarKeywordSistema(tenantId: string, telefone: string): Promise
   await guardarSessao(tenantId, telefone, { step: 'conversando', dados: { historico } })
 }
 
-// ─── Confirmacao de pedido ────────────────────────────────────────────────────
+// ─── Preview para admin/owner (com confirmacao SIM/NAO) ───────────────────────
+
+async function mostrarPreviewAdmin(
+  tenantId: string,
+  telefone: string,
+  dados: DadosPedidoPendente,
+  historico: Msg[]
+): Promise<void> {
+  const matricFmt = dados.matricula
+    ? String(dados.matricula).replace(/([A-Z0-9]{2})([A-Z0-9]{2})([A-Z0-9]+)/, '$1-$2-$3')
+    : null
+
+  const linhas = [
+    `Pedido a criar`,
+    ``,
+    `Cliente: ${dados.clienteNome} | ${dados.contacto}`,
+    matricFmt
+      ? `Viatura: ${matricFmt}${dados.viatura ? ' · ' + dados.viatura : ''}`
+      : dados.viatura ? `Viatura: ${dados.viatura}` : null,
+    `Produto: ${dados.material} · ${dados.tipoTapete.join(' + ')}`,
+    dados.extras?.length ? `Extras: ${dados.extras.join(', ')}` : null,
+    dados.quantidade && dados.quantidade > 1 ? `Qtd: ${dados.quantidade}` : null,
+    `Pagamento: ${dados.formaPagamento ?? 'PAGAR NA ENTREGA'}`,
+    ``,
+    `Responde SIM para criar ou NAO para cancelar.`,
+  ].filter(l => l !== null).join('\n')
+
+  await guardarSessao(tenantId, telefone, {
+    step:  'aguarda_confirmacao',
+    dados: { historico, pedidoPendente: dados },
+  })
+
+  await enviarMensagem(telefone, linhas)
+}
+
+// ─── Processamento de pedido de cliente (sem confirmacao) ─────────────────────
+
+async function processarPedidoCliente(
+  tenantId: string,
+  telefone: string,
+  dados: DadosPedidoPendente,
+  historico: Msg[]
+): Promise<void> {
+  const numeroHumano = obterNumeroHumano()
+  const mbway        = process.env.WHATSAPP_MBWAY ?? ''
+
+  // Lookup do tipo de cliente
+  const supabase  = criarClienteAdmin()
+  const contacto  = String(dados.contacto).replace(/\D/g, '').slice(-9)
+
+  const { data: clienteExistente } = await supabase
+    .from('clientes')
+    .select('tipo_cliente_id, tipos_cliente ( nome )')
+    .eq('tenant_id', tenantId)
+    .eq('contacto', contacto)
+    .single()
+
+  const { data: tipoDefault } = await supabase
+    .from('tipos_cliente')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .limit(1)
+    .single()
+
+  const tipoClienteId = (clienteExistente?.tipo_cliente_id as string | null) ?? tipoDefault?.id ?? ''
+  const tipoNome      = (clienteExistente?.tipos_cliente as unknown as { nome: string } | null)?.nome ?? 'NORMAL'
+
+  // Cria o pedido
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/pedidos`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tenantId,
+      clienteNome:     dados.clienteNome,
+      clienteContacto: contacto,
+      tipoClienteId,
+      estadoId:        '',
+      dados:           { matricula: dados.matricula ?? '', viatura: dados.viatura ?? '' },
+      material:        dados.material,
+      tipoTapete:      dados.tipoTapete,
+      extras:          dados.extras        ?? [],
+      quantidade:      dados.quantidade    ?? 1,
+      descontoManual:  0,
+      sinal:           0,
+      formaPagamento:  dados.formaPagamento ?? 'PAGAR NA ENTREGA',
+      origem:          'whatsapp',
+    }),
+  })
+
+  const resultado = await res.json()
+
+  if (!res.ok) {
+    await enviarComDelay(telefone, 'Ocorreu um erro ao registar o pedido. A nossa equipa contacta em breve.')
+    console.error('[Agente] Erro ao criar pedido de cliente:', resultado)
+    return
+  }
+
+  const valorFinal = Number(resultado.valorFinal)
+  const tapetes    = dados.tipoTapete.join(' + ')
+  const matricFmt  = dados.matricula
+    ? String(dados.matricula).replace(/([A-Z0-9]{2})([A-Z0-9]{2})([A-Z0-9]+)/, '$1-$2-$3')
+    : ''
+
+  // Notifica o owner/admin
+  if (numeroHumano) {
+    const linhasAdmin = [
+      `NOVO PEDIDO DE CLIENTE — #${resultado.numeroPedido}`,
+      `Cliente: ${dados.clienteNome} | ${contacto} | ${tipoNome}`,
+      matricFmt ? `Viatura: ${matricFmt}${dados.viatura ? ' · ' + dados.viatura : ''}` : '',
+      `Produto: ${dados.material} · ${tapetes}`,
+      `Valor: ${valorFinal.toFixed(2)}EUR`,
+    ].filter(Boolean).join('\n')
+    await enviarMensagem(numeroHumano, linhasAdmin)
+  }
+
+  // Avisa o cliente para aguardar
+  await enviarComDelay(telefone,
+    `Pedido registado. Por favor aguarde enquanto a nossa equipa confirma a disponibilidade.`)
+
+  // Mensagem de pagamento para nao-VIP
+  const ehVip = await verificarEhVip(tenantId, contacto)
+  if (!ehVip && mbway) {
+    const metade = (valorFinal / 2).toFixed(2)
+    await new Promise(r => setTimeout(r, 2000))
+    await enviarMensagem(telefone,
+      `O pedido sera processado a partir do pagamento de ${valorFinal.toFixed(2)}EUR (ou 50% = ${metade}EUR) via MBWay: ${mbway}`)
+  }
+
+  // Guarda historico
+  historico.push({ role: 'assistant', content: `Pedido #${resultado.numeroPedido} registado.` })
+  await guardarSessao(tenantId, telefone, { step: 'pedido_criado', dados: { historico } })
+}
+
+// ─── Confirmacao de pedido (fluxo admin/owner com SIM/NAO) ────────────────────
 
 async function tratarConfirmacao(
   tenantId: string,
@@ -194,19 +399,19 @@ async function tratarConfirmacao(
 
   if (['NAO', 'NÃO', 'CANCELAR', 'N', 'NO'].includes(respNorm)) {
     await eliminarSessao(tenantId, telefone)
-    await enviarComDelay(telefone, 'Pedido cancelado.')
+    await enviarMensagem(telefone, 'Pedido cancelado.')
     return
   }
 
   if (!['SIM', 'S', 'CONFIRMAR', 'OK'].includes(respNorm)) {
-    await enviarComDelay(telefone, 'Responde SIM para criar o pedido ou NAO para cancelar.')
+    await enviarMensagem(telefone, 'Responde SIM para criar o pedido ou NAO para cancelar.')
     return
   }
 
   await eliminarSessao(tenantId, telefone)
 
-  const supabase = criarClienteAdmin()
-  const contacto = String(dadosPendentes.contacto).replace(/\D/g, '').slice(-9)
+  const supabase  = criarClienteAdmin()
+  const contacto  = String(dadosPendentes.contacto).replace(/\D/g, '').slice(-9)
 
   const { data: clienteExistente } = await supabase
     .from('clientes')
@@ -250,7 +455,7 @@ async function tratarConfirmacao(
   const resultado = await res.json()
 
   if (!res.ok) {
-    await enviarComDelay(telefone, `Erro ao criar pedido: ${resultado.erro ?? 'tente novamente'}`)
+    await enviarMensagem(telefone, `Erro ao criar pedido: ${resultado.erro ?? 'tente novamente'}`)
     return
   }
 
@@ -266,42 +471,7 @@ async function tratarConfirmacao(
     `${dadosPendentes.material} · ${tapetes} | ${Number(resultado.valorFinal).toFixed(2)}EUR`,
   ].filter(Boolean).join('\n')
 
-  await enviarComDelay(telefone, confirmacao)
-}
-
-// ─── Preview do pedido ────────────────────────────────────────────────────────
-
-async function mostrarPreviewPedido(
-  tenantId: string,
-  telefone: string,
-  dados: DadosPedidoPendente,
-  historico: Msg[]
-): Promise<void> {
-  const matricFmt = dados.matricula
-    ? String(dados.matricula).replace(/([A-Z0-9]{2})([A-Z0-9]{2})([A-Z0-9]+)/, '$1-$2-$3')
-    : null
-
-  const linhas = [
-    `Pedido a criar`,
-    ``,
-    `Cliente: ${dados.clienteNome} | ${dados.contacto}`,
-    matricFmt
-      ? `Viatura: ${matricFmt}${dados.viatura ? ' · ' + dados.viatura : ''}`
-      : dados.viatura ? `Viatura: ${dados.viatura}` : null,
-    `Produto: ${dados.material} · ${dados.tipoTapete.join(' + ')}`,
-    dados.extras?.length ? `Extras: ${dados.extras.join(', ')}` : null,
-    dados.quantidade && dados.quantidade > 1 ? `Qtd: ${dados.quantidade}` : null,
-    `Pagamento: ${dados.formaPagamento ?? 'PAGAR NA ENTREGA'}`,
-    ``,
-    `Responde SIM para criar ou NAO para cancelar.`,
-  ].filter(l => l !== null).join('\n')
-
-  await guardarSessao(tenantId, telefone, {
-    step:  'aguarda_confirmacao',
-    dados: { historico, pedidoPendente: dados },
-  })
-
-  await enviarComDelay(telefone, linhas)
+  await enviarMensagem(telefone, confirmacao)
 }
 
 // ─── Entrada principal ────────────────────────────────────────────────────────
@@ -318,7 +488,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   const tenant = await resolverTenant(tenantSlug)
   if (!tenant)  { console.error('[Agente] Tenant nao encontrado:', tenantSlug); return }
 
-  // ── Keyword SISTEMA (qualquer utilizador) ────────────────────────────────
+  // ── Keyword SISTEMA ──────────────────────────────────────────────────────
   if (mensagem.trim().toUpperCase() === 'SISTEMA') {
     await tratarKeywordSistema(tenant.id, telefone)
     return
@@ -354,7 +524,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   const sessao = await obterSessao(tenant.id, telefone)
 
-  // ── Aguarda confirmacao de pedido ────────────────────────────────────────
+  // ── Aguarda confirmacao de pedido (fluxo admin/owner) ────────────────────
   if (sessao?.step === 'aguarda_confirmacao') {
     const pendente = sessao.dados?.pedidoPendente as DadosPedidoPendente | undefined
     if (pendente) {
@@ -376,7 +546,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   try {
     const res = await claude.messages.create({
       model:      'claude-sonnet-4-6',
-      max_tokens: 400,
+      max_tokens: 500,
       system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner),
       messages:   historico,
     })
@@ -397,23 +567,46 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     try {
       const dados = JSON.parse(jsonStr) as DadosPedidoPendente
       historico.push({ role: 'assistant', content: resposta })
-      await mostrarPreviewPedido(tenant.id, telefone, dados, historico)
+
+      if (isOwner || isAdmin) {
+        // Admin/owner: mostra preview e pede confirmacao
+        await mostrarPreviewAdmin(tenant.id, telefone, dados, historico)
+      } else {
+        // Cliente: cria pedido, notifica admin, envia mensagem de pagamento
+        await processarPedidoCliente(tenant.id, telefone, dados, historico)
+      }
     } catch {
-      console.error('[Agente] JSON invalido:', jsonStr)
+      console.error('[Agente] JSON invalido no PEDIDO_PENDENTE:', jsonStr)
       await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
-      await enviarComDelay(telefone, 'Nao consegui processar o pedido. Pode repetir os dados?')
+      const msgErro = isOwner || isAdmin
+        ? 'Nao consegui processar o pedido. Pode repetir os dados?'
+        : 'Ocorreu um problema. A nossa equipa contacta em breve.'
+      if (isOwner || isAdmin) await enviarMensagem(telefone, msgErro)
+      else await enviarComDelay(telefone, msgErro)
     }
+    return
+  }
+
+  // ── Envio de fotos de material ───────────────────────────────────────────
+  if (resposta.includes('[ENVIAR_FOTOS_MATERIAL]')) {
+    const textoLimpo = resposta.replace('[ENVIAR_FOTOS_MATERIAL]', '').trim()
+    historico.push({ role: 'assistant', content: textoLimpo })
+    await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
+
+    if (isOwner || isAdmin) {
+      await enviarMensagem(telefone, textoLimpo)
+    } else {
+      await enviarComDelay(telefone, textoLimpo)
+    }
+    await enviarFotosMaterial(telefone)
     return
   }
 
   // ── Escalamento ──────────────────────────────────────────────────────────
   if (resposta.startsWith('[ESCALAR]')) {
     const motivo = resposta.replace('[ESCALAR]', '').trim()
-    if (numeroHumano) {
-      await enviarMensagem(numeroHumano,
-        `ESCALAMENTO\nCliente: ${telefone}\nMotivo: ${motivo}\nMensagem: "${mensagem}"`)
-    }
-    await enviarComDelay(telefone, 'Vou passar o seu contacto a nossa equipa, que responde em breve.')
+    await notificarTodosAdmins(`ORCAMENTO/ESCALAMENTO\nCliente: ${telefone}\n${motivo}`)
+    await enviarComDelay(telefone, 'Vou passar o seu pedido a nossa equipa, que entra em contacto para confirmar o orcamento.')
     historico.push({ role: 'assistant', content: resposta })
     await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
     return
@@ -423,7 +616,6 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   historico.push({ role: 'assistant', content: resposta })
   await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
 
-  // Owner e admins recebem resposta imediata; clientes com delay humano
   if (isOwner || isAdmin) {
     await enviarMensagem(telefone, resposta)
   } else {

@@ -16,7 +16,8 @@ interface MensagemUazapi {
   messageType?: string       // "AudioMessage" | "ImageMessage" | ...
   wasSentByApi: boolean
   messageId?:   string
-  messageid?:   string
+  messageid?:   string       // ID da mensagem (uazapi lowercase)
+  chatid?:      string       // JID do chat (ex: 351916958780@s.whatsapp.net)
   mediaUrl?:    string
   content?:     { URL?: string; mimetype?: string; [key: string]: unknown }
   mimetype?:    string
@@ -77,21 +78,27 @@ export async function POST(request: NextRequest) {
       || msg.messageType === 'AudioMessage'
 
     if (tipoAudio) {
+      // Dedup para audio (usa messageid)
+      const audioDedupKey = `audio:${msg.messageid ?? msg.messageId ?? ''}`
+      if (audioDedupKey !== 'audio:') {
+        const supabaseDedup = criarClienteAdmin()
+        const { error: errDedup } = await supabaseDedup.from('msg_dedup').insert({ hash: audioDedupKey })
+        if (errDedup?.code === '23505') {
+          console.log('[WhatsApp] Dedup audio — ignorado:', telefone)
+          return NextResponse.json({ ok: true })
+        }
+      }
+
       if (!eAdmin(telefone)) {
         await enviarMensagem(telefone, 'Por favor envie a mensagem em texto.')
         return NextResponse.json({ ok: true })
       }
 
-      // URL do audio pode estar em mediaUrl ou content.URL
-      const audioUrl = msg.mediaUrl ?? msg.content?.URL
       const mimeType = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
+      const messageId = msg.messageid ?? msg.messageId
+      const chatId    = msg.chatid ?? (msg.sender_pn ?? msg.sender)
 
-      if (!audioUrl) {
-        await enviarMensagem(telefone, 'Nao consegui aceder ao audio. Pode escrever o pedido em texto?')
-        return NextResponse.json({ ok: true })
-      }
-
-      const transcricao = await transcreverAudio(audioUrl, mimeType)
+      const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType })
       if (!transcricao) {
         await enviarMensagem(telefone, 'Nao consegui transcrever o audio. Pode escrever o pedido em texto?')
         return NextResponse.json({ ok: true })
