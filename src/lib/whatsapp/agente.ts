@@ -120,7 +120,7 @@ async function carregarInstrucoes(tenantId: string): Promise<string> {
   return (data?.estado as { instrucoes?: string } | null)?.instrucoes ?? ''
 }
 
-async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promise<void> {
+async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promise<boolean> {
   const supabase        = criarClienteAdmin()
   const instrucaoActual = await carregarInstrucoes(tenantId)
   const timestamp       = new Date().toLocaleDateString('pt-PT')
@@ -129,12 +129,18 @@ async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promis
     : `- [${timestamp}] ${novaInstrucao}`
 
   const expira_em = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-  await supabase
+  const { error } = await supabase
     .from('sessoes_whatsapp')
     .upsert(
       { tenant_id: tenantId, telefone: TELEFONE_INSTRUCOES, estado: { instrucoes: actualizado }, expira_em },
       { onConflict: 'tenant_id,telefone' }
     )
+
+  if (error) {
+    console.error('[Agente] Erro ao guardar instrucao:', error.message, error.code)
+    return false
+  }
+  return true
 }
 
 // ─── Verificar se cliente e VIP ───────────────────────────────────────────────
@@ -520,8 +526,8 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
     if (/^instruc[aã]o\s+/i.test(cmd)) {
       const texto = cmd.replace(/^instruc[aã]o\s+/i, '').trim()
-      await guardarInstrucao(tenant.id, texto)
-      await enviarMensagem(telefone, `Instrucao guardada: "${texto}"`)
+      const ok = await guardarInstrucao(tenant.id, texto)
+      await enviarMensagem(telefone, ok ? `Instrucao guardada: "${texto}"` : 'Erro ao guardar instrucao. Tente novamente.')
       return
     }
     if (/^ver instruc/i.test(cmd)) {
