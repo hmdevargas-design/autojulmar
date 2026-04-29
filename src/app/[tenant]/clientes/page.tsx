@@ -6,12 +6,12 @@ import EditarCliente from './EditarCliente'
 
 interface Props {
   params: Promise<{ tenant: string }>
-  searchParams: Promise<{ q?: string; arquivados?: string }>
+  searchParams: Promise<{ q?: string; arquivados?: string; tipo?: string }>
 }
 
 export default async function PaginaClientes({ params, searchParams }: Props) {
   const { tenant: slug } = await params
-  const { q, arquivados: arquivadosParam } = await searchParams
+  const { q, arquivados: arquivadosParam, tipo: tipoFiltroId } = await searchParams
   const mostrarArquivados = arquivadosParam === '1'
 
   const tenant = await resolverTenant(slug)
@@ -33,6 +33,11 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
         .limit(50)
       if (q?.trim()) {
         query = query.or(`nome.ilike.%${q.trim()}%,contacto.ilike.%${q.trim()}%`)
+      }
+      if (tipoFiltroId) {
+        query = tipoFiltroId === 'sem-tipo'
+          ? query.is('tipo_cliente_id', null)
+          : query.eq('tipo_cliente_id', tipoFiltroId)
       }
       return query
     })(),
@@ -70,7 +75,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <PesquisaClientes q={q ?? ''} mostrarArquivados={mostrarArquivados} totalArquivados={totalArquivados} />
+      <PesquisaClientes q={q ?? ''} mostrarArquivados={mostrarArquivados} totalArquivados={totalArquivados} tipos={tipos} tipoFiltroId={tipoFiltroId ?? ''} />
 
       {/* Cards mobile */}
       <div className="md:hidden space-y-2">

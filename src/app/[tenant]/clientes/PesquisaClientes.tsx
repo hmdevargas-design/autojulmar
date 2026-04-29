@@ -3,36 +3,48 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
 
+interface TipoCliente {
+  id: string
+  nome: string
+}
+
 interface Props {
   q: string
   mostrarArquivados: boolean
   totalArquivados: number
+  tipos: TipoCliente[]
+  tipoFiltroId: string
 }
 
-export default function PesquisaClientes({ q, mostrarArquivados, totalArquivados }: Props) {
+export default function PesquisaClientes({ q, mostrarArquivados, totalArquivados, tipos, tipoFiltroId }: Props) {
   const router   = useRouter()
   const pathname = usePathname()
   const [valor, setValor] = useState(q)
 
-  function navegar(novoQ: string, novoArquivados: boolean) {
+  function navegar(novoQ: string, novoArquivados: boolean, novoTipo: string) {
     const params = new URLSearchParams()
     if (novoQ.trim()) params.set('q', novoQ.trim())
     if (novoArquivados) params.set('arquivados', '1')
+    if (novoTipo) params.set('tipo', novoTipo)
     router.push(`${pathname}?${params.toString()}`)
   }
 
   function pesquisar(e: React.FormEvent) {
     e.preventDefault()
-    navegar(valor, mostrarArquivados)
+    navegar(valor, mostrarArquivados, tipoFiltroId)
   }
 
   function limpar() {
     setValor('')
-    navegar('', mostrarArquivados)
+    navegar('', mostrarArquivados, tipoFiltroId)
   }
 
   function toggleArquivados() {
-    navegar(valor, !mostrarArquivados)
+    navegar(valor, !mostrarArquivados, tipoFiltroId)
+  }
+
+  function alterarTipo(novoTipo: string) {
+    navegar(valor, mostrarArquivados, novoTipo)
   }
 
   return (
@@ -61,8 +73,49 @@ export default function PesquisaClientes({ q, mostrarArquivados, totalArquivados
         )}
       </form>
 
-      {totalArquivados > 0 && (
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {tipos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => alterarTipo('')}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                !tipoFiltroId
+                  ? 'bg-indigo-100 dark:bg-indigo-950 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 font-medium'
+                  : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              Todos
+            </button>
+            {tipos.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => alterarTipo(tipoFiltroId === t.id ? '' : t.id)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  tipoFiltroId === t.id
+                    ? 'bg-indigo-100 dark:bg-indigo-950 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 font-medium'
+                    : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {t.nome}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => alterarTipo(tipoFiltroId === 'sem-tipo' ? '' : 'sem-tipo')}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                tipoFiltroId === 'sem-tipo'
+                  ? 'bg-slate-200 dark:bg-slate-700 border-slate-400 dark:border-slate-500 text-slate-700 dark:text-slate-300 font-medium'
+                  : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              Sem tipo
+            </button>
+          </div>
+        )}
+
+        {totalArquivados > 0 && (
           <button
             type="button"
             onClick={toggleArquivados}
@@ -74,8 +127,8 @@ export default function PesquisaClientes({ q, mostrarArquivados, totalArquivados
           >
             {mostrarArquivados ? '✓ ' : ''}Arquivados ({totalArquivados})
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

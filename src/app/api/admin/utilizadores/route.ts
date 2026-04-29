@@ -10,6 +10,12 @@ const schemaPost = z.object({
   role:     z.enum(['admin', 'operador']).default('operador'),
 })
 
+const schemaPatch = z.object({
+  userId:   z.string().min(1),
+  tenantId: z.string().min(1),
+  password: z.string().min(6),
+})
+
 const schemaDelete = z.object({
   userId:   z.string().min(1),
   tenantId: z.string().min(1),
@@ -72,6 +78,34 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ id: user.id, email: user.email, nome: input.nome, role: input.role })
+  } catch (err) {
+    if (err instanceof z.ZodError) return NextResponse.json({ erro: 'Dados inválidos' }, { status: 400 })
+    return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body  = await request.json()
+    const input = schemaPatch.parse(body)
+    const supabase = criarClienteAdmin()
+
+    // Verifica que pertence ao tenant
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', input.userId)
+      .eq('tenant_id', input.tenantId)
+      .single()
+
+    if (!profile) return NextResponse.json({ erro: 'Utilizador não encontrado' }, { status: 404 })
+
+    const { error } = await supabase.auth.admin.updateUserById(input.userId, {
+      password: input.password,
+    })
+
+    if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ erro: 'Dados inválidos' }, { status: 400 })
     return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })

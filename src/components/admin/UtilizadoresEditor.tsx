@@ -10,6 +10,11 @@ interface Utilizador {
   criadoEm: string
 }
 
+interface AlterarPassword {
+  userId: string
+  nome: string
+}
+
 interface Props {
   tenantId: string
 }
@@ -20,6 +25,9 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
   const [mostrarForm, setMostrarForm]   = useState(false)
   const [apagando, setApagando]         = useState<string | null>(null)
   const [erro, setErro]                 = useState('')
+  const [alterarPwd, setAlterarPwd]     = useState<AlterarPassword | null>(null)
+  const [novaPwd, setNovaPwd]           = useState('')
+  const [salvandoPwd, setSalvandoPwd]   = useState(false)
 
   // Form novo utilizador
   const [nome,     setNome]     = useState('')
@@ -56,6 +64,22 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
     setNome(''); setEmail(''); setPassword(''); setRole('operador')
     setMostrarForm(false)
     setCriando(false)
+  }
+
+  async function salvarPassword() {
+    if (!alterarPwd || novaPwd.length < 6) return
+    setSalvandoPwd(true)
+    setErro('')
+    const res = await fetch('/api/admin/utilizadores', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: alterarPwd.userId, tenantId, password: novaPwd }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.erro ?? 'Erro ao alterar'); setSalvandoPwd(false); return }
+    setAlterarPwd(null)
+    setNovaPwd('')
+    setSalvandoPwd(false)
   }
 
   async function apagar(id: string, nomeUtil: string) {
@@ -107,12 +131,20 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                   {apagando === u.id ? (
                     <span className="text-xs text-slate-400">a remover…</span>
                   ) : (
-                    <button
-                      onClick={() => apagar(u.id, u.nome)}
-                      className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
-                    >
-                      remover
-                    </button>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => { setAlterarPwd({ userId: u.id, nome: u.nome }); setNovaPwd(''); setErro('') }}
+                        className="text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      >
+                        password
+                      </button>
+                      <button
+                        onClick={() => apagar(u.id, u.nome)}
+                        className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
+                      >
+                        remover
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -138,6 +170,45 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
       </div>
 
       {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+
+      {/* Modal alterar password */}
+      {alterarPwd && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAlterarPwd(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Alterar password — {alterarPwd.nome}
+            </h3>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Nova password</label>
+              <input
+                type="password"
+                value={novaPwd}
+                onChange={e => setNovaPwd(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') salvarPassword() }}
+                placeholder="Mínimo 6 caracteres"
+                autoFocus
+                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            {erro && <p className="text-xs text-red-600 dark:text-red-400">{erro}</p>}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setAlterarPwd(null); setErro('') }}
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarPassword}
+                disabled={salvandoPwd || novaPwd.length < 6}
+                className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium"
+              >
+                {salvandoPwd ? 'A guardar…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mostrarForm && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
