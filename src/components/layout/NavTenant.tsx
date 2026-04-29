@@ -30,6 +30,15 @@ const links = (slug: string) => [
     ),
   },
   {
+    href:  `/${slug}/producao`,
+    label: 'Produção',
+    icon:  (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+      </svg>
+    ),
+  },
+  {
     href:  `/${slug}/clientes`,
     label: 'Clientes',
     icon:  (
@@ -108,7 +117,7 @@ export default function NavTenant({ tenant }: Props) {
 
       {/* ── Bottom nav — mobile only ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           {navLinks.map((link) => {
             const activo = pathname.startsWith(link.href)
             return (
