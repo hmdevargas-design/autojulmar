@@ -82,11 +82,29 @@ async function enviarFotosMaterial(telefone: string): Promise<void> {
     { nome: 'BORRACHA',     arquivo: 'borracha'     },
     { nome: 'CANELADO',     arquivo: 'canelado'     },
     { nome: 'CINZA CABRIO', arquivo: 'cinza-cabrio' },
+    { nome: 'TAPETES 3D',   arquivo: 'tapetes-3d'   },
+    { nome: 'MALAS 3D',     arquivo: 'malas-3d'     },
   ]
   for (const mat of materiais) {
     await enviarImagem(telefone, `${baseUrl}/materiais/${mat.arquivo}.jpg`, mat.nome)
     await new Promise(r => setTimeout(r, 600))
   }
+}
+
+// ─── Takeover (pausa/retoma o bot para um numero) ────────────────────────────
+
+export async function pausarBot(tenantId: string, telefone: string): Promise<void> {
+  const supabase  = criarClienteAdmin()
+  const sessao    = await obterSessao(tenantId, telefone)
+  const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
+  await guardarSessao(tenantId, telefone, { step: 'takeover', dados: { historico } })
+}
+
+async function retomarBot(tenantId: string, telefone: string): Promise<void> {
+  const supabase  = criarClienteAdmin()
+  const sessao    = await obterSessao(tenantId, telefone)
+  const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
+  await guardarSessao(tenantId, telefone, { step: 'conversando', dados: { historico } })
 }
 
 // ─── Instrucoes persistentes ──────────────────────────────────────────────────
@@ -517,12 +535,38 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       return
     }
 
+    // !pausar NUMERO — pausa o bot manualmente para um numero
+    if (/^pausar\s+/i.test(cmd)) {
+      const num = cmd.replace(/^pausar\s+/i, '').trim().replace(/\D/g, '')
+      if (num) {
+        await pausarBot(tenant.id, num)
+        await enviarMensagem(telefone, `Bot pausado para ${num}.`)
+      }
+      return
+    }
+
+    // !retomar NUMERO — retoma o bot para um numero apos takeover
+    if (/^retomar\s+/i.test(cmd)) {
+      const num = cmd.replace(/^retomar\s+/i, '').trim().replace(/\D/g, '')
+      if (num) {
+        await retomarBot(tenant.id, num)
+        await enviarMensagem(telefone, `Bot retomado para ${num}.`)
+      }
+      return
+    }
+
     await enviarMensagem(telefone,
-      'Comandos:\n!instrucao [texto] — guardar instrucao\n!ver instrucoes — listar\n!limpar instrucoes — apagar tudo')
+      'Comandos:\n!instrucao [texto]\n!ver instrucoes\n!limpar instrucoes\n!pausar [numero]\n!retomar [numero]')
     return
   }
 
   const sessao = await obterSessao(tenant.id, telefone)
+
+  // ── Takeover activo — bot em silencio para este numero ───────────────────
+  if (sessao?.step === 'takeover') {
+    console.log('[Agente] Takeover activo — ignorando mensagem de:', telefone)
+    return
+  }
 
   // ── Aguarda confirmacao de pedido (fluxo admin/owner) ────────────────────
   if (sessao?.step === 'aguarda_confirmacao') {

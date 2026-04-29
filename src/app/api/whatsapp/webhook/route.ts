@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { processarComAgente } from '@/lib/whatsapp/agente'
-import { enviarMensagem }     from '@/lib/whatsapp/sender'
-import { criarClienteAdmin }  from '@/lib/supabase/admin'
-import { transcreverAudio }   from '@/lib/whatsapp/transcricao'
+import { processarComAgente, pausarBot } from '@/lib/whatsapp/agente'
+import { enviarMensagem }                from '@/lib/whatsapp/sender'
+import { criarClienteAdmin }             from '@/lib/supabase/admin'
+import { transcreverAudio }              from '@/lib/whatsapp/transcricao'
+import { resolverTenant }                from '@/lib/tenant/resolver'
 
 interface MensagemUazapi {
   fromMe:       boolean
@@ -60,8 +61,27 @@ export async function POST(request: NextRequest) {
 
     const msg = payload.message
 
-    if (msg.fromMe === true)  return NextResponse.json({ ok: true })
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
+
+    // Takeover: admin enviou mensagem manual (fromMe=true, nao via API)
+    // Pausa o bot para o cliente desse chat
+    if (msg.fromMe === true) {
+      if (msg.wasSentByApi === false && msg.type === 'text') {
+        const chatJid    = msg.chatid ?? ''
+        const clienteTel = chatJid.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+        if (clienteTel && !eAdmin(clienteTel)) {
+          const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
+          if (tenantSlug) {
+            const tenant = await resolverTenant(tenantSlug)
+            if (tenant) {
+              await pausarBot(tenant.id, clienteTel)
+              console.log('[WhatsApp] Takeover — bot pausado para:', clienteTel)
+            }
+          }
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
 
     // Extrai numero real: sender_pn tem o formato @s.whatsapp.net mesmo quando sender e @lid
     const senderRaw = msg.sender ?? ''
@@ -70,6 +90,14 @@ export async function POST(request: NextRequest) {
       .replace('@c.us', '')
       .replace('@lid', '')
       .replace(/\D/g, '')
+
+    // Modo de teste: so responde a numeros autorizados quando WHATSAPP_NUMEROS_TESTE esta definido
+    const numerosTeste = (process.env.WHATSAPP_NUMEROS_TESTE ?? '')
+      .split(',').map(n => n.trim().replace(/\D/g, '')).filter(Boolean)
+    if (numerosTeste.length > 0 && !numerosTeste.some(n => telefone.endsWith(n))) {
+      console.log('[WhatsApp] Modo teste — numero ignorado:', telefone)
+      return NextResponse.json({ ok: true })
+    }
 
     // Audio — so aceita de admins; tenta transcrever
     // uazapi envia type="media" com mediaType="ptt"/"audio" ou messageType="AudioMessage"

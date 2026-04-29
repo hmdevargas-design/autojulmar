@@ -34,6 +34,8 @@ export interface Pedido {
   criadoPor: string          // userId
   criadoEm: string
   atualizadoEm: string
+  estadoProducao: EstadoProducao
+  historicoProducao: HistoricoProducaoItem[]
 }
 
 export type FormaPagamento =
@@ -43,6 +45,20 @@ export type FormaPagamento =
   | 'TRANSFERENCIA'
 
 export type OrigemPedido = 'web' | 'whatsapp' | 'api'
+
+export type EstadoProducao =
+  | 'corte'
+  | 'acabamento'
+  | 'separacao'
+  | 'avisar'
+  | 'avisado'
+  | 'entregue'
+
+export interface HistoricoProducaoItem {
+  estado: EstadoProducao
+  timestamp: string
+  userId?: string
+}
 
 // Input para criar pedido
 export interface CriarPedidoInput {
