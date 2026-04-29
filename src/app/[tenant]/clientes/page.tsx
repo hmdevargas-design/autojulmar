@@ -6,12 +6,13 @@ import EditarCliente from './EditarCliente'
 
 interface Props {
   params: Promise<{ tenant: string }>
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; arquivados?: string }>
 }
 
 export default async function PaginaClientes({ params, searchParams }: Props) {
   const { tenant: slug } = await params
-  const { q } = await searchParams
+  const { q, arquivados: arquivadosParam } = await searchParams
+  const mostrarArquivados = arquivadosParam === '1'
 
   const tenant = await resolverTenant(slug)
   if (!tenant) notFound()
@@ -44,7 +45,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
 
   const tipos = (tiposRes.data ?? []).map(t => ({ id: t.id, nome: t.nome }))
 
-  const clientes = (clientesRes.data ?? []).map(c => ({
+  const todosClientes = (clientesRes.data ?? []).map(c => ({
     id:            c.id,
     nome:          c.nome,
     contacto:      c.contacto,
@@ -54,16 +55,22 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
     numPedidos:    Array.isArray(c.pedidos) ? c.pedidos.length : 0,
   }))
 
+  const isArquivado = (tipoNome: string) => tipoNome.toUpperCase() === 'ARQUIVADO'
+  const totalArquivados = todosClientes.filter(c => isArquivado(c.tipoNome)).length
+  const clientes = mostrarArquivados
+    ? todosClientes
+    : todosClientes.filter(c => !isArquivado(c.tipoNome))
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{clientesRes.count ?? 0} registos</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{clientes.length} registos</p>
         </div>
       </div>
 
-      <PesquisaClientes q={q ?? ''} />
+      <PesquisaClientes q={q ?? ''} mostrarArquivados={mostrarArquivados} totalArquivados={totalArquivados} />
 
       {/* Cards mobile */}
       <div className="md:hidden space-y-2">
@@ -75,7 +82,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
                 <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{c.contacto}</div>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isArquivado(c.tipoNome) ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 line-through' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{c.tipoNome}</span>
                 <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">{c.numPedidos} pedidos</div>
               </div>
             </div>
@@ -120,7 +127,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
                 <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{c.nome}</td>
                 <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{c.contacto}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">{c.tipoNome}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${isArquivado(c.tipoNome) ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 line-through' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{c.tipoNome}</span>
                 </td>
                 <td className="px-4 py-3 text-right text-slate-500 dark:text-slate-400">{c.numPedidos}</td>
                 <td className="px-4 py-3 text-right">
