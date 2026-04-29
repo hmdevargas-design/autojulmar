@@ -14,7 +14,7 @@ export async function obterSessao(tenantId: string, telefone: string): Promise<E
   const supabase = criarClienteAdmin()
   const { data } = await supabase
     .from('sessoes_whatsapp')
-    .select('estado, expira_em')
+    .select('estado_conversa, expira_em')
     .eq('tenant_id', tenantId)
     .eq('telefone', telefone)
     .single()
@@ -27,7 +27,7 @@ export async function obterSessao(tenantId: string, telefone: string): Promise<E
     return null
   }
 
-  return data.estado as EstadoSessao
+  return data.estado_conversa as EstadoSessao
 }
 
 export async function guardarSessao(tenantId: string, telefone: string, estado: EstadoSessao): Promise<void> {
@@ -37,7 +37,7 @@ export async function guardarSessao(tenantId: string, telefone: string, estado: 
   await supabase
     .from('sessoes_whatsapp')
     .upsert(
-      { tenant_id: tenantId, telefone, estado, expira_em },
+      { tenant_id: tenantId, telefone, estado_conversa: estado, expira_em },
       { onConflict: 'tenant_id,telefone' }
     )
 }

@@ -113,11 +113,11 @@ async function carregarInstrucoes(tenantId: string): Promise<string> {
   const supabase = criarClienteAdmin()
   const { data } = await supabase
     .from('sessoes_whatsapp')
-    .select('estado')
+    .select('estado_conversa')
     .eq('tenant_id', tenantId)
     .eq('telefone', TELEFONE_INSTRUCOES)
     .single()
-  return (data?.estado as { instrucoes?: string } | null)?.instrucoes ?? ''
+  return (data?.estado_conversa as { instrucoes?: string } | null)?.instrucoes ?? ''
 }
 
 async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promise<boolean> {
@@ -132,7 +132,7 @@ async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promis
   const { error } = await supabase
     .from('sessoes_whatsapp')
     .upsert(
-      { tenant_id: tenantId, telefone: TELEFONE_INSTRUCOES, estado: { instrucoes: actualizado }, expira_em },
+      { tenant_id: tenantId, telefone: TELEFONE_INSTRUCOES, estado_conversa: { instrucoes: actualizado }, expira_em },
       { onConflict: 'tenant_id,telefone' }
     )
 
