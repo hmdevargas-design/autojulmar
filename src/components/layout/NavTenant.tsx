@@ -3,6 +3,7 @@ import type { Tenant } from '@/core/entities'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/theme/ThemeToggle'
+import BotaoLogout from '@/components/auth/BotaoLogout'
 
 interface Props {
   tenant: Tenant
@@ -103,6 +104,7 @@ export default function NavTenant({ tenant }: Props) {
             {/* Direita: toggle + botão novo pedido */}
             <div className="flex items-center gap-2">
               <ThemeToggle />
+              <BotaoLogout />
               <Link
                 href={`/${tenant.slug}/pedidos/novo`}
                 className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
