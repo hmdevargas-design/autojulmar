@@ -1,6 +1,7 @@
 import { resolverTenant } from '@/lib/tenant/resolver'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import PesquisaClientes from './PesquisaClientes'
 import EditarCliente from './EditarCliente'
 
@@ -82,10 +83,10 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
         {clientes.map((c) => (
           <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <Link href={`/${slug}/clientes/${c.id}`} className="min-w-0 flex-1 hover:opacity-80 transition-opacity">
                 <div className="font-medium text-slate-900 dark:text-slate-100">{c.nome}</div>
                 <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{c.contacto}</div>
-              </div>
+              </Link>
               <div className="text-right shrink-0">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${isArquivado(c.tipoNome) ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 line-through' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{c.tipoNome}</span>
                 <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">{c.numPedidos} pedidos</div>
@@ -129,7 +130,11 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
                     : <span className="text-slate-300 dark:text-slate-600">—</span>
                   }
                 </td>
-                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{c.nome}</td>
+                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                  <Link href={`/${slug}/clientes/${c.id}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                    {c.nome}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{c.contacto}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${isArquivado(c.tipoNome) ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 line-through' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{c.tipoNome}</span>
