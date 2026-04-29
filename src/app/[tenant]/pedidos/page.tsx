@@ -12,10 +12,28 @@ interface Props {
 }
 
 const CAMPOS_PEDIDO = `
-  id, numero_pedido, valor_final, forma_pagamento, criado_em, dados,
+  id, numero_pedido, valor_final, forma_pagamento, criado_em, dados, estado_producao,
   clientes ( nome, contacto ),
   estados_fluxo ( id, nome, cor )
 `
+
+const LABEL_PRODUCAO: Record<string, string> = {
+  corte:      'Corte',
+  acabamento: 'Acabamento',
+  separacao:  'Separação',
+  avisar:     'Avisar',
+  avisado:    'Avisado',
+  entregue:   'Entregue',
+}
+
+const COR_PRODUCAO: Record<string, string> = {
+  corte:      '#EF9F27',
+  acabamento: '#BA7517',
+  separacao:  '#378ADD',
+  avisar:     '#7F77DD',
+  avisado:    '#1D9E75',
+  entregue:   '#888780',
+}
 
 export default async function PaginaPedidos({ params, searchParams }: Props) {
   const { tenant: slug } = await params
@@ -130,10 +148,18 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2">
-                <div>
+                <div className="flex items-center gap-2">
                   {estado ? (
                     <SeletorEstado pedidoId={pedido.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} />
                   ) : null}
+                  {pedido.estado_producao && (
+                    <span
+                      className="text-[10px] text-white font-medium px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: COR_PRODUCAO[pedido.estado_producao] ?? '#888' }}
+                    >
+                      {LABEL_PRODUCAO[pedido.estado_producao] ?? pedido.estado_producao}
+                    </span>
+                  )}
                 </div>
                 <a href={`/api/pedidos/${pedido.id}/pdf`} target="_blank" className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline">PDF</a>
               </div>
@@ -160,6 +186,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cliente</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Matrícula</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Produção</th>
               <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Valor</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Data</th>
               <th className="px-4 py-3"></th>
@@ -194,6 +221,16 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
                         estadoAtual={estado}
                         estados={estados}
                       />
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {pedido.estado_producao ? (
+                      <span
+                        className="text-xs text-white font-medium px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: COR_PRODUCAO[pedido.estado_producao] ?? '#888' }}
+                      >
+                        {LABEL_PRODUCAO[pedido.estado_producao] ?? pedido.estado_producao}
+                      </span>
                     ) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">
