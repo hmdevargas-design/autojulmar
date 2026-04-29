@@ -514,8 +514,8 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     return
   }
 
-  // ── Comandos do owner (prefixo !) ────────────────────────────────────────
-  if (isOwner && mensagem.startsWith('!')) {
+  // ── Comandos do owner/admin (prefixo !) ─────────────────────────────────
+  if (isAdmin && mensagem.startsWith('!')) {
     const cmd = mensagem.slice(1).trim()
 
     if (/^instruc[aã]o\s+/i.test(cmd)) {
