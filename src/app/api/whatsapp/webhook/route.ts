@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Dedup atomico
-    const chaveDedup = msg.messageId
+    // Dedup atomico — uazapi envia messageId ou messageid conforme o evento
+    const chaveDedup = msg.messageId ?? msg.messageid
       ?? `${telefone}:${msg.text.trim()}:${Math.floor(Date.now() / 10_000)}`
 
     const supabase = criarClienteAdmin()
