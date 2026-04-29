@@ -20,12 +20,37 @@ interface Props {
   tiposVip: string[]
 }
 
+function chaveOcultos(tenantId: string) {
+  return `producao_ocultos_${tenantId}`
+}
+
+function lerOcultos(tenantId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(chaveOcultos(tenantId))
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function guardarOcultos(tenantId: string, ids: Set<string>) {
+  try {
+    localStorage.setItem(chaveOcultos(tenantId), JSON.stringify([...ids]))
+  } catch { /* silencioso */ }
+}
+
 export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props) {
   const [pedidos, setPedidos] = useState<PedidoBoard[]>([])
   const [tabActiva, setTabActiva] = useState<EstadoProducao>('corte')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoBoard | null>(null)
   const [actualizadoAs, setActualizadoAs] = useState('')
   const [loading, setLoading] = useState(true)
+  const [ocultos, setOcultos] = useState<Set<string>>(new Set())
+
+  // Carrega IDs ocultos do localStorage após hydration
+  useEffect(() => {
+    setOcultos(lerOcultos(tenantId))
+  }, [tenantId])
 
   const carregar = useCallback(async () => {
     try {
@@ -35,9 +60,7 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
         setPedidos(data)
         setActualizadoAs(new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }))
       }
-    } catch {
-      // falha silenciosa — indicador de hora ficará desactualizado
-    } finally {
+    } catch { /* falha silenciosa */ } finally {
       setLoading(false)
     }
   }, [tenantId])
@@ -48,12 +71,33 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
     return () => clearInterval(intervalo)
   }, [carregar])
 
+  function limparEntregues() {
+    const entreguesActuais = pedidos.filter(p => p.estado_producao === 'entregue').map(p => p.id)
+    const novosOcultos = new Set([...ocultos, ...entreguesActuais])
+    setOcultos(novosOcultos)
+    guardarOcultos(tenantId, novosOcultos)
+  }
+
   const isVip = (p: PedidoBoard) => {
     const tipoNome = p.clientes?.tipos_cliente?.nome?.toUpperCase() ?? ''
     return tiposVip.includes(tipoNome)
   }
 
-  const pedidosTab = pedidos.filter(p => p.estado_producao === tabActiva)
+  // Filtra pela tab activa, excluindo os ocultos (apenas na tab Entregue)
+  const pedidosTab = pedidos.filter(p => {
+    if (p.estado_producao !== tabActiva) return false
+    if (tabActiva === 'entregue' && ocultos.has(p.id)) return false
+    return true
+  })
+
+  // Conta entregues visíveis (excluindo ocultos)
+  const contadorPorEstado = (id: EstadoProducao) => {
+    return pedidos.filter(p => {
+      if (p.estado_producao !== id) return false
+      if (id === 'entregue' && ocultos.has(p.id)) return false
+      return true
+    }).length
+  }
 
   // Agrupa por material, VIPs primeiro dentro de cada grupo
   const grupos = new Map<string, PedidoBoard[]>()
@@ -71,7 +115,7 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
     }))
   }
 
-  const contadorPorEstado = (id: EstadoProducao) => pedidos.filter(p => p.estado_producao === id).length
+  const entreguesVisiveis = contadorPorEstado('entregue')
 
   return (
     <div className="-mx-4 -my-6">
@@ -114,6 +158,18 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
 
       {/* Conteúdo do quadro */}
       <div className="bg-slate-100 dark:bg-slate-900 min-h-[calc(100vh-140px)] p-4 space-y-5">
+        {/* Botão Limpar Entregues — apenas visível na tab Entregue com pedidos */}
+        {tabActiva === 'entregue' && entreguesVisiveis > 0 && (
+          <div className="flex justify-end">
+            <button
+              onClick={limparEntregues}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+            >
+              Limpar entregues ({entreguesVisiveis})
+            </button>
+          </div>
+        )}
+
         {loading && (
           <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
             A carregar…
@@ -121,14 +177,13 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
         )}
 
         {!loading && grupos.size === 0 && (
-          <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
-            Nenhum pedido em <span className="font-medium ml-1">{ESTADOS.find(e => e.id === tabActiva)?.label}</span>
+          <div className="flex flex-col items-center justify-center py-20 gap-2 text-slate-400 text-sm">
+            <span>Nenhum pedido em <span className="font-medium">{ESTADOS.find(e => e.id === tabActiva)?.label}</span></span>
           </div>
         )}
 
         {[...grupos.entries()].map(([material, lista]) => (
           <div key={material}>
-            {/* Cabeçalho do grupo */}
             <div className="flex items-center gap-2 mb-2 px-1">
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                 {material}
@@ -136,7 +191,6 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
               <span className="text-xs text-slate-400 dark:text-slate-500">({lista.length})</span>
             </div>
 
-            {/* Cards com scroll horizontal */}
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
               {lista.map(pedido => (
                 <CardPedido
@@ -152,7 +206,6 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
         ))}
       </div>
 
-      {/* Overlay de detalhe */}
       {pedidoSeleccionado && (
         <DetalheOverlay
           pedido={pedidoSeleccionado}
@@ -177,8 +230,8 @@ interface CardProps {
 }
 
 function CardPedido({ pedido, vip, estadoCor, onClick }: CardProps) {
-  const dados   = pedido.dados
-  const cliente = pedido.clientes
+  const dados      = pedido.dados
+  const cliente    = pedido.clientes
   const tipoTapete = dados.tipoTapete?.[0] ?? '—'
 
   return (
@@ -191,7 +244,6 @@ function CardPedido({ pedido, vip, estadoCor, onClick }: CardProps) {
       }`}
     >
       <div className="p-2.5 space-y-1">
-        {/* Número + VIP */}
         <div className="flex items-center justify-between">
           <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
             #{pedido.numero_pedido}
@@ -203,22 +255,18 @@ function CardPedido({ pedido, vip, estadoCor, onClick }: CardProps) {
           )}
         </div>
 
-        {/* Viatura */}
         <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
           {dados.viatura ?? dados.matricula ?? '—'}
         </p>
 
-        {/* Cliente */}
         <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
           {cliente?.nome ?? '—'}
         </p>
 
-        {/* Tipo tapete */}
         <p className="text-xs text-slate-500 dark:text-slate-500 truncate leading-tight">
           {tipoTapete}
         </p>
 
-        {/* Valor + badge estado */}
         <div className="flex items-center justify-between pt-0.5">
           <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
             {Number(pedido.valor_final).toFixed(0)}€

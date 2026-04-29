@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 
-// Início do dia actual em ISO (para filtrar entregues de hoje)
-function inicioDoDia() {
+function há7Dias() {
   const d = new Date()
+  d.setDate(d.getDate() - 7)
   d.setHours(0, 0, 0, 0)
   return d.toISOString()
 }
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = criarClienteAdmin()
 
-  // Mostra todos os pedidos activos + entregues de hoje
+  // Pedidos activos (todos) + entregues dos últimos 7 dias
   const { data, error } = await supabase
     .from('pedidos')
     .select(`
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       clientes ( nome, contacto, tipos_cliente ( nome, desconto_pct ) )
     `)
     .eq('tenant_id', tenantId)
-    .or(`estado_producao.neq.entregue,criado_em.gte.${inicioDoDia()}`)
+    .or(`estado_producao.neq.entregue,criado_em.gte.${há7Dias()}`)
     .order('numero_pedido', { ascending: true })
 
   if (error) {
