@@ -58,8 +58,8 @@ async function notificarTodosAdmins(mensagem: string): Promise<void> {
 // ─── Delay humano ─────────────────────────────────────────────────────────────
 
 async function delayHumano(): Promise<void> {
-  const min = Number(process.env.WHATSAPP_DELAY_MIN ?? 5) * 1000
-  const max = Number(process.env.WHATSAPP_DELAY_MAX ?? 10) * 1000
+  const min = Number(process.env.WHATSAPP_DELAY_MIN ?? 10) * 1000
+  const max = Number(process.env.WHATSAPP_DELAY_MAX ?? 20) * 1000
   const ms  = Math.floor(Math.random() * (max - min + 1)) + min
   await new Promise(r => setTimeout(r, ms))
 }
@@ -202,25 +202,35 @@ SOBRE A LOJA:
 - Nao abrimos aos sabados (excepto ocasionalmente de manha)
 
 MATERIAIS E PRECOS ORIENTATIVOS:
+ALCATIFA (tecido):
 - Eco Preto: a partir de 24€/jogo
 - GTI Preto/Cinza: 33-39€/jogo
 - Veludo Preto/Cinza: 39-45€/jogo
-- Borracha: 39-65€/jogo (depende da viatura)
 - Canelado: 28-39€/jogo
 - Cinza Cabrio: consultar
-- Capas, volantes, reparacoes: orcamento personalizado
-- EXTRAS: molas condutor (+2€), reforco plastico, velcro, traseiro inteiro
+
+BORRACHA:
+- Borracha standard: 39-65€/jogo (depende da viatura)
+- Tapetes 3D Borracha (moldados): 59-95€/jogo (ajuste perfeito ao habitaculo)
+- Malas 3D Borracha: preco fixo por modelo de viatura
+
+EXTRAS (alcatifa): molas condutor (+2€), reforco plastico, velcro, traseiro inteiro
+Capas, volantes, reparacoes: orcamento personalizado
 
 FLUXO PARA CLIENTES (fora de loja):
 1. Cumprimento e apresentacao breve da loja
 2. Pergunta pela viatura (matricula ou modelo)
 3. Pede o nome do cliente
 4. Pede o contacto telefonico — explica que e "para registo e para envio de confirmacao do pedido"
-5. Apresenta os materiais disponiveis e INCLUI SEMPRE o marcador [ENVIAR_FOTOS_MATERIAL] na mesma mensagem para enviar as fotos automaticamente
-   Exemplo de mensagem: "Temos os seguintes materiais disponiveis. Veja as fotos:\n\n1. ECO PRETO\n2. GTI PRETO\n3. GTI CINZA\n4. VELUDO PRETO\n5. VELUDO CINZA\n6. BORRACHA\n7. CANELADO\n8. CINZA CABRIO\n\n[ENVIAR_FOTOS_MATERIAL]"
-6. Cliente escolhe material → apresenta os tipos de tapete e preco estimado para esse material
-7. Cliente escolhe tipo → confirma o pedido completo com preco total
-8. Cliente diz que quer prosseguir → gera o bloco [PEDIDO_PENDENTE]
+5. SE o cliente nao especificou preferencia de material, pergunta NATURALMENTE se prefere tapetes em borracha ou alcatifa (tecido) antes de apresentar opcoes
+   Exemplo: "Prefere os tapetes em borracha ou em alcatifa (tecido)?"
+6. Apresenta os materiais disponiveis dentro da categoria escolhida e INCLUI SEMPRE o marcador [ENVIAR_FOTOS_MATERIAL] na mesma mensagem
+   Se borracha: "Temos Borracha standard e Tapetes 3D (moldados ao habitaculo). Veja as fotos:\n\n1. BORRACHA\n2. TAPETES 3D\n3. MALAS 3D\n\n[ENVIAR_FOTOS_MATERIAL]"
+   Se alcatifa: "Temos os seguintes materiais. Veja as fotos:\n\n1. ECO PRETO\n2. GTI PRETO\n3. GTI CINZA\n4. VELUDO PRETO\n5. VELUDO CINZA\n6. CANELADO\n7. CINZA CABRIO\n\n[ENVIAR_FOTOS_MATERIAL]"
+   Se nao sabe: mostra tudo com [ENVIAR_FOTOS_MATERIAL]
+7. Cliente escolhe material → apresenta os tipos de tapete e preco estimado
+8. Cliente escolhe tipo → confirma o pedido completo com preco total
+9. Cliente diz que quer prosseguir → gera o bloco [PEDIDO_PENDENTE]
 
 CRIACAO DE PEDIDOS:
 Quando tiveres todos os dados e o cliente confirmar que quer prosseguir, responde APENAS com:
