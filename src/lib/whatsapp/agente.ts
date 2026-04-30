@@ -163,12 +163,80 @@ async function verificarEhVip(tenantId: string, contacto: string): Promise<boole
   return tiposVip.some(v => tipoNome.includes(v))
 }
 
+// ─── Tabela de preços real da BD ─────────────────────────────────────────────
+
+async function carregarTabelaPrecos(tenantId: string): Promise<string> {
+  const supabase = criarClienteAdmin()
+
+  const [baseRes, extraRes, tiposRes] = await Promise.all([
+    supabase
+      .from('tabela_preco_base')
+      .select('campo1_valor, campo2_valor, preco')
+      .eq('tenant_id', tenantId)
+      .order('campo1_valor')
+      .order('campo2_valor'),
+    supabase
+      .from('tabela_preco_extra')
+      .select('opcao_valor, preco_adicional')
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('tipos_cliente')
+      .select('nome, desconto_pct')
+      .eq('tenant_id', tenantId)
+      .order('ordem'),
+  ])
+
+  const base   = baseRes.data   ?? []
+  const extras = extraRes.data  ?? []
+  const tipos  = tiposRes.data  ?? []
+
+  if (base.length === 0) return ''
+
+  const porMaterial = new Map<string, { tipo: string; preco: number }[]>()
+  for (const row of base) {
+    if (!porMaterial.has(row.campo1_valor)) porMaterial.set(row.campo1_valor, [])
+    porMaterial.get(row.campo1_valor)!.push({ tipo: row.campo2_valor, preco: Number(row.preco) })
+  }
+
+  let tabela = 'TABELA DE PRECOS EXACTOS (euros, sem desconto de cliente):\n'
+  for (const [material, tipos_] of porMaterial) {
+    tabela += `\n${material}:\n`
+    for (const { tipo, preco } of tipos_) {
+      tabela += `  ${tipo}: ${preco.toFixed(2)}€\n`
+    }
+  }
+
+  if (extras.length > 0) {
+    tabela += '\nEXTRAS (acrescentar ao preco base):\n'
+    for (const e of extras) {
+      tabela += `  ${e.opcao_valor}: +${Number(e.preco_adicional).toFixed(2)}€\n`
+    }
+  }
+
+  if (tipos.length > 0) {
+    tabela += '\nDESCONTOS POR TIPO DE CLIENTE (aplicar ao subtotal):\n'
+    for (const t of tipos) {
+      tabela += `  ${t.nome}: ${Number(t.desconto_pct)}% de desconto\n`
+    }
+  }
+
+  tabela += '\nREGRAS DE CALCULO:\n'
+  tabela += '  preco_base = tabela[material][tipo_tapete]\n'
+  tabela += '  subtotal   = (preco_base + soma_extras) × quantidade\n'
+  tabela += '  valor_final = subtotal - (subtotal × desconto_pct / 100)\n'
+  tabela += '  Apresenta SEMPRE o valor_final (com desconto do tipo de cliente se conhecido).\n'
+  tabela += '  Se o cliente nao estiver na BD, usa desconto 0%.\n'
+
+  return tabela
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(
   instrucoes:      string,
   tipoUtilizador:  'owner' | 'admin' | 'cliente',
-  nomeOwner:       string
+  nomeOwner:       string,
+  tabelaPrecos:    string
 ): string {
   const nomeLoja = process.env.WHATSAPP_LOJA_NOME    ?? 'Autojulmar'
   const morada   = process.env.WHATSAPP_LOJA_MORADA  ?? 'R. Camara de Lobos 7 Loja C, 2670-489 Loures'
@@ -201,21 +269,10 @@ SOBRE A LOJA:
 - Horario: ${horario}${mbway ? `\n- MBWay: ${mbway}` : ''}
 - Nao abrimos aos sabados (excepto ocasionalmente de manha)
 
-MATERIAIS E PRECOS ORIENTATIVOS:
-ALCATIFA (tecido):
-- Eco Preto: a partir de 24€/jogo
-- GTI Preto/Cinza: 33-39€/jogo
-- Veludo Preto/Cinza: 39-45€/jogo
-- Canelado: 28-39€/jogo
-- Cinza Cabrio: consultar
+${tabelaPrecos || 'PRECOS: consultar na loja (tabela nao configurada)'}
 
-BORRACHA:
-- Borracha standard: 39-65€/jogo (depende da viatura)
-- Tapetes 3D Borracha (moldados): 59-95€/jogo (ajuste perfeito ao habitaculo)
-- Malas 3D Borracha: preco fixo por modelo de viatura
-
-EXTRAS (alcatifa): molas condutor (+2€), reforco plastico, velcro, traseiro inteiro
-Capas, volantes, reparacoes: orcamento personalizado
+OUTROS SERVICOS (sem preco fixo — escalar obrigatoriamente):
+Capas, volantes, reparacoes
 
 FLUXO PARA CLIENTES (fora de loja):
 1. Cumprimento e apresentacao breve da loja
@@ -595,10 +652,13 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     }
   }
 
-  // ── Carrega historico e instrucoes ───────────────────────────────────────
+  // ── Carrega historico, instrucoes e tabela de preços ────────────────────
   const historico: Msg[] = (sessao?.dados?.historico as Msg[] | undefined) ?? []
-  const instrucoes       = await carregarInstrucoes(tenant.id)
-  const tipoUtilizador   = isOwner ? 'owner' : isAdmin ? 'admin' : 'cliente'
+  const [instrucoes, tabelaPrecos] = await Promise.all([
+    carregarInstrucoes(tenant.id),
+    carregarTabelaPrecos(tenant.id),
+  ])
+  const tipoUtilizador = isOwner ? 'owner' : isAdmin ? 'admin' : 'cliente'
 
   historico.push({ role: 'user', content: mensagem })
   if (historico.length > MAX_HISTORICO) historico.splice(0, historico.length - MAX_HISTORICO)
@@ -609,7 +669,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     const res = await claude.messages.create({
       model:      'claude-sonnet-4-6',
       max_tokens: 500,
-      system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner),
+      system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner, tabelaPrecos),
       messages:   historico,
     })
     resposta = (res.content[0] as { type: string; text: string }).text.trim()
