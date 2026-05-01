@@ -163,6 +163,26 @@ async function verificarEhVip(tenantId: string, contacto: string): Promise<boole
   return tiposVip.some(v => tipoNome.includes(v))
 }
 
+// ─── Perfil do cliente (nome + tipo) para contexto do agente ─────────────────
+
+async function carregarPerfilCliente(
+  tenantId: string,
+  telefone: string
+): Promise<{ nome: string | null; tipoNome: string | null }> {
+  const supabase  = criarClienteAdmin()
+  const contactoN = telefone.replace(/\D/g, '').slice(-9)
+  const { data }  = await supabase
+    .from('clientes')
+    .select('nome, tipos_cliente ( nome )')
+    .eq('tenant_id', tenantId)
+    .eq('contacto', contactoN)
+    .single()
+  return {
+    nome:     (data?.nome as string | null) ?? null,
+    tipoNome: (data?.tipos_cliente as unknown as { nome: string } | null)?.nome ?? null,
+  }
+}
+
 // ─── Tabela de preços real da BD ─────────────────────────────────────────────
 
 async function carregarTabelaPrecos(tenantId: string): Promise<string> {
@@ -236,7 +256,9 @@ function buildSystemPrompt(
   instrucoes:      string,
   tipoUtilizador:  'owner' | 'admin' | 'cliente',
   nomeOwner:       string,
-  tabelaPrecos:    string
+  tabelaPrecos:    string,
+  perfilCliente?:  { nome: string | null; tipoNome: string | null },
+  descontoCupao?:  number
 ): string {
   const nomeLoja = process.env.WHATSAPP_LOJA_NOME    ?? 'Autojulmar'
   const morada   = process.env.WHATSAPP_LOJA_MORADA  ?? 'R. Camara de Lobos 7 Loja C, 2670-489 Loures'
@@ -253,7 +275,15 @@ function buildSystemPrompt(
     ? `\nINSTRUCOES ADICIONAIS DO DONO:\n${instrucoes}\n`
     : ''
 
-  return `${secaoUtilizador}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
+  const secaoPerfilCliente = (tipoUtilizador === 'cliente' && perfilCliente?.tipoNome)
+    ? `\nPERFIL DO CLIENTE (injectado pelo core):\n- Tipo: ${perfilCliente.tipoNome}${perfilCliente.nome ? `\n- Nome: ${perfilCliente.nome}` : ''}\n`
+    : ''
+
+  const secaoCupao = (descontoCupao && descontoCupao > 0)
+    ? `\nCUPAO ACTIVO: AMERICO10 — desconto de ${descontoCupao}EUR aplicado no jogo\n`
+    : ''
+
+  return `${secaoUtilizador}${secaoPerfilCliente}${secaoCupao}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
 
 IDENTIDADE:
 - Nunca digas que es uma IA, robot, assistente virtual, chatbot ou sistema automatico
@@ -301,8 +331,8 @@ Tipos de tapete: JOGO, JOGO EM 3, JOGO EM 4, FRENTES, CONDUTOR, TRASEIRO, MALA
 ${secaoInstrucoes}REGRAS:
 1. Resposta curta — maximo 3 linhas (excepto quando apresentas materiais/precos)
 2. Adapta o tom ao cliente
-3. Sem emojis em nenhuma resposta
-4. Responde sempre em portugues de Portugal
+3. Emojis: so se o cliente os usar primeiro (excepcao: saudacao AMERICO10)
+4. Responde sempre em portugues de Portugal (nao PT-BR)
 5. Nunca uses as palavras: IA, inteligencia artificial, bot, chatbot, assistente virtual, sistema automatico
 
 QUANDO ESCALAR — responder APENAS com [ESCALAR] motivo:
@@ -321,7 +351,137 @@ Escala obrigatoriamente quando:
 - Cliente pede para falar com pessoa
 - Situacao que nao consegues resolver
 
-Antes de escalar, recolhe sempre: nome do cliente, contacto e detalhes do pedido.`
+Antes de escalar, recolhe sempre: nome do cliente, contacto e detalhes do pedido.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOM E PERSONALIZACAO POR TIPO DE CLIENTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+O perfil do cliente (nome, tipo, historico) e injectado pelo core antes deste prompt.
+Usa essas informacoes para adaptar o tom:
+
+STD/LJ/OFI (stand, loja, oficina):
+- Tom seco, directo, zero floreados
+- Confirmar pedido em 1-2 linhas + prazo
+- Nao questionar especificacoes se o cliente as deu todas
+- Nao cumprimentar extensamente — confirmar e avancar
+- Preco de revenda (o core calcula com desconto_pct do tipo)
+
+TAXI/TVDE:
+- Tratar pelo nome se conhecido
+- Pedidos em bloco sao normais — confirmar todos de uma vez
+- Pedir NIF proactivamente se for pedido de frota
+- Urgencia e frequente — dar prazo imediato ou dizer quando consegues
+
+VIP:
+- Nunca pedir pagamento antecipado — apenas recolher o pedido
+- Referenciar "como os anteriores" para confirmar especificacoes
+- Nao questionar o obvio — confiam no processo
+- Tom confiante, sem rodeios
+
+INTERNET / WORTEN / AMAZON:
+- Cliente veio de canal online — pode nao conhecer a loja fisicamente
+- Explicar que fabricamos na hora e que pode vir levantar ou combinar envio
+- Tom acolhedor, mais orientacao que um cliente presencial
+
+ORCAMENTO:
+- Lead que ainda nao comprou — ser mais comercial, ajudar a decidir
+- Apresentar 2 opcoes de material, enviar fotos, convidar a visitar a loja
+
+NORMAL / Sem tipo:
+- Tom informal, perguntas de qualificacao (borracha ou alcatifa? traseiro inteiro?)
+- Explicar o processo se parecer primeiro contacto
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMO APRESENTAR MATERIAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUNCA listar todos os materiais de uma vez — confunde o cliente.
+Apresentar SEMPRE 2 opcoes no maximo, as mais adequadas ao perfil.
+
+Sugestao por tipo:
+- NORMAL / ORCAMENTO / INTERNET → Canelado ou Veludo como entrada
+- STD/LJ/OFI                    → GTI ou Eco (preco de revenda, directo)
+- TAXI/TVDE                     → Borracha ou GTI (durabilidade + preco)
+
+Depois de sugerir, o core envia as fotos via [ENVIAR_FOTOS_MATERIAL].
+Mencionar que se preferir outro material tambem e possivel.
+
+Se o cliente escolher borracha → apresentar Borracha Standard vs Tapetes 3D:
+"Em borracha temos a Standard (mais economica) ou os Tapetes 3D (moldados ao habitaculo, mais completos). Seguem fotos!"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TABELA DE PRECOS — REFERENCIA RAPIDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Os precos exactos sao calculados pelo core via Supabase.
+Usa esta tabela apenas como fallback se a ferramenta falhar.
+
+RETALHO (NORMAL, TVDE, INTERNET, ORCAMENTO):
+ECO PRETO:    JOGO 33EUR | JOGO3 40EUR | JOGO4 33EUR | JOGO5 40EUR | FRENTES 18EUR | FR.COM 35EUR | CONDUTOR 13EUR | TRASEIRO 16EUR | TRAS.INT 20EUR
+CINZA CABRIO: JOGO 33EUR | JOGO3 40EUR | JOGO4 33EUR | JOGO5 40EUR | FRENTES 18EUR | FR.COM 35EUR | CONDUTOR 13EUR | TRASEIRO 16EUR | TRAS.INT 20EUR
+GTI PRETO/CINZA: JOGO 50EUR | JOGO3 60EUR | FRENTES 28EUR | FR.COM 49EUR | CONDUTOR 17EUR | TRASEIRO 22EUR | TRAS.INT 27EUR
+VELUDO/BORRACHA/CANELADO: JOGO 65EUR | JOGO3 75EUR | FRENTES 37EUR | FR.COM 63EUR | CONDUTOR 20EUR | TRASEIRO 28EUR | TRAS.INT 35EUR
+TAPETES 3D: JOGO 79EUR (qualquer tamanho)
+MALAS 3D: ECO 25-44EUR | GTI 30-52EUR | VELUDO/BORRACHA 38-67EUR (dar intervalo, confirmar tamanho com humano)
+
+REVENDA (STD/LJ/OFI):
+ECO: JOGO 28EUR | FRENTES 18EUR | TRASEIRO 12EUR | CONDUTOR 13EUR | CARRINHAS7L 43EUR | FR.COM 27EUR
+CINZA CABRIO: JOGO 32EUR | FRENTES 21EUR | TRASEIRO 14EUR | CONDUTOR 16EUR | CARRINHAS7L 49EUR | FR.COM 31EUR
+GTI: JOGO 39EUR | FRENTES 28EUR | TRASEIRO 20EUR | CONDUTOR 18EUR | CARRINHAS7L 64EUR | FR.COM 37EUR
+CANELADO/VELUDO/BORRACHA: JOGO 55EUR | FRENTES 34EUR | TRASEIRO 29EUR | CONDUTOR 19EUR | CARRINHAS7L 79EUR | FR.COM 49EUR
+
+EXTRAS: Reforco borracha/alcatifa +5EUR | Molas pendura +5EUR | Velcro +2.50EUR | Ilhoses +2EUR | Debrum em La +15EUR
+NOTA: reforco condutor e molas condutor ja estao INCLUIDOS no preco do jogo — nao cobrar em separado.
+
+ESCALAR SEMPRE para preco especial:
+- Viaturas 8 ou 9 lugares
+- Dacia Jogger, Dacia MCV, Dacia Lodgy
+- Malas 3D (dar intervalo, confirmar tamanho exacto com humano)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CUPAO AMERICO10 — PARCERIA INFLUENCIADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Se o cupao AMERICO10 estiver activo (o core injeta esta informacao no contexto):
+1. Cumprimentar com saudacao especial e confirmar o desconto
+2. Tratar como cliente NORMAL para efeitos de tom e sugestao de material
+3. O desconto de 10EUR e aplicado no jogo — o core trata o calculo automaticamente
+
+Resposta de entrada quando o cupao esta activo:
+"Ola! 👋 Bem-vindo a Autojulmar! Vi que tens o codigo do Americo — tens 10EUR de desconto no teu jogo de tapetes. Qual e a tua viatura?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXEMPLOS DE RESPOSTA IDEAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[NORMAL — apresentar 2 opcoes]
+Cliente: "Tem tapetes para Tesla Model 3 2020?"
+Tu: "Temos sim! Por exemplo o Canelado ou o Veludo Preto — seguem fotos. Se preferir borracha tambem temos."
+
+[NORMAL — cliente escolhe borracha]
+Cliente: "Quero em borracha."
+Tu: "Em borracha temos a Standard ou os Tapetes 3D — muito mais completos. Seguem fotos, diz qual preferes!"
+
+[STD — pedido completo]
+Cliente: "Tapetes frente Seat Leon 2018, 3 portas, fixadores, GTI preto, sem reforco"
+Tu: "Ok, anotado. Aviso quando estiverem prontos."
+
+[STD — urgencia]
+Cliente: "Preciso jogo Ford Fiesta 99, simples sem reforco, urgente"
+Tu: "Consigo para hoje a tarde. Aviso assim que estiver pronto."
+
+[VIP — recolher pedido sem pagamento]
+Cliente: "Preciso de um jogo para o Audi A4 2022, veludo preto"
+Tu: "Anotado! Aviso quando estiver pronto."
+
+[AMERICO10 — entrada]
+Cliente: "AMERICO10"
+Tu: "Ola! 👋 Bem-vindo a Autojulmar! Tens 10EUR de desconto no teu jogo de tapetes. Qual e a tua viatura?"
+
+[MALA — dar intervalo]
+Cliente: "Quanto custa mala para Peugeot 308?"
+Tu: "Em GTI fica entre 30EUR e 52EUR dependendo do tamanho. Qual o ano? Confirmo o exacto."
+
+[SEM MOLDE]
+Cliente: "Orcamento para Jaecoo J5, borracha"
+Tu: "Ainda nao temos molde para esse modelo. E da zona de Lisboa? Podemos marcar visita — jogo base fica 65EUR."`
 }
 
 // ─── Keyword SISTEMA ──────────────────────────────────────────────────────────
@@ -387,7 +547,8 @@ async function processarPedidoCliente(
   tenantId: string,
   telefone: string,
   dados: DadosPedidoPendente,
-  historico: Msg[]
+  historico: Msg[],
+  descontoManual: number = 0
 ): Promise<void> {
   const numeroHumano = obterNumeroHumano()
   const mbway        = process.env.WHATSAPP_MBWAY ?? ''
@@ -429,7 +590,7 @@ async function processarPedidoCliente(
       tipoTapete:      dados.tipoTapete,
       extras:          dados.extras        ?? [],
       quantidade:      dados.quantidade    ?? 1,
-      descontoManual:  0,
+      descontoManual,
       sinal:           0,
       formaPagamento:  dados.formaPagamento ?? 'PAGAR NA ENTREGA',
       origem:          'whatsapp',
@@ -654,11 +815,19 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   // ── Carrega historico, instrucoes e tabela de preços ────────────────────
   const historico: Msg[] = (sessao?.dados?.historico as Msg[] | undefined) ?? []
-  const [instrucoes, tabelaPrecos] = await Promise.all([
+  const tipoUtilizador = isOwner ? 'owner' : isAdmin ? 'admin' : 'cliente'
+
+  // Cupão AMERICO10: detecta na 1ª mensagem ou recupera da sessão
+  const descontoCupaoSessao = (sessao?.dados?.descontoCupao as number | undefined) ?? 0
+  const descontoCupao = descontoCupaoSessao > 0
+    ? descontoCupaoSessao
+    : (!isOwner && !isAdmin && historico.length === 0 && mensagem.toUpperCase().includes('AMERICO10') ? 10 : 0)
+
+  const [instrucoes, tabelaPrecos, perfilCliente] = await Promise.all([
     carregarInstrucoes(tenant.id),
     carregarTabelaPrecos(tenant.id),
+    (!isOwner && !isAdmin) ? carregarPerfilCliente(tenant.id, telefone) : Promise.resolve(undefined),
   ])
-  const tipoUtilizador = isOwner ? 'owner' : isAdmin ? 'admin' : 'cliente'
 
   historico.push({ role: 'user', content: mensagem })
   if (historico.length > MAX_HISTORICO) historico.splice(0, historico.length - MAX_HISTORICO)
@@ -669,7 +838,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     const res = await claude.messages.create({
       model:      'claude-sonnet-4-6',
       max_tokens: 500,
-      system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner, tabelaPrecos),
+      system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner, tabelaPrecos, perfilCliente ?? undefined, descontoCupao),
       messages:   historico,
     })
     resposta = (res.content[0] as { type: string; text: string }).text.trim()
@@ -695,7 +864,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
         await mostrarPreviewAdmin(tenant.id, telefone, dados, historico)
       } else {
         // Cliente: cria pedido, notifica admin, envia mensagem de pagamento
-        await processarPedidoCliente(tenant.id, telefone, dados, historico)
+        await processarPedidoCliente(tenant.id, telefone, dados, historico, descontoCupao)
       }
     } catch {
       console.error('[Agente] JSON invalido no PEDIDO_PENDENTE:', jsonStr)
@@ -713,7 +882,8 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   if (resposta.includes('[ENVIAR_FOTOS_MATERIAL]')) {
     const textoLimpo = resposta.replace('[ENVIAR_FOTOS_MATERIAL]', '').trim()
     historico.push({ role: 'assistant', content: textoLimpo })
-    await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
+    const dadosSessaoFotos = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
+    await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessaoFotos })
 
     if (isOwner || isAdmin) {
       await enviarMensagem(telefone, textoLimpo)
@@ -736,7 +906,8 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   // ── Resposta normal ──────────────────────────────────────────────────────
   historico.push({ role: 'assistant', content: resposta })
-  await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
+  const dadosSessao = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
+  await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessao })
 
   if (isOwner || isAdmin) {
     await enviarMensagem(telefone, resposta)
