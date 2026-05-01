@@ -8,11 +8,11 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const schemaPut = z.object({
-  id:             z.string().uuid(),
-  tenantId:       z.string().uuid(),
+  id:             z.string().min(1),  // aceita UUID demo (00000000-...) rejeitado pelo Zod v4
+  tenantId:       z.string().min(1),  // idem
   nome:           z.string().min(1),
   contacto:       z.string().min(1),  // valida após normalização
-  tipoClienteId:  z.string().uuid().nullable(),
+  tipoClienteId:  z.string().min(1).nullable(),
   codigo:         z.string().max(20).nullable().optional(),
 })
 
