@@ -44,20 +44,22 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
     setAGuardar(true)
     setErro('')
     try {
+      const payload = {
+        id: cliente.id,
+        tenantId,
+        nome: nome.trim(),
+        contacto: contacto.trim(),
+        tipoClienteId: tipoClienteId || null,
+        codigo: codigo.trim() || null,
+      }
+      console.log('[EditarCliente] payload:', JSON.stringify(payload))
       const res = await fetch('/api/clientes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: cliente.id,
-          tenantId,
-          nome: nome.trim(),
-          contacto: contacto.trim(),
-          tipoClienteId: tipoClienteId || null,
-          codigo: codigo.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
-      if (!res.ok) { setErro(data.erro ?? 'Erro ao guardar'); return }
+      if (!res.ok) { setErro(data.detalhe ? `${data.erro}: ${data.detalhe}` : (data.erro ?? 'Erro ao guardar')); return }
       setAberto(false)
       router.refresh()
     } catch {

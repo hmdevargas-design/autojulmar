@@ -11,7 +11,7 @@ const schemaPut = z.object({
   id:             z.string().uuid(),
   tenantId:       z.string().uuid(),
   nome:           z.string().min(1),
-  contacto:       z.string().min(9),
+  contacto:       z.string().min(1),  // valida após normalização
   tipoClienteId:  z.string().uuid().nullable(),
   codigo:         z.string().max(20).nullable().optional(),
 })
@@ -25,7 +25,7 @@ export async function PUT(request: NextRequest) {
     // Normaliza contacto (remove não-dígitos, fica com os últimos 9)
     const contacto = input.contacto.replace(/\D/g, '').slice(-9)
     if (contacto.length < 9) {
-      return NextResponse.json({ erro: 'Contacto inválido' }, { status: 400 })
+      return NextResponse.json({ erro: 'Contacto inválido — precisa de 9 dígitos' }, { status: 400 })
     }
 
     const { error } = await supabase
@@ -42,7 +42,11 @@ export async function PUT(request: NextRequest) {
     if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (err) {
-    if (err instanceof z.ZodError) return NextResponse.json({ erro: 'Dados inválidos' }, { status: 400 })
+    if (err instanceof z.ZodError) {
+      console.error('[API clientes PUT] Zod:', JSON.stringify(err.errors))
+      return NextResponse.json({ erro: 'Dados inválidos', detalhe: err.errors[0]?.message }, { status: 400 })
+    }
+    console.error('[API clientes PUT]', err)
     return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })
   }
 }
