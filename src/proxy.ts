@@ -8,10 +8,15 @@ export async function proxy(request: NextRequest) {
 
   // Paths públicos — não precisam de autenticação
   if (
+    pathname === '/' ||
     pathname.startsWith('/login') ||
+    pathname.startsWith('/americo10') ||
+    pathname.startsWith('/saas') ||
     pathname.startsWith('/api/whatsapp') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/images/') ||
+    pathname.startsWith('/materiais/')
   ) {
     return NextResponse.next()
   }
