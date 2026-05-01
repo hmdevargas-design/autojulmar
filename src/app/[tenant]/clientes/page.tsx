@@ -5,53 +5,76 @@ import Link from 'next/link'
 import PesquisaClientes from './PesquisaClientes'
 import EditarCliente from './EditarCliente'
 
+const PAGE_SIZE = 50
+
 interface Props {
   params: Promise<{ tenant: string }>
-  searchParams: Promise<{ q?: string; arquivados?: string; tipo?: string }>
+  searchParams: Promise<{ q?: string; arquivados?: string; tipo?: string; pagina?: string }>
 }
 
 export default async function PaginaClientes({ params, searchParams }: Props) {
   const { tenant: slug } = await params
-  const { q, arquivados: arquivadosParam, tipo: tipoFiltroId } = await searchParams
+  const { q, arquivados: arquivadosParam, tipo: tipoFiltroId, pagina: paginaParam } = await searchParams
   const mostrarArquivados = arquivadosParam === '1'
+  const paginaAtual = Math.max(1, parseInt(paginaParam ?? '1', 10))
+  const offset = (paginaAtual - 1) * PAGE_SIZE
 
   const tenant = await resolverTenant(slug)
   if (!tenant) notFound()
 
   const supabase = criarClienteAdmin()
 
-  const [clientesRes, tiposRes] = await Promise.all([
-    (() => {
-      let query = supabase
-        .from('clientes')
-        .select(`
-          id, nome, contacto, tipo_cliente_id, codigo,
-          tipos_cliente ( id, nome ),
-          pedidos ( id )
-        `, { count: 'exact' })
-        .eq('tenant_id', tenant.id)
-        .order('nome')
-        .limit(50)
-      if (q?.trim()) {
-        query = query.or(`nome.ilike.%${q.trim()}%,contacto.ilike.%${q.trim()}%`)
-      }
-      if (tipoFiltroId) {
-        query = tipoFiltroId === 'sem-tipo'
-          ? query.is('tipo_cliente_id', null)
-          : query.eq('tipo_cliente_id', tipoFiltroId)
-      }
-      return query
-    })(),
-    supabase
-      .from('tipos_cliente')
-      .select('id, nome')
-      .eq('tenant_id', tenant.id)
-      .order('ordem'),
-  ])
+  // 1. Tipos (necessário para saber o ID do tipo ARQUIVADO)
+  const tiposRes = await supabase
+    .from('tipos_cliente')
+    .select('id, nome')
+    .eq('tenant_id', tenant.id)
+    .order('ordem')
 
   const tipos = (tiposRes.data ?? []).map(t => ({ id: t.id, nome: t.nome }))
+  const arquivadoTipoId = tipos.find(t => t.nome.toUpperCase() === 'ARQUIVADO')?.id ?? null
 
-  const todosClientes = (clientesRes.data ?? []).map(c => ({
+  // 2. Clientes paginados + contagem de arquivados (paralelo)
+  const clientesQuery = (() => {
+    let query = supabase
+      .from('clientes')
+      .select(`
+        id, nome, contacto, tipo_cliente_id, codigo,
+        tipos_cliente ( id, nome ),
+        pedidos ( id )
+      `, { count: 'exact' })
+      .eq('tenant_id', tenant.id)
+      .order('nome')
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (q?.trim()) {
+      query = query.or(`nome.ilike.%${q.trim()}%,contacto.ilike.%${q.trim()}%`)
+    }
+    if (tipoFiltroId === 'sem-tipo') {
+      query = query.is('tipo_cliente_id', null)
+    } else if (tipoFiltroId) {
+      query = query.eq('tipo_cliente_id', tipoFiltroId)
+    } else if (!mostrarArquivados && arquivadoTipoId) {
+      query = query.or(`tipo_cliente_id.is.null,tipo_cliente_id.neq.${arquivadoTipoId}`)
+    }
+    return query
+  })()
+
+  const arquivadosCountQuery = arquivadoTipoId
+    ? supabase
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
+        .eq('tipo_cliente_id', arquivadoTipoId)
+    : Promise.resolve({ count: 0 })
+
+  const [clientesRes, arquivadosRes] = await Promise.all([clientesQuery, arquivadosCountQuery])
+
+  const totalArquivados = arquivadosRes.count ?? 0
+  const totalResultados  = clientesRes.count ?? 0
+  const totalPaginas     = Math.ceil(totalResultados / PAGE_SIZE)
+
+  const clientes = (clientesRes.data ?? []).map(c => ({
     id:            c.id,
     nome:          c.nome,
     contacto:      c.contacto,
@@ -62,21 +85,36 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
   }))
 
   const isArquivado = (tipoNome: string) => tipoNome.toUpperCase() === 'ARQUIVADO'
-  const totalArquivados = todosClientes.filter(c => isArquivado(c.tipoNome)).length
-  const clientes = mostrarArquivados
-    ? todosClientes
-    : todosClientes.filter(c => !isArquivado(c.tipoNome))
+
+  function buildUrl(pagina: number) {
+    const p = new URLSearchParams()
+    if (q?.trim()) p.set('q', q.trim())
+    if (mostrarArquivados) p.set('arquivados', '1')
+    if (tipoFiltroId) p.set('tipo', tipoFiltroId)
+    if (pagina > 1) p.set('pagina', pagina.toString())
+    const qs = p.toString()
+    return `/${slug}/clientes${qs ? `?${qs}` : ''}`
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{clientes.length} registos</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {totalResultados} {totalResultados === 1 ? 'registo' : 'registos'}
+            {totalPaginas > 1 && ` · página ${paginaAtual} de ${totalPaginas}`}
+          </p>
         </div>
       </div>
 
-      <PesquisaClientes q={q ?? ''} mostrarArquivados={mostrarArquivados} totalArquivados={totalArquivados} tipos={tipos} tipoFiltroId={tipoFiltroId ?? ''} />
+      <PesquisaClientes
+        q={q ?? ''}
+        mostrarArquivados={mostrarArquivados}
+        totalArquivados={totalArquivados}
+        tipos={tipos}
+        tipoFiltroId={tipoFiltroId ?? ''}
+      />
 
       {/* Cards mobile */}
       <div className="md:hidden space-y-2">
@@ -154,10 +192,31 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
         )}
       </div>
 
-      {(clientesRes.count ?? 0) > 50 && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-          A mostrar 50 de {clientesRes.count} resultados — use a pesquisa para filtrar.
-        </p>
+      {/* Paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            {offset + 1}–{Math.min(offset + PAGE_SIZE, totalResultados)} de {totalResultados}
+          </span>
+          <div className="flex gap-2">
+            {paginaAtual > 1 && (
+              <Link
+                href={buildUrl(paginaAtual - 1)}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+              >
+                ← Anterior
+              </Link>
+            )}
+            {paginaAtual < totalPaginas && (
+              <Link
+                href={buildUrl(paginaAtual + 1)}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+              >
+                Próxima →
+              </Link>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
