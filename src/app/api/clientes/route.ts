@@ -43,8 +43,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      console.error('[API clientes PUT] Zod:', JSON.stringify(err.errors))
-      return NextResponse.json({ erro: 'Dados inválidos', detalhe: err.errors[0]?.message }, { status: 400 })
+      console.error('[API clientes PUT] Zod:', JSON.stringify(err.issues))
+      return NextResponse.json({ erro: 'Dados inválidos', detalhe: err.issues[0]?.message }, { status: 400 })
     }
     console.error('[API clientes PUT]', err)
     return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })
