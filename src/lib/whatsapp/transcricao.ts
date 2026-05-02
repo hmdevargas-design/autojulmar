@@ -78,7 +78,7 @@ export async function transcreverAudio(opts: OptsTranscricao): Promise<string | 
 
   // 4. Enviar para Groq/OpenAI Whisper
   const form = new FormData()
-  form.append('file', new Blob([audioBuffer]), `audio.${ext}`)
+  form.append('file', new Blob([new Uint8Array(audioBuffer)]), `audio.${ext}`)
   form.append('model', isGroq ? 'whisper-large-v3' : 'whisper-1')
   form.append('language', 'pt')
 
