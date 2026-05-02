@@ -118,16 +118,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const mimeType  = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
-      const messageId = msg.messageid ?? msg.messageId
-      const chatId    = msg.chatid ?? msg.sender_pn ?? msg.sender
-      // URL directa incluída no webhook pelo uazapi (evita chamar download-media)
-      const mediaUrl  = (msg.mediaUrl ?? msg.content?.URL) as string | undefined
+      const mimeType   = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
+      const messageId  = msg.messageid ?? msg.messageId
+      const chatId     = msg.chatid ?? msg.sender_pn ?? msg.sender
+      const mediaUrl   = (msg.mediaUrl ?? msg.content?.URL) as string | undefined
+      const mediaKey   = (msg.content?.mediaKey ?? msg.content?.MediaKey) as string | undefined
+      const fileSha256 = (msg.content?.fileSha256 ?? msg.content?.FileSHA256 ?? msg.content?.fileEncSha256) as string | undefined
+      const fileLength = (msg.content?.fileLength ?? msg.content?.FileLength) as number | undefined
 
       console.log('[WhatsApp] Audio detectado — telefone:', telefone, 'messageId:', messageId, 'chatId:', chatId, 'mime:', mimeType, 'type:', msg.type, 'mediaType:', msg.mediaType)
-      console.log('[WhatsApp] Audio campos media — mediaUrl:', mediaUrl ?? '(vazio)')
+      console.log('[WhatsApp] Audio campos media — mediaUrl:', mediaUrl ?? '(vazio)', '| mediaKey:', mediaKey ? '[presente]' : '(vazio)', '| content keys:', Object.keys(msg.content ?? {}).join(', '))
 
-      const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType, mediaUrl })
+      const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType, mediaUrl, mediaKey, fileSha256, fileLength })
 
       if (!transcricao) {
         console.warn('[WhatsApp] Transcricao falhou para:', telefone)
