@@ -3,21 +3,39 @@
 /* Dark mode via classe .dark no <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Paleta clara (toggle manual) */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #F5F0E8;
+  --foreground: #1A1A1A;
 }
 
+/* Paleta escura — Design System Autojulmar */
 .dark {
-  --background: #020617;
-  --foreground: #f1f5f9;
+  --background: #0D0D0D;
+  --foreground: #E5E5E5;
 }
 
+/* Registo de tokens do Design System no tema Tailwind */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+
+  /* Dourado principal — usado como accent primário */
+  --color-gold:      #C8A96A;
+  --color-gold-dark: #8C6B3F;
+}
+
+/* Variáveis CSS do Design System — acessíveis via var() em qualquer componente */
+:root {
+  --ds-bg-primary:   #0D0D0D;
+  --ds-bg-secondary: #1A1A1A;
+  --ds-bg-tertiary:  #2A2A2A;
+  --ds-gold:         #C8A96A;
+  --ds-gold-dark:    #8C6B3F;
+  --ds-text-primary: #E5E5E5;
+  --ds-text-muted:   #6B7280;
 }
 
 body {

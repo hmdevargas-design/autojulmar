@@ -124,7 +124,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Métricas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}                cor="text-slate-900 dark:text-slate-100" />
-        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`}      cor="text-indigo-700 dark:text-indigo-400" />
+        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`}      cor="text-gold dark:text-gold" />
         <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}        sub={`${pedidosMes} pedidos`} cor="text-emerald-700 dark:text-emerald-400" />
         <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}                  sub="pedidos"      cor="text-violet-700 dark:text-violet-400" />
         <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`}     sub="em aberto"    cor="text-amber-600 dark:text-amber-400" />
@@ -174,7 +174,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                       <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 shrink-0">{m.faturado.toFixed(2)}€</span>
                     </div>
                     <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500 dark:bg-indigo-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                   <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{m.total}</span>
@@ -215,7 +215,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Recentes</h2>
-          <Link href={`/${slug}/pedidos`} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium">Ver todos →</Link>
+          <Link href={`/${slug}/pedidos`} className="text-sm text-gold hover:underline font-medium">Ver todos →</Link>
         </div>
 
         {/* Cards mobile */}

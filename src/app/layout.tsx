@@ -16,14 +16,15 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-// Script inline executado antes da hidratação para evitar flash de tema errado
+// Tema escuro por defeito (Design System Autojulmar — fundo sempre escuro)
+// Só remove o dark se o utilizador escolheu explicitamente 'claro'
 const scriptTema = `
 (function(){try{
   var t=localStorage.getItem('tema');
-  if(t==='escuro'||(t===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){
+  if(t!=='claro'){
     document.documentElement.classList.add('dark');
   }
-}catch(e){}})();
+}catch(e){document.documentElement.classList.add('dark');}})();
 `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
