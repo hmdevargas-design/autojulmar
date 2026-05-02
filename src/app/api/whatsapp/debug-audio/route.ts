@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${uazapiUrl}/message/download-media`, {
-      method:  'POST',
-      headers: { token: uazapiToken, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ messageId, chatId }),
+    const params = new URLSearchParams({ messageId, chatId })
+    const res = await fetch(`${uazapiUrl}/message/download-media?${params}`, {
+      method:  'GET',
+      headers: { token: uazapiToken },
     })
 
     const status      = res.status

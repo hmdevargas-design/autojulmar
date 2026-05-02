@@ -28,10 +28,10 @@ export async function transcreverAudio(opts: OptsTranscricao): Promise<string | 
   try {
     console.log('[Transcricao] A descarregar audio — messageId:', opts.messageId, 'chatId:', opts.chatId, 'mime:', opts.mimetype)
 
-    const downloadRes = await fetch(`${uazapiUrl}/message/download-media`, {
-      method:  'POST',
-      headers: { token: uazapiToken, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ messageId: opts.messageId, chatId: opts.chatId }),
+    const params = new URLSearchParams({ messageId: opts.messageId, chatId: opts.chatId })
+    const downloadRes = await fetch(`${uazapiUrl}/message/download-media?${params}`, {
+      method:  'GET',
+      headers: { token: uazapiToken },
     })
 
     const status      = downloadRes.status
