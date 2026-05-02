@@ -1,15 +1,15 @@
-// Transcricao de audio via OpenAI Whisper
+// Transcricao de audio via Groq/OpenAI Whisper
 // Estratégia (por ordem):
-//   1. URL directa no payload do webhook (mediaUrl / content.URL)
-//   2. GET /message/download-media?messageId=...&chatId=...
-//   3. GET /chat/download-media?messageId=...&chatId=...
-//   4. POST /message/download-media  (body JSON)
+//   1. GET /message/download-media?messageId=...&chatId=...  (uazapi desencripta)
+//   2. GET /chat/download-media?messageId=...&chatId=...
+//   3. POST /message/download-media  (body JSON)
+//   4. URL directa do webhook (mmg.whatsapp.net — encriptada, último recurso)
 
 interface OptsTranscricao {
   messageId?: string
   chatId?:    string
   mimetype?:  string
-  mediaUrl?:  string   // URL directa do webhook, evita chamar uazapi
+  mediaUrl?:  string   // URL encriptada do CDN WhatsApp (último recurso)
 }
 
 async function descarregarBlob(url: string, headers?: Record<string, string>): Promise<{ blob: Blob; ok: boolean; status: number }> {
@@ -25,11 +25,8 @@ async function tentarDownloadUazapi(
   chatId: string,
 ): Promise<Blob | null> {
   const endpoints = [
-    // Tentativa 1: GET com query params
     { method: 'GET' as const, url: `${uazapiUrl}/message/download-media?${new URLSearchParams({ messageId, chatId })}` },
-    // Tentativa 2: GET caminho alternativo
     { method: 'GET' as const, url: `${uazapiUrl}/chat/download-media?${new URLSearchParams({ messageId, chatId })}` },
-    // Tentativa 3: POST com body JSON
     { method: 'POST' as const, url: `${uazapiUrl}/message/download-media` },
   ]
 
@@ -90,29 +87,23 @@ export async function transcreverAudio(opts: OptsTranscricao): Promise<string | 
 
   if (!apiKey) { console.warn('[Transcricao] GROQ_API_KEY (ou OPENAI_API_KEY) nao configurada'); return null }
 
-  console.log('[Transcricao] Inicio — messageId:', opts.messageId, 'mediaUrl:', opts.mediaUrl ?? '(vazio)', 'mime:', opts.mimetype)
+  console.log('[Transcricao] Inicio — messageId:', opts.messageId, 'chatId:', opts.chatId, 'mime:', opts.mimetype)
 
   let audioBlob: Blob | null = null
 
-  // 1. URL directa do webhook
-  if (opts.mediaUrl) {
-    console.log('[Transcricao] A usar URL directa do webhook:', opts.mediaUrl)
+  // 1. Endpoint uazapi (desencripta o ficheiro) — tentado primeiro
+  if (uazapiUrl && uazapiToken && opts.messageId && opts.chatId) {
+    audioBlob = await tentarDownloadUazapi(uazapiUrl, uazapiToken, opts.messageId, opts.chatId)
+  } else {
+    console.warn('[Transcricao] Credenciais uazapi ou messageId/chatId em falta — a saltar para URL directa')
+  }
+
+  // 2. URL directa do webhook (ficheiro encriptado — último recurso)
+  if (!audioBlob && opts.mediaUrl) {
+    console.warn('[Transcricao] Todos os endpoints uazapi falharam — a tentar URL directa (pode estar encriptada):', opts.mediaUrl)
     const { blob, ok, status } = await descarregarBlob(opts.mediaUrl)
     console.log('[Transcricao] URL directa — status:', status, 'size:', blob.size)
     if (ok && blob.size > 0) audioBlob = blob
-  }
-
-  // 2. Fallback: endpoint uazapi
-  if (!audioBlob) {
-    if (!uazapiUrl || !uazapiToken) {
-      console.warn('[Transcricao] Credenciais uazapi nao configuradas e sem URL directa')
-      return null
-    }
-    if (!opts.messageId || !opts.chatId) {
-      console.warn('[Transcricao] messageId/chatId em falta e sem URL directa')
-      return null
-    }
-    audioBlob = await tentarDownloadUazapi(uazapiUrl, uazapiToken, opts.messageId, opts.chatId)
   }
 
   if (!audioBlob || audioBlob.size === 0) {
