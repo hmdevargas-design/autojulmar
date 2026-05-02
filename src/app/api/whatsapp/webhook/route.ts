@@ -120,12 +120,14 @@ export async function POST(request: NextRequest) {
 
       const mimeType  = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
       const messageId = msg.messageid ?? msg.messageId
-      // chatId: preferir chatid (JID completo); fallback para sender_pn ou sender
       const chatId    = msg.chatid ?? msg.sender_pn ?? msg.sender
+      // URL directa incluída no webhook pelo uazapi (evita chamar download-media)
+      const mediaUrl  = (msg.mediaUrl ?? msg.content?.URL) as string | undefined
 
       console.log('[WhatsApp] Audio detectado — telefone:', telefone, 'messageId:', messageId, 'chatId:', chatId, 'mime:', mimeType, 'type:', msg.type, 'mediaType:', msg.mediaType)
+      console.log('[WhatsApp] Audio campos media — mediaUrl:', mediaUrl ?? '(vazio)')
 
-      const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType })
+      const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType, mediaUrl })
 
       if (!transcricao) {
         console.warn('[WhatsApp] Transcricao falhou para:', telefone)
