@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('[WhatsApp] Audio transcrito:', telefone, '|', transcricao)
+      await enviarMensagem(telefone, `🎙️ _${transcricao}_`)
       await processarComAgente(telefone, transcricao)
       return NextResponse.json({ ok: true })
     }
