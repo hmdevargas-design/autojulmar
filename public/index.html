@@ -116,18 +116,18 @@
        VARIAVEIS CSS E RESET
     ============================================================ */
     :root {
-      --bg-primary: #0d0d0d;
-      --bg-secondary: #161616;
-      --bg-card: #1e1e1e;
-      --accent: #E63946;
-      --accent-hover: #c1121f;
-      --accent-secondary: #FF6B35;
-      --text-primary: #f0f0f0;
-      --text-secondary: #a0a0a0;
-      --border: #2a2a2a;
-      --success: #2a9d5c;
-      --radius: 12px;
-      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --bg-primary:        #0D0D0D;
+      --bg-secondary:      #1A1A1A;
+      --bg-card:           #1A1A1A;
+      --accent:            #C8A96A;
+      --accent-hover:      #8C6B3F;
+      --accent-secondary:  #C8A96A;
+      --text-primary:      #E5E5E5;
+      --text-secondary:    #6B7280;
+      --border:            #2A2A2A;
+      --success:           #2a9d5c;
+      --radius:            12px;
+      --shadow:            0 4px 24px rgba(0, 0, 0, 0.4);
     }
 
     *, *::before, *::after {
@@ -202,7 +202,7 @@
       background-color: var(--accent-hover);
       border-color: var(--accent-hover);
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(230, 57, 70, 0.35);
+      box-shadow: 0 8px 24px rgba(200, 169, 106, 0.35);
     }
 
     .btn-outline {
@@ -311,30 +311,14 @@
     /* Logo */
     .navbar-logo {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       line-height: 1;
     }
 
-    .navbar-logo-name {
-      font-family: 'Montserrat', sans-serif;
-      font-weight: 900;
-      font-size: 1.4rem;
-      color: var(--text-primary);
-      letter-spacing: 0.04em;
-    }
-
-    .navbar-logo-name span {
-      color: var(--accent);
-    }
-
-    .navbar-logo-sub {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.65rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-top: 3px;
+    .navbar-logo-img {
+      height: 52px;
+      width: auto;
+      object-fit: contain;
     }
 
     /* Links de navegacao */
@@ -1566,8 +1550,7 @@
 
         <!-- Logo -->
         <a href="#" class="navbar-logo" aria-label="Autojulmar — início">
-          <span class="navbar-logo-name">AUTO<span>JULMAR</span></span>
-          <span class="navbar-logo-sub">Tapetes à Medida Desde 1986</span>
+          <img src="images/logo.jpeg" alt="Autojulmar — Tapetes Automotivos Personalizados" class="navbar-logo-img">
         </a>
 
         <!-- Links desktop -->
