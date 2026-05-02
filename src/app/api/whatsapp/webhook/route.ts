@@ -99,14 +99,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Audio — so aceita de admins; tenta transcrever
-    // uazapi envia type="media" com mediaType="ptt"/"audio" ou messageType="AudioMessage"
+    // Audio (ptt / audio / AudioMessage) — aceita de todos os utilizadores
+    // uazapi envia type="ptt"|"audio" ou type="media" com mediaType="ptt"/"audio"
     const tipoAudio = msg.type === 'ptt' || msg.type === 'audio'
       || msg.mediaType === 'ptt' || msg.mediaType === 'audio'
       || msg.messageType === 'AudioMessage'
+      || (msg.type === 'media' && (msg.mediaType === 'ptt' || msg.mediaType === 'audio'))
 
     if (tipoAudio) {
-      // Dedup para audio (usa messageid)
+      // Dedup por messageId
       const audioDedupKey = `audio:${msg.messageid ?? msg.messageId ?? ''}`
       if (audioDedupKey !== 'audio:') {
         const supabaseDedup = criarClienteAdmin()
@@ -117,18 +118,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (!eAdmin(telefone)) {
-        await enviarMensagem(telefone, 'Por favor envie a mensagem em texto.')
-        return NextResponse.json({ ok: true })
-      }
-
-      const mimeType = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
+      const mimeType  = msg.mimetype ?? (msg.content?.mimetype as string | undefined)
       const messageId = msg.messageid ?? msg.messageId
-      const chatId    = msg.chatid ?? (msg.sender_pn ?? msg.sender)
+      // chatId: preferir chatid (JID completo); fallback para sender_pn ou sender
+      const chatId    = msg.chatid ?? msg.sender_pn ?? msg.sender
+
+      console.log('[WhatsApp] Audio detectado — telefone:', telefone, 'messageId:', messageId, 'chatId:', chatId, 'mime:', mimeType, 'type:', msg.type, 'mediaType:', msg.mediaType)
 
       const transcricao = await transcreverAudio({ messageId, chatId, mimetype: mimeType })
+
       if (!transcricao) {
-        await enviarMensagem(telefone, 'Nao consegui transcrever o audio. Pode escrever o pedido em texto?')
+        console.warn('[WhatsApp] Transcricao falhou para:', telefone)
+        await enviarMensagem(telefone, 'Nao consegui perceber o audio. Pode enviar em texto?')
         return NextResponse.json({ ok: true })
       }
 
