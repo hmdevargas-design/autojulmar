@@ -92,29 +92,43 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
     return s + Math.max(0, Number(p.valor_final) - Number(p.sinal))
   }, 0)
 
-  const mapaMateriais = new Map<string, { total: number; faturado: number }>()
+  const mapaMateriais  = new Map<string, { total: number; faturado: number }>()
+  const mapaTipos      = new Map<string, number>()
+  const pedidosPeriodo = materiaisRes.data?.length ?? 0
+  const faturadoPeriodo = (materiaisRes.data ?? []).reduce((s, p) => s + Number(p.valor_final), 0)
+  const valorMedio     = pedidosPeriodo > 0 ? faturadoPeriodo / pedidosPeriodo : 0
+
   for (const p of materiaisRes.data ?? []) {
     const dados    = p.dados as Record<string, unknown>
     const material = typeof dados?.material === 'string' && dados.material ? dados.material : null
-    if (!material) continue
-    const entrada = mapaMateriais.get(material)
-    if (entrada) { entrada.total++; entrada.faturado += Number(p.valor_final) }
-    else mapaMateriais.set(material, { total: 1, faturado: Number(p.valor_final) })
+    if (material) {
+      const entrada = mapaMateriais.get(material)
+      if (entrada) { entrada.total++; entrada.faturado += Number(p.valor_final) }
+      else mapaMateriais.set(material, { total: 1, faturado: Number(p.valor_final) })
+    }
+    const tipoRaw = dados?.tipo_tapete
+    const tipos = Array.isArray(tipoRaw) ? tipoRaw : (typeof tipoRaw === 'string' && tipoRaw ? [tipoRaw] : [])
+    for (const t of tipos) {
+      if (typeof t === 'string' && t) mapaTipos.set(t, (mapaTipos.get(t) ?? 0) + 1)
+    }
   }
-  const materiais = [...mapaMateriais.entries()].map(([nome, d]) => ({ nome, ...d })).sort((a, b) => b.total - a.total)
-  const maxTotal  = materiais[0]?.total ?? 1
+  const materiais  = [...mapaMateriais.entries()].map(([nome, d]) => ({ nome, ...d })).sort((a, b) => b.total - a.total)
+  const tiposTapete = [...mapaTipos.entries()].map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total)
+  const maxTotal   = materiais[0]?.total ?? 1
+  const maxTipo    = tiposTapete[0]?.total ?? 1
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
 
       {/* Métricas */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}           cor="text-slate-900 dark:text-slate-100" />
-        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`} cor="text-indigo-700 dark:text-indigo-400" />
-        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}   sub={`${pedidosMes} pedidos`} cor="text-emerald-700 dark:text-emerald-400" />
-        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}             sub="pedidos"        cor="text-violet-700 dark:text-violet-400" />
-        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`} sub="em aberto"    cor="text-amber-600 dark:text-amber-400" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}                cor="text-slate-900 dark:text-slate-100" />
+        <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`}      cor="text-indigo-700 dark:text-indigo-400" />
+        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}        sub={`${pedidosMes} pedidos`} cor="text-emerald-700 dark:text-emerald-400" />
+        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}                  sub="pedidos"      cor="text-violet-700 dark:text-violet-400" />
+        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`}     sub="em aberto"    cor="text-amber-600 dark:text-amber-400" />
+        <CardMetrica titulo="Ticket médio"   valor={`${valorMedio.toFixed(2)}€`}          sub={periodo === 'tudo' ? 'todos os tempos' : `no período`} cor="text-sky-700 dark:text-sky-400" />
       </div>
 
       {/* Pipeline */}
@@ -170,6 +184,32 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
           </div>
         )}
       </div>
+
+      {/* Tipos de Tapete */}
+      {tiposTapete.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">Tipos de Tapete</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            {tiposTapete.map((t, i) => {
+              const pct = Math.round((t.total / maxTipo) * 100)
+              return (
+                <div key={t.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{t.nome}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-violet-500 dark:bg-violet-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{t.total}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pedidos recentes */}
       <div>
