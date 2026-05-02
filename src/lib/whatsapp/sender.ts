@@ -44,12 +44,12 @@ export async function enviarImagem(para: string, imageUrl: string, caption?: str
   }
 
   const form = new FormData()
-  form.append('number',  para)
-  form.append('file',    blob, 'image.jpg')
+  form.append('file', blob, 'image.jpg')
   if (caption) form.append('caption', caption)
 
-  // Não definir Content-Type — fetch define o boundary correcto para multipart
-  const res = await fetch(`${baseUrl}/send/media`, { method: 'POST', headers: { token }, body: form })
+  // number como query param — o parser Go pode ter dificuldade com campos texto + ficheiro no mesmo multipart
+  const qs  = new URLSearchParams({ number: para })
+  const res = await fetch(`${baseUrl}/send/media?${qs}`, { method: 'POST', headers: { token }, body: form })
 
   if (!res.ok) {
     const erro = await res.text()
