@@ -71,21 +71,31 @@ async function enviarComDelay(para: string, texto: string): Promise<void> {
 
 // ─── Fotos de material ─────────────────────────────────────────────────────────
 
-async function enviarFotosMaterial(telefone: string): Promise<void> {
+const TODOS_MATERIAIS = [
+  { nome: 'ECO PRETO',    arquivo: 'eco-preto'    },
+  { nome: 'GTI PRETO',    arquivo: 'gti-preto'    },
+  { nome: 'GTI CINZA',    arquivo: 'gti-cinza'    },
+  { nome: 'VELUDO PRETO', arquivo: 'veludo-preto' },
+  { nome: 'VELUDO CINZA', arquivo: 'veludo-cinza' },
+  { nome: 'BORRACHA',     arquivo: 'borracha'     },
+  { nome: 'CANELADO',     arquivo: 'canelado'     },
+  { nome: 'CINZA CABRIO', arquivo: 'cinza-cabrio' },
+  { nome: 'TAPETES 3D',   arquivo: 'tapetes-3d'   },
+  { nome: 'MALAS 3D',     arquivo: 'malas-3d'     },
+]
+
+// filtro: lista separada por vírgulas, ex: "GTI PRETO,GTI CINZA" ou "todos"
+async function enviarFotosMaterial(telefone: string, filtro?: string): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ''
-  const materiais = [
-    { nome: 'ECO PRETO',    arquivo: 'eco-preto'    },
-    { nome: 'GTI PRETO',    arquivo: 'gti-preto'    },
-    { nome: 'GTI CINZA',    arquivo: 'gti-cinza'    },
-    { nome: 'VELUDO PRETO', arquivo: 'veludo-preto' },
-    { nome: 'VELUDO CINZA', arquivo: 'veludo-cinza' },
-    { nome: 'BORRACHA',     arquivo: 'borracha'     },
-    { nome: 'CANELADO',     arquivo: 'canelado'     },
-    { nome: 'CINZA CABRIO', arquivo: 'cinza-cabrio' },
-    { nome: 'TAPETES 3D',   arquivo: 'tapetes-3d'   },
-    { nome: 'MALAS 3D',     arquivo: 'malas-3d'     },
-  ]
-  for (const mat of materiais) {
+
+  let lista = TODOS_MATERIAIS
+  if (filtro && filtro.toUpperCase() !== 'TODOS') {
+    const pedidos = filtro.split(',').map(s => s.trim().toUpperCase())
+    lista = TODOS_MATERIAIS.filter(m => pedidos.some(p => m.nome.toUpperCase().includes(p) || p.includes(m.nome.toUpperCase())))
+    if (lista.length === 0) lista = TODOS_MATERIAIS // fallback se filtro não bater em nada
+  }
+
+  for (const mat of lista) {
     await enviarImagem(telefone, `${baseUrl}/materiais/${mat.arquivo}.jpg`, mat.nome)
     await new Promise(r => setTimeout(r, 600))
   }
@@ -293,7 +303,7 @@ IDENTIDADE:
 
 CAPACIDADES DO SISTEMA:
 - Mensagens de audio sao transcritas automaticamente para texto — responde ao conteudo, nao ao meio
-- Envio de fotos: quando incluis [ENVIAR_FOTOS_MATERIAL] na resposta, o sistema envia automaticamente as fotos dos materiais — NAO digas que nao consegues enviar fotos
+- Envio de fotos: quando incluis [ENVIAR_FOTOS_MATERIAL:lista] na resposta, o sistema envia automaticamente as fotos indicadas — NAO digas que nao consegues enviar fotos
 
 SOBRE A LOJA:
 - Fabricamos tapetes personalizados para qualquer viatura
@@ -315,10 +325,12 @@ FLUXO PARA CLIENTES (fora de loja):
 4. Pede o contacto telefonico — explica que e "para registo e para envio de confirmacao do pedido"
 5. SE o cliente nao especificou preferencia de material, pergunta NATURALMENTE se prefere tapetes em borracha ou alcatifa (tecido) antes de apresentar opcoes
    Exemplo: "Prefere os tapetes em borracha ou em alcatifa (tecido)?"
-6. Apresenta os materiais disponiveis dentro da categoria escolhida e INCLUI SEMPRE o marcador [ENVIAR_FOTOS_MATERIAL] na mesma mensagem
-   Se borracha: "Temos Borracha standard e Tapetes 3D (moldados ao habitaculo). Veja as fotos:\n\n1. BORRACHA\n2. TAPETES 3D\n3. MALAS 3D\n\n[ENVIAR_FOTOS_MATERIAL]"
-   Se alcatifa: "Temos os seguintes materiais. Veja as fotos:\n\n1. ECO PRETO\n2. GTI PRETO\n3. GTI CINZA\n4. VELUDO PRETO\n5. VELUDO CINZA\n6. CANELADO\n7. CINZA CABRIO\n\n[ENVIAR_FOTOS_MATERIAL]"
-   Se nao sabe: mostra tudo com [ENVIAR_FOTOS_MATERIAL]
+6. Apresenta os materiais disponiveis dentro da categoria escolhida e INCLUI SEMPRE o marcador com os materiais exactos
+   Se borracha: "Temos Borracha standard e Tapetes 3D. Seguem fotos!\n\n[ENVIAR_FOTOS_MATERIAL:BORRACHA,TAPETES 3D,MALAS 3D]"
+   Se alcatifa: "Temos os seguintes materiais. Veja as fotos:\n\n[ENVIAR_FOTOS_MATERIAL:ECO PRETO,GTI PRETO,GTI CINZA,VELUDO PRETO,VELUDO CINZA,CANELADO,CINZA CABRIO]"
+   Se cliente pediu material especifico (ex: "GTI preto"): envia so esse — [ENVIAR_FOTOS_MATERIAL:GTI PRETO]
+   Se nao sabe: [ENVIAR_FOTOS_MATERIAL:todos]
+   IMPORTANTE: especifica SEMPRE os materiais no marcador, nunca uses o marcador sem parametros
 7. Cliente escolhe material → apresenta os tipos de tapete e preco estimado
 8. Cliente escolhe tipo → confirma o pedido completo com preco total
 9. Cliente diz que quer prosseguir → gera o bloco [PEDIDO_PENDENTE]
@@ -406,7 +418,7 @@ Sugestao por tipo:
 - STD/LJ/OFI                    → GTI ou Eco (preco de revenda, directo)
 - TAXI/TVDE                     → Borracha ou GTI (durabilidade + preco)
 
-Depois de sugerir, o core envia as fotos via [ENVIAR_FOTOS_MATERIAL].
+Depois de sugerir, o core envia as fotos via [ENVIAR_FOTOS_MATERIAL:material1,material2].
 Mencionar que se preferir outro material tambem e possivel.
 
 Se o cliente escolher borracha → apresentar Borracha Standard vs Tapetes 3D:
@@ -883,8 +895,10 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   }
 
   // ── Envio de fotos de material ───────────────────────────────────────────
-  if (resposta.includes('[ENVIAR_FOTOS_MATERIAL]')) {
-    const textoLimpo = resposta.replace('[ENVIAR_FOTOS_MATERIAL]', '').trim()
+  const markerMatch = resposta.match(/\[ENVIAR_FOTOS_MATERIAL(?::([^\]]*))?\]/)
+  if (markerMatch) {
+    const filtro     = markerMatch[1]?.trim() // ex: "GTI PRETO,GTI CINZA" ou undefined
+    const textoLimpo = resposta.replace(markerMatch[0], '').trim()
     historico.push({ role: 'assistant', content: textoLimpo })
     const dadosSessaoFotos = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
     await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessaoFotos })
@@ -894,7 +908,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     } else {
       await enviarComDelay(telefone, textoLimpo)
     }
-    await enviarFotosMaterial(telefone)
+    await enviarFotosMaterial(telefone, filtro)
     return
   }
 
