@@ -43,16 +43,28 @@ export async function enviarImagem(para: string, imageUrl: string, caption?: str
     console.error('[WhatsApp] Erro download imagem:', String(err)); return
   }
 
-  const form = new FormData()
-  form.append('file', blob, 'image.jpg')
-  if (caption) form.append('caption', caption)
+  const cap = caption ?? ''
 
-  // number como query param — o parser Go pode ter dificuldade com campos texto + ficheiro no mesmo multipart
-  const qs  = new URLSearchParams({ number: para })
-  const res = await fetch(`${baseUrl}/send/media?${qs}`, { method: 'POST', headers: { token }, body: form })
+  // Testa variações de endpoint + nome do campo de número
+  const combos = [
+    { path: '/send/image', numField: 'phone',  fileField: 'image' },
+    { path: '/send/image', numField: 'number', fileField: 'image' },
+    { path: '/send/image', numField: 'phone',  fileField: 'file'  },
+    { path: '/send/media', numField: 'phone',  fileField: 'file'  },
+    { path: '/send/media', numField: 'number', fileField: 'file'  },
+  ]
 
-  if (!res.ok) {
-    const erro = await res.text()
-    console.error('[WhatsApp] Erro ao enviar imagem:', erro)
+  for (const c of combos) {
+    const form = new FormData()
+    form.append(c.numField,  para)
+    form.append(c.fileField, blob, 'image.jpg')
+    if (cap) form.append('caption', cap)
+
+    const res = await fetch(`${baseUrl}${c.path}`, { method: 'POST', headers: { token }, body: form })
+    const txt = await res.text()
+    console.log('[WhatsApp] enviarImagem', c.path, `${c.numField}+${c.fileField}`, '→', res.status, txt.slice(0, 80))
+    if (res.ok) return
+    if (res.status !== 400 && res.status !== 404 && res.status !== 405 && res.status !== 500) break
   }
+  console.error('[WhatsApp] Todas as tentativas falharam para', para)
 }
