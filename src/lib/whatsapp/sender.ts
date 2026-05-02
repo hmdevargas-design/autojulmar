@@ -51,7 +51,7 @@ export async function enviarImagem(para: string, imageUrl: string, caption?: str
   const res = await fetch(`${baseUrl}/send/media`, {
     method:  'POST',
     headers: { token, 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ number: para, file, caption: caption ?? '' }),
+    body:    JSON.stringify({ number: para, type: 'image', file, caption: caption ?? '' }),
   })
 
   if (!res.ok) {
