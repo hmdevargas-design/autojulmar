@@ -83,11 +83,12 @@ async function tentarDownloadUazapi(
 }
 
 export async function transcreverAudio(opts: OptsTranscricao): Promise<string | null> {
-  const apiKey      = process.env.OPENAI_API_KEY
+  const apiKey      = process.env.GROQ_API_KEY ?? process.env.OPENAI_API_KEY
+  const isGroq      = !!process.env.GROQ_API_KEY
   const uazapiUrl   = process.env.UAZAPI_URL
   const uazapiToken = process.env.UAZAPI_TOKEN
 
-  if (!apiKey) { console.warn('[Transcricao] OPENAI_API_KEY nao configurada'); return null }
+  if (!apiKey) { console.warn('[Transcricao] GROQ_API_KEY (ou OPENAI_API_KEY) nao configurada'); return null }
 
   console.log('[Transcricao] Inicio — messageId:', opts.messageId, 'mediaUrl:', opts.mediaUrl ?? '(vazio)', 'mime:', opts.mimetype)
 
@@ -128,13 +129,17 @@ export async function transcreverAudio(opts: OptsTranscricao): Promise<string | 
 
   const form = new FormData()
   form.append('file', audioBlob, `audio.${ext}`)
-  form.append('model', 'whisper-1')
+  form.append('model', isGroq ? 'whisper-large-v3' : 'whisper-1')
   form.append('language', 'pt')
 
-  console.log('[Transcricao] A enviar para Whisper — ext:', ext, 'size:', audioBlob.size)
+  const whisperUrl = isGroq
+    ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+    : 'https://api.openai.com/v1/audio/transcriptions'
+
+  console.log('[Transcricao] A enviar para', isGroq ? 'Groq' : 'OpenAI', '— ext:', ext, 'size:', audioBlob.size)
 
   try {
-    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const res = await fetch(whisperUrl, {
       method:  'POST',
       headers: { Authorization: `Bearer ${apiKey}` },
       body:    form,
