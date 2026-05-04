@@ -1,8 +1,9 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
-// 80mm = 226.77pt | margens de 8pt cada lado → área útil ≈ 210pt
+// SRP-350Plus III: papel 80mm (226.77pt) | área imprimível 72mm (204pt)
+// M = 12pt cada lado → área de conteúdo ≈ 202pt (dentro dos 72mm)
 const L = 226.77
-const M = 8  // margem
+const M = 12
 
 const s = StyleSheet.create({
   page: {
