@@ -3,6 +3,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import SeletorEstado from '@/components/pedidos/SeletorEstado'
+import BotaoImprimir from '@/components/pedidos/BotaoImprimir'
 
 interface Props {
   params: Promise<{ tenant: string; id: string }>
@@ -160,12 +161,16 @@ export default async function PaginaDetalhe({ params }: Props) {
 
         {/* Acções */}
         <div className="flex gap-3">
+          <BotaoImprimir
+            pedidoId={p.id}
+            className="flex-1 text-center py-2.5 bg-gold hover:bg-gold-dark text-slate-900 text-sm font-medium rounded-xl transition-colors shadow-sm"
+          />
           <a
             href={`/api/pedidos/${p.id}/pdf`}
             target="_blank"
-            className="flex-1 text-center py-2.5 bg-gold hover:bg-gold-dark text-slate-900 text-sm font-medium rounded-xl transition-colors shadow-sm"
+            className="py-2.5 px-4 border border-slate-600 text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-800 transition-colors"
           >
-            Abrir PDF
+            PDF
           </a>
           <Link
             href={`/${slug}/pedidos/${p.id}/editar`}

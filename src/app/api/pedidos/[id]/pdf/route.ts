@@ -51,7 +51,7 @@ export async function GET(
     ano:               String(dados?.ano ?? ''),
     combustivel:       String(dados?.combustivel ?? ''),
     material:          String(dados?.material ?? ''),
-    tipoTapete:        Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[]) : [],
+    tipoTapete:        Array.isArray(dados?.tipo_tapete) ? (dados.tipo_tapete as string[]) : Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[]) : [],
     extras:            Array.isArray(dados?.extras) ? (dados.extras as string[]) : [],
     estado:            estado?.nome ?? '—',
     corEstado:         estado?.cor ?? '#64748b',

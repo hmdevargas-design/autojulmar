@@ -71,11 +71,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // O trigger handle_new_user cria o profile com role='operador'
-    // Se for admin, actualiza o role
-    if (input.role === 'admin') {
-      await supabase.from('profiles').update({ role: 'admin' }).eq('id', user.id)
-    }
+    // Cria/actualiza o profile explicitamente (o trigger pode não disparar via admin API)
+    await supabase.from('profiles').upsert({
+      id:        user.id,
+      tenant_id: input.tenantId,
+      nome:      input.nome,
+      role:      input.role,
+    })
 
     return NextResponse.json({ id: user.id, email: user.email, nome: input.nome, role: input.role })
   } catch (err) {
