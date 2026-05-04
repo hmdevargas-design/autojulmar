@@ -83,7 +83,7 @@ export default function DocumentoPedidoTermica(props: Props) {
 
   return (
     <Document>
-      <Page size={[L, 'auto']} style={s.page}>
+      <Page size={[L, 1000]} style={s.page}>
 
         {/* Cabeçalho */}
         <Text style={s.empresa}>{props.nomeTenant}</Text>
