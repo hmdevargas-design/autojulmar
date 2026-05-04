@@ -10,13 +10,14 @@ interface Props {
 }
 
 export default function BotaoImprimir({ pedidoId, className, formato = 'termica', label = 'Imprimir' }: Props) {
-  const [estado, setEstado] = useState<'idle' | 'loading'>('idle')
+  const [loading, setLoading] = useState(false)
 
   function imprimir() {
-    if (estado === 'loading') return
-    setEstado('loading')
+    if (loading) return
+    setLoading(true)
 
     const url = `/api/pedidos/${pedidoId}/pdf?formato=${formato}`
+    let carregado = false
 
     const iframe = document.createElement('iframe')
     iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.01;left:-9999px;top:-9999px'
@@ -24,24 +25,23 @@ export default function BotaoImprimir({ pedidoId, className, formato = 'termica'
     document.body.appendChild(iframe)
 
     iframe.addEventListener('load', () => {
+      carregado = true
       try {
         iframe.contentWindow?.focus()
         iframe.contentWindow?.print()
       } catch {
-        // fallback: abre em nova tab se o iframe falhar (ex: bloqueio cross-origin)
         window.open(url, '_blank')
       }
-      setEstado('idle')
-      // Remove o iframe 2 min depois (tempo suficiente para o diálogo de impressão fechar)
+      setLoading(false)
       setTimeout(() => iframe.parentNode?.removeChild(iframe), 120_000)
     })
 
-    // Timeout de segurança: se o PDF não carregar em 15s, abre em nova tab
+    // Fallback: se o PDF não carregar em 15s, abre em nova tab
     setTimeout(() => {
-      if (estado === 'loading') {
+      if (!carregado) {
         iframe.parentNode?.removeChild(iframe)
         window.open(url, '_blank')
-        setEstado('idle')
+        setLoading(false)
       }
     }, 15_000)
   }
@@ -50,10 +50,10 @@ export default function BotaoImprimir({ pedidoId, className, formato = 'termica'
     <button
       type="button"
       onClick={imprimir}
-      disabled={estado === 'loading'}
+      disabled={loading}
       className={className}
     >
-      {estado === 'loading' ? 'A carregar…' : label}
+      {loading ? 'A carregar…' : label}
     </button>
   )
 }
