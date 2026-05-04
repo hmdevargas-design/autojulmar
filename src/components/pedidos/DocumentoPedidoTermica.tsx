@@ -11,31 +11,31 @@ const s = StyleSheet.create({
     paddingHorizontal: M,
     paddingVertical: 8,
     fontFamily: 'Helvetica',
-    fontSize: 9,
+    fontSize: 11,
     color: '#000',
   },
-  empresa:     { fontFamily: 'Helvetica-Bold', fontSize: 11, textAlign: 'center' },
-  subTitulo:   { fontSize: 9, textAlign: 'center', marginTop: 1 },
+  empresa:     { fontFamily: 'Helvetica-Bold', fontSize: 13, textAlign: 'center' },
+  subTitulo:   { fontSize: 10, textAlign: 'center', marginTop: 1 },
   separador:   { borderBottom: '0.5 solid #000', marginVertical: 3 },
-  tracejado:   { textAlign: 'center', fontSize: 8, marginVertical: 2 },
-  secaoTitulo: { fontFamily: 'Helvetica-Bold', fontSize: 9, marginBottom: 2, marginTop: 5 },
+  tracejado:   { textAlign: 'center', fontSize: 9, marginVertical: 2 },
+  secaoTitulo: { fontFamily: 'Helvetica-Bold', fontSize: 11, marginBottom: 2, marginTop: 5 },
 
   // Linha label + valor em duas colunas
-  linhaRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1.5 },
-  linhaLabel: { fontSize: 9, flexShrink: 0, maxWidth: 90 },
-  linhaValor: { fontSize: 9, textAlign: 'right', flex: 1 },
-  linhaNegritoLabel: { fontFamily: 'Helvetica-Bold', fontSize: 9, flexShrink: 0, maxWidth: 90 },
-  linhaNegritoValor: { fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'right', flex: 1 },
+  linhaRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  linhaLabel: { fontSize: 11, flexShrink: 0, maxWidth: 90 },
+  linhaValor: { fontSize: 11, textAlign: 'right', flex: 1 },
+  linhaNegritoLabel: { fontFamily: 'Helvetica-Bold', fontSize: 11, flexShrink: 0, maxWidth: 90 },
+  linhaNegritoValor: { fontFamily: 'Helvetica-Bold', fontSize: 11, textAlign: 'right', flex: 1 },
 
   // Extras em bloco separado (texto pode ser longo)
   extrasBloco: { marginBottom: 2 },
-  extrasLabel: { fontSize: 8, color: '#555' },
-  extrasValor: { fontSize: 9 },
+  extrasLabel: { fontSize: 9, color: '#555' },
+  extrasValor: { fontSize: 11 },
 
   // Pedido # + data
-  pedidoRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, marginBottom: 4 },
-  numeroPedido: { fontFamily: 'Helvetica-Bold', fontSize: 14 },
-  dataTexto:   { fontSize: 8 },
+  pedidoRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, marginBottom: 4 },
+  numeroPedido: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
+  dataTexto:    { fontSize: 9 },
 
   // Total
   totalFinalLinha: {
@@ -43,13 +43,13 @@ const s = StyleSheet.create({
     borderTop: '1 solid #000', borderBottom: '1 solid #000',
     paddingVertical: 3, marginVertical: 3,
   },
-  totalFinalLabel: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
-  totalFinalValor: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
+  totalFinalLabel: { fontFamily: 'Helvetica-Bold', fontSize: 18 },
+  totalFinalValor: { fontFamily: 'Helvetica-Bold', fontSize: 18 },
 
-  emFaltaLabel: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
-  emFaltaValor: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
+  emFaltaLabel: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
+  emFaltaValor: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
 
-  rodape: { textAlign: 'center', fontSize: 8, marginTop: 8, color: '#555' },
+  rodape: { textAlign: 'center', fontSize: 9, marginTop: 8, color: '#555' },
 })
 
 const SEP = '- - - - - - - - - - - - - - - -'
