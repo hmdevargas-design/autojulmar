@@ -1,44 +1,58 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
-// SRP-350Plus III: papel 80mm (226.77pt) | área imprimível 72mm (204pt)
-// M = 12pt cada lado → área de conteúdo ≈ 202pt (dentro dos 72mm)
-const L = 226.77
-const M = 12
+// SRP-350Plus III: área imprimível exacta = 72mm = 204pt
+// Margens 8pt → conteúdo útil = 188pt ≈ 66mm
+const L = 204
+const M = 8
 
 const s = StyleSheet.create({
   page: {
     width: L,
     paddingHorizontal: M,
-    paddingVertical: 10,
+    paddingVertical: 8,
     fontFamily: 'Helvetica',
-    fontSize: 12,
+    fontSize: 9,
     color: '#000',
   },
-  centro: { textAlign: 'center' },
-  negrito: { fontFamily: 'Helvetica-Bold' },
-  empresa: { fontFamily: 'Helvetica-Bold', fontSize: 12, textAlign: 'center' },
-  subTitulo: { fontSize: 12, textAlign: 'center', marginTop: 1 },
-  separador: { borderBottom: '0.5 solid #000', marginVertical: 4 },
-  tracejado: { textAlign: 'center', fontSize: 12, marginVertical: 3 },
-  secaoTitulo: { fontFamily: 'Helvetica-Bold', fontSize: 12, marginBottom: 3, marginTop: 6 },
-  linha: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-  label: { color: '#000', fontSize: 12 },
-  valor: { fontSize: 12 },
-  totalLinha: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  empresa:     { fontFamily: 'Helvetica-Bold', fontSize: 11, textAlign: 'center' },
+  subTitulo:   { fontSize: 9, textAlign: 'center', marginTop: 1 },
+  separador:   { borderBottom: '0.5 solid #000', marginVertical: 3 },
+  tracejado:   { textAlign: 'center', fontSize: 8, marginVertical: 2 },
+  secaoTitulo: { fontFamily: 'Helvetica-Bold', fontSize: 9, marginBottom: 2, marginTop: 5 },
+
+  // Linha label + valor em duas colunas
+  linhaRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1.5 },
+  linhaLabel: { fontSize: 9, flexShrink: 0, maxWidth: 90 },
+  linhaValor: { fontSize: 9, textAlign: 'right', flex: 1 },
+  linhaNegritoLabel: { fontFamily: 'Helvetica-Bold', fontSize: 9, flexShrink: 0, maxWidth: 90 },
+  linhaNegritoValor: { fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'right', flex: 1 },
+
+  // Extras em bloco separado (texto pode ser longo)
+  extrasBloco: { marginBottom: 2 },
+  extrasLabel: { fontSize: 8, color: '#555' },
+  extrasValor: { fontSize: 9 },
+
+  // Pedido # + data
+  pedidoRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, marginBottom: 4 },
+  numeroPedido: { fontFamily: 'Helvetica-Bold', fontSize: 14 },
+  dataTexto:   { fontSize: 8 },
+
+  // Total
   totalFinalLinha: {
     flexDirection: 'row', justifyContent: 'space-between',
-    borderTop: '0.5 solid #000', borderBottom: '0.5 solid #000',
-    paddingVertical: 4, marginVertical: 4,
+    borderTop: '1 solid #000', borderBottom: '1 solid #000',
+    paddingVertical: 3, marginVertical: 3,
   },
-  totalFinalLabel: { fontFamily: 'Helvetica-Bold', fontSize: 18 },
-  totalFinalValor: { fontFamily: 'Helvetica-Bold', fontSize: 18 },
-  emFaltaLabel: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
-  emFaltaValor: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
-  numeroPedido: { fontFamily: 'Helvetica-Bold', fontSize: 18 },
-  rodape: { textAlign: 'center', fontSize: 12, marginTop: 10, color: '#000' },
+  totalFinalLabel: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
+  totalFinalValor: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
+
+  emFaltaLabel: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
+  emFaltaValor: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
+
+  rodape: { textAlign: 'center', fontSize: 8, marginTop: 8, color: '#555' },
 })
 
-const SEP = '- - - - - - - - - - - - - - - - - - -'
+const SEP = '- - - - - - - - - - - - - - - -'
 
 interface Props {
   numeroPedido: number
@@ -68,18 +82,18 @@ interface Props {
 
 function Linha({ l, v, negrito }: { l: string; v: string; negrito?: boolean }) {
   return (
-    <View style={s.totalLinha}>
-      <Text style={negrito ? [s.label, s.negrito] : s.label}>{l}</Text>
-      <Text style={negrito ? [s.valor, s.negrito] : s.valor}>{v}</Text>
+    <View style={s.linhaRow}>
+      <Text style={negrito ? s.linhaNegritoLabel : s.linhaLabel}>{l}</Text>
+      <Text style={negrito ? s.linhaNegritoValor : s.linhaValor}>{v}</Text>
     </View>
   )
 }
 
 export default function DocumentoPedidoTermica(props: Props) {
-  const temDesconto = props.descontoValorTipo > 0
+  const temDesconto      = props.descontoValorTipo > 0
   const temDescontoManual = props.descontoManual > 0
-  const temSinal = props.sinal > 0
-  const temExtras = props.extras.length > 0
+  const temSinal         = props.sinal > 0
+  const temExtras        = props.extras.length > 0
 
   return (
     <Document>
@@ -88,35 +102,39 @@ export default function DocumentoPedidoTermica(props: Props) {
         {/* Cabeçalho */}
         <Text style={s.empresa}>{props.nomeTenant}</Text>
         <Text style={s.subTitulo}>Guia de Serviço</Text>
-
         <View style={s.separador} />
 
-        <View style={[s.linha, { marginTop: 2 }]}>
+        <View style={s.pedidoRow}>
           <Text style={s.numeroPedido}>PEDIDO #{props.numeroPedido}</Text>
-          <Text style={s.valor}>{props.data}</Text>
+          <Text style={s.dataTexto}>{props.data}</Text>
         </View>
 
         {/* Cliente */}
         <Text style={s.tracejado}>{SEP}</Text>
         <Text style={s.secaoTitulo}>CLIENTE</Text>
-        <Linha l="Nome" v={props.nomeCliente} />
-        <Linha l="Tel" v={props.contacto} />
-        <Linha l="Tipo" v={props.tipoCliente} />
+        <Linha l="Nome"    v={props.nomeCliente} />
+        <Linha l="Tel"     v={props.contacto} />
+        {props.tipoCliente ? <Linha l="Tipo" v={props.tipoCliente} /> : null}
 
         {/* Viatura */}
         <Text style={s.tracejado}>{SEP}</Text>
         <Text style={s.secaoTitulo}>VIATURA</Text>
         <Linha l="Matrícula" v={props.matricula || '—'} />
-        {props.viatura      ? <Linha l="Viatura"     v={props.viatura}      /> : null}
-        {props.ano          ? <Linha l="Ano"         v={props.ano}          /> : null}
-        {props.combustivel  ? <Linha l="Combustível" v={props.combustivel}  /> : null}
+        {props.viatura     ? <Linha l="Viatura"     v={props.viatura}     /> : null}
+        {props.ano         ? <Linha l="Ano"         v={props.ano}         /> : null}
+        {props.combustivel ? <Linha l="Combustível" v={props.combustivel} /> : null}
 
         {/* Serviço */}
         <Text style={s.tracejado}>{SEP}</Text>
         <Text style={s.secaoTitulo}>SERVIÇO</Text>
         <Linha l="Material" v={props.material || '—'} />
-        <Linha l="Tipo" v={props.tipoTapete.join(' + ') || '—'} />
-        {temExtras && <Linha l="Extras" v={props.extras.join(', ')} />}
+        <Linha l="Tipo"     v={props.tipoTapete.join(' + ') || '—'} />
+        {temExtras && (
+          <View style={s.extrasBloco}>
+            <Text style={s.extrasLabel}>Extras</Text>
+            <Text style={s.extrasValor}>{props.extras.join(' · ')}</Text>
+          </View>
+        )}
 
         {/* Valores */}
         <Text style={s.tracejado}>{SEP}</Text>
@@ -126,7 +144,10 @@ export default function DocumentoPedidoTermica(props: Props) {
           <Linha l="Extras" v={`+${props.somaExtras.toFixed(2)} EUR`} />
         )}
         {temDesconto && (
-          <Linha l={`Desc. ${props.tipoCliente} -${props.descontoPct}%`} v={`-${props.descontoValorTipo.toFixed(2)} EUR`} />
+          <Linha
+            l={`Desc. ${props.tipoCliente} -${props.descontoPct}%`}
+            v={`-${props.descontoValorTipo.toFixed(2)} EUR`}
+          />
         )}
         {temDescontoManual && (
           <Linha l="Desc. manual" v={`-${props.descontoManual.toFixed(2)} EUR`} />
@@ -141,17 +162,17 @@ export default function DocumentoPedidoTermica(props: Props) {
         {temSinal && (
           <>
             <Linha l="Sinal pago" v={`-${props.sinal.toFixed(2)} EUR`} />
-            <View style={s.totalLinha}>
+            <View style={s.linhaRow}>
               <Text style={s.emFaltaLabel}>EM FALTA</Text>
               <Text style={s.emFaltaValor}>{props.valorEmFalta.toFixed(2)} EUR</Text>
             </View>
           </>
         )}
 
-        {/* Pagamento e estado */}
+        {/* Pagamento */}
         <Text style={s.tracejado}>{SEP}</Text>
         <Linha l="Pagamento" v={props.formaPagamento.replace(/_/g, ' ')} negrito />
-        <Linha l="Estado" v={props.estado} />
+        <Linha l="Estado"    v={props.estado} />
 
         <Text style={s.tracejado}>{SEP}</Text>
         <Text style={s.rodape}>{props.nomeTenant} · obrigado</Text>
