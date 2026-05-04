@@ -21,6 +21,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Estação de impressão local — chave de API no header x-print-key
+  const printKey = process.env.IMPRESSAO_API_KEY
+  const headerKey = request.headers.get('x-print-key')
+  const isPrintPath =
+    pathname.startsWith('/api/pedidos/recentes') ||
+    /^\/api\/pedidos\/[^/]+\/pdf/.test(pathname)
+  if (printKey && headerKey === printKey && isPrintPath) {
+    return NextResponse.next()
+  }
+
   const response = NextResponse.next({
     request: { headers: request.headers },
   })
