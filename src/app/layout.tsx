@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Montserrat } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' })
 
 export const metadata: Metadata = {
   title: 'Gestão de Serviços',
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: scriptTema }} />
       </head>
-      <body className={`${inter.variable} font-sans`}>{children}</body>
+      <body className={`${inter.variable} ${montserrat.variable} font-sans`}>{children}</body>
     </html>
   )
 }

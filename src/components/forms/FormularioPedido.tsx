@@ -42,8 +42,8 @@ interface Props {
 }
 
 // Classes reutilizáveis para consistência
-const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'
+const inputCls = 'w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
+const labelCls = 'block text-sm font-medium text-slate-300 mb-1'
 
 export default function FormularioPedido({ config, configPreco, tenantId, tenantSlug }: Props) {
   const [submetido, setSubmetido] = useState(false)
@@ -187,22 +187,22 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
   if (submetido && numeroPedido) {
     return (
-      <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6 text-center">
+      <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 text-center">
         <div className="text-3xl mb-2">✅</div>
-        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">Pedido #{numeroPedido} criado</h2>
-        <p className="text-emerald-700 dark:text-emerald-400 mt-1">
+        <h2 className="text-xl font-bold text-green-400">Pedido #{numeroPedido} criado</h2>
+        <p className="text-slate-300 mt-1">
           Valor final: <strong>{resultado.valorFinal.toFixed(2)}€</strong>
         </p>
         <div className="mt-4 flex gap-3 justify-center">
           <a
             href={`/${tenantSlug}/pedidos`}
-            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+            className="px-4 py-2 bg-slate-800 border border-slate-600 text-slate-300 rounded-lg text-sm hover:bg-slate-700"
           >
             Ver listagem
           </a>
           <button
             onClick={() => { setSubmetido(false); setNumeroPedido(null) }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+            className="px-4 py-2 bg-gold text-slate-900 rounded-lg text-sm hover:bg-gold-dark"
           >
             Novo pedido
           </button>
@@ -288,7 +288,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             placeholder="9XXXXXXXX ou código (ex: c12)"
           />
           {clienteAutoPreenchido && (
-            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">✓ Cliente encontrado no histórico</p>
+            <p className="mt-1 text-xs text-green-400">✓ Cliente encontrado no histórico</p>
           )}
           {errors.contacto && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.contacto.message}</p>
@@ -487,7 +487,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-3 bg-gold text-slate-900 font-medium rounded-xl hover:bg-gold-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isSubmitting ? 'A criar pedido…' : 'Criar Pedido'}
       </button>

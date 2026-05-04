@@ -57,7 +57,7 @@ export default function ResumoPreco({ resultado }: Props) {
       )}
 
       {resultado.sinal > 0 && (
-        <div className="flex justify-between text-sm font-medium text-indigo-700 dark:text-indigo-400">
+        <div className="flex justify-between text-sm font-medium text-gold">
           <span>Em falta</span>
           <span>{resultado.valorEmFalta.toFixed(2)}€</span>
         </div>

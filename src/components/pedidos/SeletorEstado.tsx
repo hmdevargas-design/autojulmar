@@ -54,7 +54,7 @@ export default function SeletorEstado({ pedidoId, tenantId, estadoAtual, estados
     <>
       <div className="fixed inset-0 z-[9998]" onClick={() => setAberto(false)} />
       <div
-        className="fixed z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 min-w-36"
+        className="fixed z-[9999] bg-slate-900 border border-slate-700 rounded-xl shadow-xl py-1 min-w-36"
         style={{ top: pos.top, left: pos.left }}
       >
         {estados.map((estado) => (

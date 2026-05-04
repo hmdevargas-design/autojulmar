@@ -103,7 +103,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -121,7 +121,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     u.role === 'admin'
-                      ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400'
+                      ? 'bg-gold/20 text-gold'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}>
                     {u.role === 'admin' ? 'Admin' : 'Operador'}
@@ -134,7 +134,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                     <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={() => { setAlterarPwd({ userId: u.id, nome: u.nome }); setNovaPwd(''); setErro('') }}
-                        className="text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        className="text-xs text-slate-400 hover:text-gold transition-colors"
                       >
                         password
                       </button>
@@ -162,7 +162,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
         <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
           <button
             onClick={() => { setMostrarForm(true); setErro('') }}
-            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+            className="text-xs text-gold hover:underline font-medium"
           >
             + Novo utilizador
           </button>
@@ -174,8 +174,8 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
       {/* Modal alterar password */}
       {alterarPwd && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAlterarPwd(null)}>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-slate-200">
               Alterar password — {alterarPwd.nome}
             </h3>
             <div>
@@ -187,7 +187,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 onKeyDown={e => { if (e.key === 'Enter') salvarPassword() }}
                 placeholder="Mínimo 6 caracteres"
                 autoFocus
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               />
             </div>
             {erro && <p className="text-xs text-red-600 dark:text-red-400">{erro}</p>}
@@ -201,7 +201,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
               <button
                 onClick={salvarPassword}
                 disabled={salvandoPwd || novaPwd.length < 6}
-                className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium"
+                className="px-4 py-1.5 text-sm bg-gold hover:bg-gold-dark text-slate-900 rounded-lg disabled:opacity-50 transition-colors font-medium"
               >
                 {salvandoPwd ? 'A guardar…' : 'Guardar'}
               </button>
@@ -211,7 +211,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
       )}
 
       {mostrarForm && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Novo utilizador</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -222,7 +222,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 onChange={e => setNome(e.target.value)}
                 placeholder="Nome completo"
                 autoFocus
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               />
             </div>
             <div>
@@ -232,7 +232,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="email@exemplo.pt"
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               />
             </div>
             <div>
@@ -242,7 +242,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               />
             </div>
             <div>
@@ -250,7 +250,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
               <select
                 value={role}
                 onChange={e => setRole(e.target.value as 'admin' | 'operador')}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               >
                 <option value="operador">Operador — acesso normal</option>
                 <option value="admin">Admin — acesso total</option>
@@ -268,7 +268,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
             <button
               onClick={criar}
               disabled={criando || !nome.trim() || !email.trim() || password.length < 6}
-              className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium"
+              className="px-4 py-1.5 text-sm bg-gold hover:bg-gold-dark text-slate-900 rounded-lg disabled:opacity-50 transition-colors font-medium"
             >
               {criando ? 'A criar…' : 'Criar acesso'}
             </button>

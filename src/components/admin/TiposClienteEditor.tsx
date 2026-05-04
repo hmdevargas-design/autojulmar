@@ -94,7 +94,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -116,15 +116,15 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                       onChange={e => setValorEdit(e.target.value)}
                       onBlur={() => guardar(tipo.id)}
                       onKeyDown={e => { if (e.key === 'Enter') guardar(tipo.id); if (e.key === 'Escape') setEditando(null) }}
-                      className="w-16 text-center border border-indigo-400 dark:border-indigo-600 rounded-lg px-2 py-0.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                      className="w-16 text-center border border-gold rounded-lg px-2 py-0.5 text-sm bg-slate-800 text-slate-100 focus:outline-none"
                       autoFocus
                       min="0" max="100" step="1"
                     />
                   ) : (
                     <span
                       className={`cursor-pointer font-medium transition-colors ${
-                        feedback?.id === tipo.id && feedback.ok ? 'text-emerald-600 dark:text-emerald-400' :
-                        tipo.descontoPct > 0 ? 'text-indigo-600 dark:text-indigo-400' :
+                        feedback?.id === tipo.id && feedback.ok ? 'text-green-400' :
+                        tipo.descontoPct > 0 ? 'text-gold' :
                         'text-slate-400 dark:text-slate-500'
                       }`}
                       onClick={() => iniciarEdicao(tipo)}
@@ -168,7 +168,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
           </p>
           <button
             onClick={() => { setMostrarFormNovo(true); setErro('') }}
-            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+            className="text-xs text-gold hover:underline font-medium"
           >
             + Novo tipo
           </button>
@@ -177,7 +177,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
 
       {/* Formulário de criação */}
       {mostrarFormNovo && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Novo tipo de cliente</h3>
           <div className="flex gap-3 items-end">
             <div className="flex-1">
@@ -188,7 +188,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                 onKeyDown={e => { if (e.key === 'Enter') criar() }}
                 placeholder="ex: ARQUIVADO, VIP, PARCEIRO"
                 autoFocus
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 uppercase placeholder:normal-case"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold uppercase placeholder:normal-case"
               />
             </div>
             <div className="w-28">
@@ -198,7 +198,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                 value={novoDesconto}
                 onChange={e => setNovoDesconto(e.target.value)}
                 min="0" max="100" step="1"
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
             <button
               onClick={criar}
               disabled={criando || !novoNome.trim()}
-              className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium"
+              className="px-4 py-1.5 text-sm bg-gold hover:bg-gold-dark text-slate-900 rounded-lg disabled:opacity-50 transition-colors font-medium"
             >
               {criando ? 'A criar…' : 'Criar'}
             </button>

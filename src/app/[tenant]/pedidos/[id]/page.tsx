@@ -92,7 +92,7 @@ export default async function PaginaDetalhe({ params }: Props) {
 
       <div className="space-y-4">
         {/* Cliente */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Cliente</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Nome"     valor={cliente?.nome ?? null} />
@@ -105,7 +105,7 @@ export default async function PaginaDetalhe({ params }: Props) {
 
         {/* Viatura */}
         {(matriculaFmt != null || viatura != null) ? (
-          <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
             <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Viatura</h2>
             <div className="grid grid-cols-2 gap-3">
               {matriculaFmt != null ? <Campo label="Matricula" valor={matriculaFmt} mono /> : null}
@@ -116,7 +116,7 @@ export default async function PaginaDetalhe({ params }: Props) {
         ) : null}
 
         {/* Tapete */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Produto</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Material"    valor={String(dados.material ?? '—')} />
@@ -128,7 +128,7 @@ export default async function PaginaDetalhe({ params }: Props) {
         </section>
 
         {/* Precos */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Valores</h2>
           <div className="space-y-2 text-sm">
             <LinhaPoco label="Preco base" valor={`${Number(p.preco_base).toFixed(2)}€`} />
@@ -160,7 +160,7 @@ export default async function PaginaDetalhe({ params }: Props) {
           <a
             href={`/api/pedidos/${p.id}/pdf`}
             target="_blank"
-            className="flex-1 text-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+            className="flex-1 text-center py-2.5 bg-gold hover:bg-gold-dark text-slate-900 text-sm font-medium rounded-xl transition-colors shadow-sm"
           >
             Abrir PDF
           </a>

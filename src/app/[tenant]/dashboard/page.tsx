@@ -12,7 +12,7 @@ interface Props {
 
 function CardMetrica({ titulo, valor, sub, cor }: { titulo: string; valor: string; sub?: string; cor: string }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
       <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">{titulo}</div>
       <div className={`text-2xl font-bold ${cor}`}>{valor}</div>
       {sub && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</div>}
@@ -125,10 +125,10 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}                cor="text-slate-900 dark:text-slate-100" />
         <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`}      cor="text-gold dark:text-gold" />
-        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}        sub={`${pedidosMes} pedidos`} cor="text-emerald-700 dark:text-emerald-400" />
-        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}                  sub="pedidos"      cor="text-violet-700 dark:text-violet-400" />
-        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`}     sub="em aberto"    cor="text-amber-600 dark:text-amber-400" />
-        <CardMetrica titulo="Ticket médio"   valor={`${valorMedio.toFixed(2)}€`}          sub={periodo === 'tudo' ? 'todos os tempos' : `no período`} cor="text-sky-700 dark:text-sky-400" />
+        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}        sub={`${pedidosMes} pedidos`} cor="text-green-400" />
+        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}                  sub="pedidos"      cor="text-slate-300" />
+        <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`}     sub="em aberto"    cor="text-gold" />
+        <CardMetrica titulo="Ticket médio"   valor={`${valorMedio.toFixed(2)}€`}          sub={periodo === 'tudo' ? 'todos os tempos' : `no período`} cor="text-slate-400" />
       </div>
 
       {/* Pipeline */}
@@ -137,7 +137,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">Pipeline</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {estadosOrdenados.map(e => (
-              <div key={e.nome} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 shadow-sm">
+              <div key={e.nome} className="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex items-center gap-3 shadow-sm">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: e.cor }} />
                 <div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{e.total}</div>
@@ -158,11 +158,11 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
           </Suspense>
         </div>
         {materiais.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-10 text-center text-sm text-slate-400 dark:text-slate-500">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 py-10 text-center text-sm text-slate-500">
             Sem pedidos no período seleccionado.
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
             {materiais.map((m, i) => {
               const pct = Math.round((m.total / maxTotal) * 100)
               return (
@@ -189,7 +189,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {tiposTapete.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">Tipos de Tapete</h2>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
             {tiposTapete.map((t, i) => {
               const pct = Math.round((t.total / maxTipo) * 100)
               return (
@@ -200,7 +200,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                       <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{t.nome}</span>
                     </div>
                     <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-violet-500 dark:bg-violet-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-slate-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                   <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{t.total}</span>
@@ -224,7 +224,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
             const cliente = p.clientes as unknown as { nome: string } | null
             const estado  = p.estados_fluxo as unknown as { nome: string; cor: string } | null
             return (
-              <div key={p.numero_pedido} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
+              <div key={p.numero_pedido} className="bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
                 <div>
                   <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</div>
                   <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">#{p.numero_pedido}</div>
@@ -241,7 +241,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
         </div>
 
         {/* Tabela desktop */}
-        <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">

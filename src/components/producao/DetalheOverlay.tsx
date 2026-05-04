@@ -116,9 +116,9 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, onClose, on
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm text-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm text-sm border border-slate-700 overflow-hidden">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
           <div className="flex items-center gap-2">
             <span className="font-mono font-bold text-base text-slate-900 dark:text-slate-100">
               #{pedido.numero_pedido}

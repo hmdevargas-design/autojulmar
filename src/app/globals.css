@@ -20,6 +20,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
+  --font-heading: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
 
   /* Dourado principal — usado como accent primário */

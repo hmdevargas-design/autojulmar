@@ -75,13 +75,13 @@ export default async function PerfilCliente({ params }: Props) {
       </div>
 
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{cliente.nome}</h1>
               {cliente.codigo && (
-                <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded">
                   {cliente.codigo}
                 </span>
               )}
@@ -109,19 +109,19 @@ export default async function PerfilCliente({ params }: Props) {
 
       {/* Estatísticas */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Pedidos</div>
           <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{pedidos.length}</div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Total gasto</div>
-          <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{totalGasto.toFixed(2)}€</div>
+          <div className="text-2xl font-bold text-gold">{totalGasto.toFixed(2)}€</div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Valor médio</div>
           <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{mediaValor.toFixed(2)}€</div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Último pedido</div>
           <div className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">
             {ultimoPedido ? formatarData(ultimoPedido.criado_em) : '—'}
@@ -136,7 +136,7 @@ export default async function PerfilCliente({ params }: Props) {
         </h2>
 
         {pedidos.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-12 text-center text-sm text-slate-400 dark:text-slate-500">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 py-12 text-center text-sm text-slate-400 dark:text-slate-500">
             Nenhum pedido registado.
           </div>
         ) : (
@@ -152,7 +152,7 @@ export default async function PerfilCliente({ params }: Props) {
                   <Link
                     key={p.id}
                     href={`/${slug}/pedidos/${p.id}`}
-                    className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="block bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 shadow-sm hover:bg-slate-800/60 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -181,7 +181,7 @@ export default async function PerfilCliente({ params }: Props) {
             </div>
 
             {/* Tabela desktop */}
-            <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">

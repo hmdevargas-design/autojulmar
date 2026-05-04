@@ -67,7 +67,7 @@ export default function NavTenant({ tenant }: Props) {
   return (
     <>
       {/* ── Top bar ── */}
-      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+      <nav className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo / nome */}
@@ -127,7 +127,7 @@ export default function NavTenant({ tenant }: Props) {
       </nav>
 
       {/* ── Bottom nav — mobile only ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-slate-900 border-t border-slate-800 safe-area-pb">
         <div className="grid grid-cols-5 h-16">
           {navLinks.map((link) => {
             const activo = pathname.startsWith(link.href)

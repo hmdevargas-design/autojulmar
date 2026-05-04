@@ -48,7 +48,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -68,7 +68,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                   <input
                     value={nomeEdit}
                     onChange={e => setNomeEdit(e.target.value)}
-                    className="border border-indigo-400 dark:border-indigo-600 rounded-lg px-2 py-0.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                    className="border border-gold rounded-lg px-2 py-0.5 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold w-full"
                     autoFocus
                     onKeyDown={e => { if (e.key === 'Enter') guardar(estado.id); if (e.key === 'Escape') setEditando(null) }}
                   />
@@ -82,7 +82,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                     type="color"
                     value={corEdit}
                     onChange={e => setCorEdit(e.target.value)}
-                    className="h-7 w-14 cursor-pointer rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
+                    className="h-7 w-14 cursor-pointer rounded-lg border border-slate-600 bg-slate-800"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                     <button
                       onClick={() => guardar(estado.id)}
                       disabled={guardando === estado.id}
-                      className="px-2.5 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      className="px-2.5 py-1 bg-gold text-slate-900 text-xs rounded-lg hover:bg-gold-dark disabled:opacity-50 transition-colors"
                     >
                       Guardar
                     </button>
@@ -117,7 +117,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                 ) : (
                   <button
                     onClick={() => iniciarEdicao(estado)}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
+                    className="text-xs text-gold hover:text-gold-dark transition-colors"
                   >
                     Editar
                   </button>

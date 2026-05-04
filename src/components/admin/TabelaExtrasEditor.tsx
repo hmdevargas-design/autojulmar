@@ -71,12 +71,12 @@ export default function TabelaExtrasEditor({ tenantId, extrasIniciais }: Props) 
     setEditandoPreco(null)
   }
 
-  const inputCls = 'border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500'
+  const inputCls = 'border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-500'
 
   return (
     <div>
       <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-3">Extras e Preços</h2>
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -100,13 +100,13 @@ export default function TabelaExtrasEditor({ tenantId, extrasIniciais }: Props) 
                         if (e.key === 'Enter') guardarPreco(extra.opcaoValor)
                         if (e.key === 'Escape') setEditandoPreco(null)
                       }}
-                      className="w-20 text-right border border-indigo-400 dark:border-indigo-600 rounded-lg px-2 py-0.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                      className="w-20 text-right border border-gold rounded-lg px-2 py-0.5 text-sm bg-slate-800 text-slate-100 focus:outline-none"
                       autoFocus
                       step="0.50"
                     />
                   ) : (
                     <span
-                      className="cursor-pointer text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      className="cursor-pointer text-slate-100 hover:text-gold transition-colors"
                       onClick={() => { setEditandoPreco(extra.opcaoValor); setValorEdit(String(extra.precoAdicional)) }}
                     >
                       +{extra.precoAdicional.toFixed(2)}€
@@ -144,7 +144,7 @@ export default function TabelaExtrasEditor({ tenantId, extrasIniciais }: Props) 
           <button
             onClick={adicionar}
             disabled={adicionando || !novoExtra.trim() || !novoPreco}
-            className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="px-3 py-1.5 bg-gold text-slate-900 text-sm rounded-lg hover:bg-gold-dark disabled:opacity-50 transition-colors"
           >
             Adicionar
           </button>

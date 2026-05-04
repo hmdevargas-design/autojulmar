@@ -237,10 +237,10 @@ function CardPedido({ pedido, vip, estadoCor, onClick }: CardProps) {
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 w-40 text-left rounded-xl border bg-white dark:bg-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
+      className={`shrink-0 w-40 text-left rounded-xl border bg-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
         vip
-          ? 'border-red-400 dark:border-red-500 border-l-4'
-          : 'border-slate-200 dark:border-slate-700'
+          ? 'border-red-500 border-l-4'
+          : 'border-slate-700'
       }`}
     >
       <div className="p-2.5 space-y-1">

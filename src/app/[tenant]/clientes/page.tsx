@@ -119,7 +119,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
       {/* Cards mobile */}
       <div className="md:hidden space-y-2">
         {clientes.map((c) => (
-          <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
+          <div key={c.id} className="bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <Link href={`/${slug}/clientes/${c.id}`} className="min-w-0 flex-1 hover:opacity-80 transition-opacity">
                 <div className="font-medium text-slate-900 dark:text-slate-100">{c.nome}</div>
@@ -132,7 +132,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
             </div>
             <div className="flex items-center justify-between mt-2">
               {c.codigo
-                ? <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">{c.codigo}</span>
+                ? <span className="font-mono text-xs bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded">{c.codigo}</span>
                 : <span />
               }
               <EditarCliente tenantId={tenant.id} cliente={{ id: c.id, nome: c.nome, contacto: c.contacto, tipoClienteId: c.tipoClienteId, codigo: c.codigo }} tipos={tipos} />
@@ -147,7 +147,7 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
       </div>
 
       {/* Tabela desktop */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -164,12 +164,12 @@ export default async function PaginaClientes({ params, searchParams }: Props) {
               <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <td className="px-4 py-3">
                   {c.codigo
-                    ? <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">{c.codigo}</span>
+                    ? <span className="font-mono text-xs bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded">{c.codigo}</span>
                     : <span className="text-slate-300 dark:text-slate-600">—</span>
                   }
                 </td>
                 <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                  <Link href={`/${slug}/clientes/${c.id}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <Link href={`/${slug}/clientes/${c.id}`} className="hover:text-gold transition-colors">
                     {c.nome}
                   </Link>
                 </td>

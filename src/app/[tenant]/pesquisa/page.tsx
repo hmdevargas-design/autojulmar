@@ -82,8 +82,8 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Pesquisa</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-100">Pesquisa</h1>
+        <p className="text-sm text-slate-400 mt-0.5">
           Pesquise por nome, contacto, matrícula ou número de pedido
         </p>
       </div>
@@ -96,30 +96,30 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
           {/* Clientes */}
           {clientes.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">
                 Clientes ({clientes.length})
               </h2>
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
                 {clientes.map((c, i) => {
                   const tipoNome = (c.tipos_cliente as unknown as { nome: string } | null)?.nome
                   return (
                     <Link
                       key={c.id}
                       href={`/${slug}/clientes/${c.id}`}
-                      className={`flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${i < clientes.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
+                      className={`flex items-center justify-between px-4 py-3 hover:bg-slate-800/60 transition-colors ${i < clientes.length - 1 ? 'border-b border-slate-800' : ''}`}
                     >
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{c.nome}</div>
-                        <div className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">{c.contacto}</div>
+                        <div className="text-sm font-medium text-slate-100">{c.nome}</div>
+                        <div className="text-xs font-mono text-slate-500 mt-0.5">{c.contacto}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         {c.codigo && (
-                          <span className="font-mono text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded">
+                          <span className="font-mono text-xs bg-gold/10 text-gold border border-gold/30 px-2 py-0.5 rounded">
                             {c.codigo}
                           </span>
                         )}
                         {tipoNome && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
                             {tipoNome}
                           </span>
                         )}
@@ -134,7 +134,7 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
           {/* Pedidos */}
           {todosPedidos.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">
                 Pedidos ({todosPedidos.length})
               </h2>
 
@@ -149,36 +149,36 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
                     <Link
                       key={p.id}
                       href={`/${slug}/pedidos/${p.id}`}
-                      className="block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="block bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 shadow-sm hover:bg-slate-800/60 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span className="font-mono text-xs text-slate-400 dark:text-slate-500">#{p.numero_pedido}</span>
-                          <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-0.5">{cliente?.nome ?? '—'}</div>
-                          {matricula && <div className="text-xs font-mono text-slate-400 dark:text-slate-500">{matricula}</div>}
+                          <span className="font-mono text-xs text-slate-500">#{p.numero_pedido}</span>
+                          <div className="text-sm font-medium text-slate-100 mt-0.5">{cliente?.nome ?? '—'}</div>
+                          {matricula && <div className="text-xs font-mono text-slate-500">{matricula}</div>}
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</div>
+                          <div className="text-sm font-bold text-slate-100">{Number(p.valor_final).toFixed(2)}€</div>
                           {estado && <span className="text-xs font-medium" style={{ color: estado.cor }}>{estado.nome}</span>}
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">{formatarData(p.criado_em)}</div>
+                      <div className="text-xs text-slate-500 mt-1">{formatarData(p.criado_em)}</div>
                     </Link>
                   )
                 })}
               </div>
 
               {/* Tabela desktop */}
-              <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+              <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">#</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cliente</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Matrícula</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Data</th>
-                      <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Valor</th>
+                    <tr className="bg-slate-800/50 border-b border-slate-700">
+                      <th className="text-left px-4 py-3 font-medium text-slate-400">#</th>
+                      <th className="text-left px-4 py-3 font-medium text-slate-400">Cliente</th>
+                      <th className="text-left px-4 py-3 font-medium text-slate-400">Matrícula</th>
+                      <th className="text-left px-4 py-3 font-medium text-slate-400">Estado</th>
+                      <th className="text-left px-4 py-3 font-medium text-slate-400">Data</th>
+                      <th className="text-right px-4 py-3 font-medium text-slate-400">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -190,12 +190,12 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
                       return (
                         <tr
                           key={p.id}
-                          className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                          className="border-b border-slate-800 last:border-0 hover:bg-slate-800/60 transition-colors cursor-pointer"
                           onClick={() => { window.location.href = `/${slug}/pedidos/${p.id}` }}
                         >
-                          <td className="px-4 py-3 font-mono text-slate-400 dark:text-slate-500">#{p.numero_pedido}</td>
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</td>
-                          <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{matricula}</td>
+                          <td className="px-4 py-3 font-mono text-slate-500">#{p.numero_pedido}</td>
+                          <td className="px-4 py-3 font-medium text-slate-100">{cliente?.nome ?? '—'}</td>
+                          <td className="px-4 py-3 font-mono text-slate-400">{matricula}</td>
                           <td className="px-4 py-3">
                             {estado && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: estado.cor + '20', color: estado.cor }}>
@@ -204,8 +204,8 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{formatarData(p.criado_em)}</td>
-                          <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</td>
+                          <td className="px-4 py-3 text-slate-400">{formatarData(p.criado_em)}</td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-100">{Number(p.valor_final).toFixed(2)}€</td>
                         </tr>
                       )
                     })}
@@ -217,15 +217,15 @@ export default async function PaginaPesquisa({ params, searchParams }: Props) {
 
           {/* Sem resultados */}
           {clientes.length === 0 && todosPedidos.length === 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-14 text-center">
-              <p className="text-slate-400 dark:text-slate-500 text-sm">Nenhum resultado para <span className="font-medium text-slate-600 dark:text-slate-300">"{termo}"</span></p>
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 py-14 text-center">
+              <p className="text-slate-500 text-sm">Nenhum resultado para <span className="font-medium text-slate-300">"{termo}"</span></p>
             </div>
           )}
         </div>
       )}
 
       {termo.length > 0 && termo.length < 2 && (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Escreve pelo menos 2 caracteres para pesquisar.</p>
+        <p className="text-sm text-slate-400">Escreve pelo menos 2 caracteres para pesquisar.</p>
       )}
     </div>
   )

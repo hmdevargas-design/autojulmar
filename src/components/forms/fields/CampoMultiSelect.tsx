@@ -35,8 +35,8 @@ export default function CampoMultiSelect({
                 temQtd && activo ? 'rounded-l' : 'rounded-lg'
               } ${
                 activo
-                  ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400'
+                  ? 'bg-gold text-slate-900 border-gold'
+                  : 'bg-slate-800 text-slate-300 border-slate-600 hover:border-gold hover:text-gold'
               }`}
             >
               {opcao}
@@ -50,7 +50,7 @@ export default function CampoMultiSelect({
                 value={qtd}
                 onChange={(e) => onQuantidadeChange?.(opcao, Math.max(1, Number(e.target.value)))}
                 onClick={(e) => e.stopPropagation()}
-                className="w-10 text-center text-xs border border-l-0 border-indigo-600 dark:border-indigo-500 rounded-r py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-indigo-50 dark:bg-indigo-950"
+                className="w-10 text-center text-xs border border-l-0 border-gold rounded-r py-1 text-slate-100 focus:outline-none focus:ring-1 focus:ring-gold bg-slate-700"
               />
             )}
           </div>

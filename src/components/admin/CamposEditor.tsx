@@ -76,7 +76,7 @@ export default function CamposEditor({ tenantId, camposIniciais }: Props) {
     }))
   }
 
-  const inputCls = 'border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500'
+  const inputCls = 'border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-500'
 
   return (
     <div className="space-y-8">
@@ -125,7 +125,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
   const inactivas = campo.opcoes.filter(o => !o.activo).sort((a, b) => a.ordem - b.ordem)
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
         <div>
@@ -138,7 +138,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
           <span className="text-xs text-slate-400 dark:text-slate-500">a guardar…</span>
         )}
         {feedback === true && (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">guardado ✓</span>
+          <span className="text-xs text-green-400">guardado ✓</span>
         )}
         {feedback === false && (
           <span className="text-xs text-red-500">erro ao guardar</span>
@@ -150,7 +150,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
         {activas.map(opcao => (
           <div key={opcao.valor} className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
             <div className="flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               <div>
                 <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{opcao.label}</span>
                 {opcao.label !== opcao.valor && (
@@ -161,7 +161,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onToggle(opcao.valor)}
-                className="text-xs text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                className="text-xs text-slate-400 hover:text-slate-300 transition-colors"
               >
                 desactivar
               </button>
@@ -185,7 +185,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
                   <span>{opcao.label}</span>
                   <button
                     onClick={() => onToggle(opcao.valor)}
-                    className="hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                    className="hover:text-green-400 transition-colors"
                     title="Reactivar"
                   >
                     ↑
@@ -216,7 +216,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
         <button
           onClick={handleAdicionar}
           disabled={!novoValor.trim()}
-          className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 bg-gold text-slate-900 text-sm rounded-lg hover:bg-gold-dark disabled:opacity-50 transition-colors whitespace-nowrap"
         >
           Adicionar
         </button>

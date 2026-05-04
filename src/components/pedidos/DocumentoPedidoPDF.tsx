@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottom: '1 solid #e5e7eb',
   },
-  empresa: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#1d4ed8' },
+  empresa: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#C8A96A' },
   subEmpresa: { fontSize: 9, color: '#6b7280', marginTop: 2 },
   numeroPedido: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#111827' },
   labelPedido: { fontSize: 9, color: '#6b7280', textAlign: 'right' },
@@ -28,9 +28,9 @@ const styles = StyleSheet.create({
   linhaTotais: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
   totalLabel: { color: '#6b7280' },
   totalValor: { fontFamily: 'Helvetica-Bold' },
-  totalFinal: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTop: '1.5 solid #1d4ed8', marginTop: 6 },
+  totalFinal: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTop: '1.5 solid #C8A96A', marginTop: 6 },
   totalFinalLabel: { fontSize: 12, fontFamily: 'Helvetica-Bold' },
-  totalFinalValor: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1d4ed8' },
+  totalFinalValor: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#C8A96A' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, alignSelf: 'flex-start' },
   badgeTexto: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
   rodape: { position: 'absolute', bottom: 30, left: 40, right: 40, textAlign: 'center', fontSize: 8, color: '#d1d5db' },
@@ -180,7 +180,7 @@ export default function DocumentoPedidoPDF(props: Props) {
           {props.sinal > 0 && (
             <View style={styles.linhaTotais}>
               <Text style={[styles.totalLabel, { fontFamily: 'Helvetica-Bold' }]}>Em falta</Text>
-              <Text style={{ fontFamily: 'Helvetica-Bold', color: '#1d4ed8' }}>{props.valorEmFalta.toFixed(2)}€</Text>
+              <Text style={{ fontFamily: 'Helvetica-Bold', color: '#C8A96A' }}>{props.valorEmFalta.toFixed(2)}€</Text>
             </View>
           )}
         </View>
