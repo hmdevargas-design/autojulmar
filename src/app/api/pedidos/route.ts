@@ -196,8 +196,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erro: 'Erro ao criar pedido' }, { status: 500 })
     }
 
-    // 7. Notificação para grupo WhatsApp (fire-and-forget — não bloqueia a resposta)
+    // 7. Notificação para grupo WhatsApp
     const grupoId = process.env.WHATSAPP_GRUPO_PEDIDOS
+    console.log('[Grupo] grupoId:', grupoId ?? '(não configurado)')
     if (grupoId) {
       const mensagem = formatarNotificacaoGrupo({
         numeroPedido:   pedido.numero_pedido,
@@ -212,9 +213,12 @@ export async function POST(request: NextRequest) {
         valorFinal:     Number(pedido.valor_final),
         formaPagamento: input.formaPagamento,
       })
-      enviarMensagem(grupoId, mensagem).catch(err =>
+      try {
+        await enviarMensagem(grupoId, mensagem)
+        console.log('[Grupo] Notificação enviada — pedido #' + pedido.numero_pedido)
+      } catch (err) {
         console.error('[Grupo] Falha ao notificar:', err)
-      )
+      }
     }
 
     return NextResponse.json({

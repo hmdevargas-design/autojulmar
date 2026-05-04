@@ -4,12 +4,17 @@ export async function enviarMensagem(para: string, texto: string): Promise<void>
   const baseUrl = process.env.UAZAPI_URL
   const token   = process.env.UAZAPI_TOKEN
 
+  console.log('[WhatsApp] enviarMensagem → baseUrl:', baseUrl ?? '(não definido)', '| para:', para)
+
   if (!baseUrl || !token) {
     console.warn('[WhatsApp] Credenciais uazapi não configuradas — mensagem não enviada')
     return
   }
 
-  const res = await fetch(`${baseUrl}/send/text`, {
+  const url = `${baseUrl}/send/text`
+  console.log('[WhatsApp] POST', url)
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'token':        token,
@@ -20,8 +25,11 @@ export async function enviarMensagem(para: string, texto: string): Promise<void>
 
   if (!res.ok) {
     const erro = await res.text()
-    console.error('[WhatsApp] Erro ao enviar mensagem:', erro)
+    console.error('[WhatsApp] Erro ao enviar mensagem — status:', res.status, '| body:', erro)
+    throw new Error(`uazapi ${res.status}: ${erro}`)
   }
+
+  console.log('[WhatsApp] Mensagem enviada com sucesso para:', para)
 }
 
 export async function enviarImagem(para: string, imageUrl: string, caption?: string): Promise<void> {
