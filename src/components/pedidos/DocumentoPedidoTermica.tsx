@@ -29,7 +29,7 @@ const s = StyleSheet.create({
 
   // Extras em bloco separado (texto pode ser longo)
   extrasBloco: { marginBottom: 2 },
-  extrasLabel: { fontSize: 9, color: '#555' },
+  extrasLabel: { fontFamily: 'Helvetica-Bold', fontSize: 11 },
   extrasValor: { fontSize: 11 },
 
   // Pedido # + data
@@ -49,7 +49,7 @@ const s = StyleSheet.create({
   emFaltaLabel: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
   emFaltaValor: { fontFamily: 'Helvetica-Bold', fontSize: 12 },
 
-  rodape: { textAlign: 'center', fontSize: 9, marginTop: 8, color: '#555' },
+  rodape: { textAlign: 'center', fontSize: 11, marginTop: 8 },
 })
 
 const SEP = '- - - - - - - - - - - - - - - -'
