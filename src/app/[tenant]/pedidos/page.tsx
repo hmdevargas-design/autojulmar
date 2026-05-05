@@ -150,7 +150,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                   {estado ? (
-                    <SeletorEstado pedidoId={pedido.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} />
+                    <SeletorEstado pedidoId={pedido.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} numeroPedido={pedido.numero_pedido} />
                   ) : null}
                   {pedido.estado_producao && (
                     <span
@@ -220,6 +220,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
                         tenantId={tenant.id}
                         estadoAtual={estado}
                         estados={estados}
+                        numeroPedido={pedido.numero_pedido}
                       />
                     ) : '—'}
                   </td>

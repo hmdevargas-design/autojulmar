@@ -4,8 +4,10 @@ import { enviarMensagem } from '@/lib/whatsapp/sender'
 import { z } from 'zod'
 
 const schema = z.object({
-  estadoId: z.string().min(1),
-  tenantId: z.string().min(1),
+  estadoId:         z.string().min(1),
+  tenantId:         z.string().min(1),
+  enviarWhatsapp:   z.boolean().optional().default(true),
+  mensagemCustom:   z.string().optional(),
 })
 
 export async function PUT(
@@ -33,7 +35,7 @@ export async function PUT(
       .eq('id', input.estadoId)
       .single()
 
-    if (estado?.nome?.toUpperCase() === 'PRONTO') {
+    if (input.enviarWhatsapp !== false && estado?.nome?.toUpperCase() === 'PRONTO') {
       // Busca número do pedido e contacto do cliente
       const { data: pedido } = await supabase
         .from('pedidos')
@@ -44,8 +46,8 @@ export async function PUT(
       const contacto = (pedido?.clientes as unknown as { contacto?: string } | null)?.contacto
       if (contacto) {
         const telefone = contacto.replace(/\D/g, '')
-        const msg = `✅ O seu pedido *#${pedido?.numero_pedido}* está pronto para levantamento!\n\n🏪 *Autojulmar* — obrigado pela preferência.`
-        // Notificação fire-and-forget — não bloqueia a resposta
+        const msgPadrao = `✅ O seu pedido *#${pedido?.numero_pedido}* está pronto para levantamento!\n\n🏪 *Autojulmar* — obrigado pela preferência.`
+        const msg = input.mensagemCustom?.trim() || msgPadrao
         enviarMensagem(telefone, msg).catch(err =>
           console.error('[WhatsApp] Erro ao notificar cliente:', String(err))
         )

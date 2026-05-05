@@ -89,7 +89,7 @@ export default async function PaginaDetalhe({ params }: Props) {
         </h1>
         {estado != null && (
           <div className="ml-auto">
-            <SeletorEstado pedidoId={p.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} />
+            <SeletorEstado pedidoId={p.id} tenantId={tenant.id} estadoAtual={estado} estados={estados} numeroPedido={p.numero_pedido} />
           </div>
         )}
       </div>
