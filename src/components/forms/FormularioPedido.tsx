@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -50,6 +50,9 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
   const [numeroPedido, setNumeroPedido] = useState<number | null>(null)
   const [extrasQuantidades, setExtrasQuantidades] = useState<Record<string, number>>({})
   const [clienteAutoPreenchido, setClienteAutoPreenchido] = useState(false)
+  const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; contacto: string; tipo_cliente_id: string }[]>([])
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false)
+  const timerSugestoes = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Extrai valores activos de um campo da configuração do tenant
   function valoresDeCampo(nomeCampo: string): string[] {
@@ -135,6 +138,28 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
     } catch {
       // falha silenciosa — operador preenche manualmente
     }
+  }
+
+  function buscarSugestoes(texto: string) {
+    if (timerSugestoes.current) clearTimeout(timerSugestoes.current)
+    if (texto.trim().length < 2) { setSugestoes([]); return }
+    timerSugestoes.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/clientes?tenantId=${tenantId}&q=${encodeURIComponent(texto.trim())}`)
+        if (!res.ok) return
+        const data = await res.json()
+        setSugestoes(data.clientes ?? [])
+      } catch { setSugestoes([]) }
+    }, 250)
+  }
+
+  function selecionarSugestao(c: { id: string; nome: string; contacto: string; tipo_cliente_id: string }) {
+    setValue('nomeCliente', c.nome)
+    if (c.contacto) setValue('contacto', c.contacto)
+    if (c.tipo_cliente_id) setValue('tipoClienteId', c.tipo_cliente_id)
+    setSugestoes([])
+    setMostrarSugestoes(false)
+    setClienteAutoPreenchido(true)
   }
 
   useEffect(() => {
@@ -257,15 +282,40 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
       {/* Cliente */}
       <div className="grid grid-cols-2 gap-4">
-        <div>
+        <div className="relative">
           <label className={labelCls}>
             Cliente <span className="text-red-500">*</span>
           </label>
           <input
             {...register('nomeCliente')}
+            autoComplete="off"
             className={inputCls}
             placeholder="Nome do cliente"
+            onChange={e => {
+              register('nomeCliente').onChange(e)
+              buscarSugestoes(e.target.value)
+              setMostrarSugestoes(true)
+              setClienteAutoPreenchido(false)
+            }}
+            onFocus={() => setMostrarSugestoes(true)}
+            onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
           />
+          {mostrarSugestoes && sugestoes.length > 0 && (
+            <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+              {sugestoes.map(c => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onMouseDown={() => selecionarSugestao(c)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors"
+                  >
+                    <span className="text-slate-100 font-medium">{c.nome}</span>
+                    {c.contacto && <span className="ml-2 text-slate-400 text-xs">{c.contacto}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {errors.nomeCliente && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.nomeCliente.message}</p>
           )}

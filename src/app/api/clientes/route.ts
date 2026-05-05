@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('clientes')
     .select(`
-      id, nome, contacto,
+      id, nome, contacto, tipo_cliente_id,
       tipos_cliente ( nome ),
       pedidos ( id )
     `, { count: 'exact' })
