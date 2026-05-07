@@ -104,10 +104,9 @@ async function enviarFotosMaterial(telefone: string, filtro?: string): Promise<v
 // ─── Takeover (pausa/retoma o bot para um numero) ────────────────────────────
 
 export async function pausarBot(tenantId: string, telefone: string): Promise<void> {
-  const supabase  = criarClienteAdmin()
   const sessao    = await obterSessao(tenantId, telefone)
   const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
-  await guardarSessao(tenantId, telefone, { step: 'takeover', dados: { historico } })
+  await guardarSessao(tenantId, telefone, { step: 'takeover', dados: { historico, takeoverTs: Date.now() } })
 }
 
 async function retomarBot(tenantId: string, telefone: string): Promise<void> {
@@ -810,10 +809,17 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   const sessao = await obterSessao(tenant.id, telefone)
 
-  // ── Takeover activo — bot em silencio para este numero ───────────────────
+  // ── Takeover activo — verifica se expirou, senão fica em silêncio ────────
   if (sessao?.step === 'takeover') {
-    console.log('[Agente] Takeover activo — ignorando mensagem de:', telefone)
-    return
+    const takeoverTtl = Number(process.env.WHATSAPP_TAKEOVER_TTL ?? 7200) * 1000
+    const takeoverTs  = (sessao.dados?.takeoverTs as number | undefined) ?? 0
+    if (takeoverTs && Date.now() - takeoverTs > takeoverTtl) {
+      console.log('[Agente] Takeover expirado — a retomar bot para:', telefone)
+      await retomarBot(tenant.id, telefone)
+    } else {
+      console.log('[Agente] Takeover activo — ignorando mensagem de:', telefone)
+      return
+    }
   }
 
   // ── Aguarda confirmacao de pedido (fluxo admin/owner) ────────────────────
