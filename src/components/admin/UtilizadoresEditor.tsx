@@ -29,7 +29,6 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
   const [novaPwd, setNovaPwd]           = useState('')
   const [salvandoPwd, setSalvandoPwd]   = useState(false)
 
-  // Form novo utilizador
   const [nome,     setNome]     = useState('')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -97,13 +96,15 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
     setApagando(null)
   }
 
+  const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold'
+
   if (loading) {
     return <div className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center">A carregar…</div>
   }
 
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -159,7 +160,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
           </tbody>
         </table>
 
-        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+        <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-800 flex justify-end">
           <button
             onClick={() => { setMostrarForm(true); setErro('') }}
             className="text-xs text-gold hover:underline font-medium"
@@ -174,8 +175,8 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
       {/* Modal alterar password */}
       {alterarPwd && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAlterarPwd(null)}>
-          <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-slate-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
               Alterar password — {alterarPwd.nome}
             </h3>
             <div>
@@ -187,7 +188,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 onKeyDown={e => { if (e.key === 'Enter') salvarPassword() }}
                 placeholder="Mínimo 6 caracteres"
                 autoFocus
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               />
             </div>
             {erro && <p className="text-xs text-red-600 dark:text-red-400">{erro}</p>}
@@ -211,7 +212,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
       )}
 
       {mostrarForm && (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Novo utilizador</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -222,7 +223,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 onChange={e => setNome(e.target.value)}
                 placeholder="Nome completo"
                 autoFocus
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               />
             </div>
             <div>
@@ -232,7 +233,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="email@exemplo.pt"
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               />
             </div>
             <div>
@@ -242,7 +243,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               />
             </div>
             <div>
@@ -250,7 +251,7 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
               <select
                 value={role}
                 onChange={e => setRole(e.target.value as 'admin' | 'operador')}
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               >
                 <option value="operador">Operador — acesso normal</option>
                 <option value="admin">Admin — acesso total</option>

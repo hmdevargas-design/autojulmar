@@ -48,7 +48,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -62,13 +62,13 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
         <tbody>
           {estados.map((estado) => (
             <tr key={estado.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <td className="px-4 py-3 text-slate-400 dark:text-slate-500 text-center">{estado.ordem}</td>
+              <td className="px-4 py-3 text-slate-500 dark:text-slate-500 text-center">{estado.ordem}</td>
               <td className="px-4 py-3">
                 {editando === estado.id ? (
                   <input
                     value={nomeEdit}
                     onChange={e => setNomeEdit(e.target.value)}
-                    className="border border-gold rounded-lg px-2 py-0.5 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold w-full"
+                    className="border border-gold rounded-lg px-2 py-0.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold w-full"
                     autoFocus
                     onKeyDown={e => { if (e.key === 'Enter') guardar(estado.id); if (e.key === 'Escape') setEditando(null) }}
                   />
@@ -82,7 +82,7 @@ export default function EstadosEditor({ tenantId, estadosIniciais }: Props) {
                     type="color"
                     value={corEdit}
                     onChange={e => setCorEdit(e.target.value)}
-                    className="h-7 w-14 cursor-pointer rounded-lg border border-slate-600 bg-slate-800"
+                    className="h-7 w-14 cursor-pointer rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                   />
                 ) : (
                   <div className="flex items-center gap-2">

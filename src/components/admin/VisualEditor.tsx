@@ -36,13 +36,12 @@ export default function VisualEditor({ tenantId, tenantSlug, nomeInicial, logoIn
     }
   }
 
-  const inputCls = 'w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-500'
-  const labelCls = 'block text-sm font-medium text-slate-300 mb-1'
+  const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-400 dark:placeholder-slate-500'
+  const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 space-y-5 shadow-sm max-w-lg">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-5 shadow-sm max-w-lg">
 
-      {/* Nome do negócio */}
       <div>
         <label className={labelCls}>Nome do negócio</label>
         <input
@@ -53,7 +52,6 @@ export default function VisualEditor({ tenantId, tenantSlug, nomeInicial, logoIn
         />
       </div>
 
-      {/* Logo */}
       <div>
         <label className={labelCls}>URL do logótipo</label>
         <input
@@ -74,7 +72,6 @@ export default function VisualEditor({ tenantId, tenantSlug, nomeInicial, logoIn
         )}
       </div>
 
-      {/* Cor primária */}
       <div>
         <label className={labelCls}>Cor primária</label>
         <div className="flex items-center gap-3">
@@ -82,17 +79,16 @@ export default function VisualEditor({ tenantId, tenantSlug, nomeInicial, logoIn
             type="color"
             value={cor}
             onChange={e => setCor(e.target.value)}
-            className="h-10 w-16 cursor-pointer rounded-lg border border-slate-600 bg-slate-800 p-0.5"
+            className="h-10 w-16 cursor-pointer rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-0.5"
           />
           <input
             value={cor}
             onChange={e => {
               if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setCor(e.target.value)
             }}
-            className="w-32 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+            className="w-32 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
             placeholder="#2563eb"
           />
-          {/* Pré-visualização */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -111,18 +107,16 @@ export default function VisualEditor({ tenantId, tenantSlug, nomeInicial, logoIn
         </div>
       </div>
 
-      {/* Feedback */}
       {feedback && (
         <div className={`text-sm px-3 py-2 rounded-lg ${
           feedback.ok
-            ? 'bg-slate-800 text-green-400'
-            : 'bg-red-950 text-red-400'
+            ? 'bg-green-50 dark:bg-slate-800 text-green-700 dark:text-green-400'
+            : 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400'
         }`}>
           {feedback.msg}
         </div>
       )}
 
-      {/* Botão guardar */}
       <button
         onClick={guardar}
         disabled={guardando || !nome.trim() || !/^#[0-9a-fA-F]{6}$/.test(cor)}

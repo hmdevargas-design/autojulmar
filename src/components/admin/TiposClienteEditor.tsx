@@ -22,7 +22,6 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
   const [feedback, setFeedback]   = useState<{ id: string; ok: boolean } | null>(null)
   const [erro, setErro]           = useState('')
 
-  // Novo tipo
   const [novoNome, setNovoNome]           = useState('')
   const [novoDesconto, setNovoDesconto]   = useState('0')
   const [criando, setCriando]             = useState(false)
@@ -92,9 +91,11 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
     setGuardando(null)
   }
 
+  const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold'
+
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -116,16 +117,16 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                       onChange={e => setValorEdit(e.target.value)}
                       onBlur={() => guardar(tipo.id)}
                       onKeyDown={e => { if (e.key === 'Enter') guardar(tipo.id); if (e.key === 'Escape') setEditando(null) }}
-                      className="w-16 text-center border border-gold rounded-lg px-2 py-0.5 text-sm bg-slate-800 text-slate-100 focus:outline-none"
+                      className="w-16 text-center border border-gold rounded-lg px-2 py-0.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
                       autoFocus
                       min="0" max="100" step="1"
                     />
                   ) : (
                     <span
                       className={`cursor-pointer font-medium transition-colors ${
-                        feedback?.id === tipo.id && feedback.ok ? 'text-green-400' :
+                        feedback?.id === tipo.id && feedback.ok ? 'text-green-500 dark:text-green-400' :
                         tipo.descontoPct > 0 ? 'text-gold' :
-                        'text-slate-400 dark:text-slate-500'
+                        'text-slate-500 dark:text-slate-500'
                       }`}
                       onClick={() => iniciarEdicao(tipo)}
                       title="Clica para editar"
@@ -162,7 +163,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
           </tbody>
         </table>
 
-        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Clica no desconto para editar · Enter para guardar
           </p>
@@ -175,9 +176,8 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
         </div>
       </div>
 
-      {/* Formulário de criação */}
       {mostrarFormNovo && (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Novo tipo de cliente</h3>
           <div className="flex gap-3 items-end">
             <div className="flex-1">
@@ -188,7 +188,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                 onKeyDown={e => { if (e.key === 'Enter') criar() }}
                 placeholder="ex: ARQUIVADO, VIP, PARCEIRO"
                 autoFocus
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold uppercase placeholder:normal-case"
+                className={`${inputCls} uppercase placeholder:normal-case`}
               />
             </div>
             <div className="w-28">
@@ -198,7 +198,7 @@ export default function TiposClienteEditor({ tenantId, tiposIniciais }: Props) {
                 value={novoDesconto}
                 onChange={e => setNovoDesconto(e.target.value)}
                 min="0" max="100" step="1"
-                className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+                className={inputCls}
               />
             </div>
           </div>
