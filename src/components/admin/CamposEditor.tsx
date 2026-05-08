@@ -76,7 +76,7 @@ export default function CamposEditor({ tenantId, camposIniciais }: Props) {
     }))
   }
 
-  const inputCls = 'border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-500'
+  const inputCls = 'border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-400 dark:placeholder-slate-500'
 
   return (
     <div className="space-y-8">
@@ -125,7 +125,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
   const inactivas = campo.opcoes.filter(o => !o.activo).sort((a, b) => a.ordem - b.ordem)
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
         <div>
@@ -161,7 +161,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onToggle(opcao.valor)}
-                className="text-xs text-slate-400 hover:text-slate-300 transition-colors"
+                className="text-xs text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 desactivar
               </button>
@@ -198,7 +198,7 @@ function CampoOpcoes({ campo, guardando, feedback, inputCls, onAdicionar, onTogg
       </div>
 
       {/* Adicionar nova opção */}
-      <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex gap-2 items-center">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex gap-2 items-center">
         <input
           value={novoValor}
           onChange={e => setNovoValor(e.target.value)}

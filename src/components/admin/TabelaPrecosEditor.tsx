@@ -86,8 +86,8 @@ export default function TabelaPrecosEditor({
           </thead>
           <tbody>
             {opcoesCampo1.map((c1, i) => (
-              <tr key={c1} className={i % 2 === 0 ? 'bg-slate-900' : 'bg-slate-800/30'}>
-                <td className="px-3 py-1.5 border-b border-r border-slate-100 dark:border-slate-800 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap sticky left-0 bg-inherit text-xs">
+              <tr key={c1} className={i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/30'}>
+                <td className="px-3 py-1.5 border-b border-r border-slate-200 dark:border-slate-800 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap sticky left-0 bg-inherit text-xs">
                   {c1}
                 </td>
                 {opcoesCampo2.map(c2 => {
@@ -99,7 +99,7 @@ export default function TabelaPrecosEditor({
                   return (
                     <td
                       key={c2}
-                      className="border-b border-r border-slate-800 text-center p-0 cursor-pointer hover:bg-slate-800/60 transition-colors"
+                      className="border-b border-r border-slate-200 dark:border-slate-800 text-center p-0 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
                       onClick={() => !estaEditando && iniciarEdicao(c1, c2)}
                     >
                       {estaEditando ? (
@@ -109,7 +109,7 @@ export default function TabelaPrecosEditor({
                           onChange={e => setValorEdit(e.target.value)}
                           onBlur={() => guardar(c1, c2)}
                           onKeyDown={e => handleKeyDown(e, c1, c2)}
-                          className="w-16 text-center py-1 text-sm bg-slate-800 text-slate-100 border-0 focus:outline-none focus:ring-2 focus:ring-gold rounded"
+                          className="w-16 text-center py-1 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-0 focus:outline-none focus:ring-2 focus:ring-gold rounded"
                           autoFocus
                           min="0"
                           step="0.50"
@@ -117,8 +117,8 @@ export default function TabelaPrecosEditor({
                       ) : (
                         <span className={`block px-2 py-1.5 text-xs ${
                           estaGuardando ? 'opacity-50' :
-                          preco != null ? 'text-slate-900 dark:text-slate-100' :
-                          'text-slate-300 dark:text-slate-600'
+                          preco != null ? 'text-slate-800 dark:text-slate-100' :
+                          'text-slate-400 dark:text-slate-600'
                         }`}>
                           {preco != null ? `${preco.toFixed(2)}€` : '—'}
                         </span>
