@@ -190,6 +190,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
           extrasQuantidades,
           quantidade:        data.quantidade,
           descontoManual:    data.descontoManual,
+          valorOverride:     data.valor,
           sinal:             data.sinal,
           formaPagamento:    data.formaPagamento,
           origem:            'web',

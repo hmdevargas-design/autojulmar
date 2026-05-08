@@ -18,6 +18,7 @@ const schemaCriarPedido = z.object({
   extrasQuantidades: z.record(z.string(), z.number()).optional(),
   quantidade:        z.coerce.number().min(1).default(1),
   descontoManual:    z.coerce.number().min(0).default(0),
+  valorOverride:     z.coerce.number().min(0).optional(),
   sinal:             z.coerce.number().min(0).default(0),
   formaPagamento:    z.string(),
   origem:            z.enum(['web', 'whatsapp', 'api']).default('web'),
@@ -147,7 +148,11 @@ export async function POST(request: NextRequest) {
       precoBase  = resultado.precoBase
       somaExtras = resultado.somaExtras
       subtotal   = resultado.subtotal
-      valorFinal = resultado.valorFinal
+      // valorOverride permite ao operador definir o preço manualmente
+      // (usado quando não há entrada na tabela base, ex: malas sem preço fixo)
+      valorFinal = (input.valorOverride != null && input.valorOverride > 0 && resultado.valorFinal === 0)
+        ? input.valorOverride
+        : resultado.valorFinal
     }
 
     // 4. Próximo número de pedido
