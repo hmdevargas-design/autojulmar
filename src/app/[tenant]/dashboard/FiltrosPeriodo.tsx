@@ -30,7 +30,7 @@ export default function FiltrosPeriodo({ periodoActual }: { periodoActual: strin
           className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
             periodoActual === o.valor
               ? 'bg-gold text-slate-900 border border-gold'
-              : 'bg-slate-800 border border-slate-700 text-slate-400 hover:border-gold hover:text-gold'
+              : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-gold hover:text-gold'
           }`}
         >
           {o.label}

@@ -43,24 +43,24 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Email</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-500"
+          className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold placeholder-slate-400 dark:placeholder-slate-500"
           placeholder="email@exemplo.pt"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Password</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         />
       </div>
       {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}

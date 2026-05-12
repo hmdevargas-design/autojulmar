@@ -42,7 +42,7 @@ interface Props {
 }
 
 // Classes reutilizáveis para consistência
-const inputCls = 'w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
+const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
 const labelCls = 'block text-sm font-medium text-slate-300 mb-1'
 
 export default function FormularioPedido({ config, configPreco, tenantId, tenantSlug }: Props) {
@@ -213,16 +213,16 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
   if (submetido && numeroPedido) {
     return (
-      <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 text-center">
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl p-6 text-center">
         <div className="text-3xl mb-2">✅</div>
-        <h2 className="text-xl font-bold text-green-400">Pedido #{numeroPedido} criado</h2>
-        <p className="text-slate-300 mt-1">
+        <h2 className="text-xl font-bold text-green-600 dark:text-green-400">Pedido #{numeroPedido} criado</h2>
+        <p className="text-slate-600 dark:text-slate-300 mt-1">
           Valor final: <strong>{resultado.valorFinal.toFixed(2)}€</strong>
         </p>
         <div className="mt-4 flex gap-3 justify-center">
           <a
             href={`/${tenantSlug}/pedidos`}
-            className="px-4 py-2 bg-slate-800 border border-slate-600 text-slate-300 rounded-lg text-sm hover:bg-slate-700"
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-700"
           >
             Ver listagem
           </a>
@@ -302,15 +302,15 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
           />
           {mostrarSugestoes && sugestoes.length > 0 && (
-            <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+            <ul className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
               {sugestoes.map(c => (
                 <li key={c.id}>
                   <button
                     type="button"
                     onMouseDown={() => selecionarSugestao(c)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                    <span className="text-slate-100 font-medium">{c.nome}</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-medium">{c.nome}</span>
                     {c.contacto && <span className="ml-2 text-slate-400 text-xs">{c.contacto}</span>}
                   </button>
                 </li>

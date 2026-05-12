@@ -60,7 +60,7 @@ interface Props {
   defaultValues: DefaultValuesEditar
 }
 
-const inputCls = 'w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
+const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
 const labelCls = 'block text-sm font-medium text-slate-300 mb-1'
 
 export default function FormularioEditarPedido({
@@ -176,9 +176,9 @@ export default function FormularioEditarPedido({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
       {/* Cliente — apenas leitura */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3">
         <span className="text-xs text-slate-400 uppercase tracking-wide">Cliente</span>
-        <p className="text-sm font-medium text-slate-100 mt-0.5">{clienteNome}</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-0.5">{clienteNome}</p>
       </div>
 
       {/* Matrícula */}
@@ -382,7 +382,7 @@ export default function FormularioEditarPedido({
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex-1 py-3 border border-slate-600 text-slate-300 font-medium rounded-xl hover:bg-slate-800 transition-colors"
+          className="flex-1 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           Cancelar
         </button>

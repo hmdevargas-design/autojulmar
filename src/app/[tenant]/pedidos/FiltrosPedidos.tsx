@@ -59,12 +59,12 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
           value={valor}
           onChange={e => setValor(e.target.value)}
           placeholder="Pesquisar por cliente, contacto ou matrícula…"
-          className="flex-1 min-w-48 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="flex-1 min-w-48 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         />
         <select
           value={estadoId}
           onChange={e => aplicar(construirParams(valor, e.target.value, dataDE, dataATE))}
-          className="border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         >
           <option value="">Todos os estados</option>
           {estados.map(e => (
@@ -80,14 +80,14 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
           type="date"
           value={dataDE}
           onChange={e => setDataDE(e.target.value)}
-          className="border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         />
         <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Até</label>
         <input
           type="date"
           value={dataATE}
           onChange={e => setDataATE(e.target.value)}
-          className="border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         />
         <button
           type="submit"

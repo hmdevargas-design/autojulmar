@@ -54,7 +54,7 @@ export default function PesquisaClientes({ q, mostrarArquivados, totalArquivados
           value={valor}
           onChange={e => setValor(e.target.value)}
           placeholder="Pesquisar por nome ou contacto…"
-          className="flex-1 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+          className="flex-1 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
         />
         <button
           type="submit"

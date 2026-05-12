@@ -82,7 +82,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAberto(false)}>
-      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 border border-slate-700" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 border border-slate-200 dark:border-slate-700" onClick={e => e.stopPropagation()}>
         <h3 className="font-semibold text-slate-900 dark:text-slate-100">Editar cliente</h3>
 
         <div>
@@ -90,7 +90,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
           <input
             value={nome}
             onChange={e => setNome(e.target.value)}
-            className="w-full border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
             autoFocus
           />
         </div>
@@ -100,7 +100,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
           <input
             value={contacto}
             onChange={e => setContacto(e.target.value)}
-            className="w-full border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
           />
         </div>
 
@@ -114,7 +114,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
             onChange={e => setCodigo(e.target.value)}
             placeholder="ex: c12"
             maxLength={20}
-            className="w-full border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
           />
         </div>
 
@@ -123,7 +123,7 @@ export default function EditarCliente({ tenantId, cliente, tipos }: Props) {
           <select
             value={tipoClienteId}
             onChange={e => setTipoClienteId(e.target.value)}
-            className="w-full border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-gold"
           >
             <option value="">— sem tipo —</option>
             {tipos.map(t => (
