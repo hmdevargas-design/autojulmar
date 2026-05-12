@@ -67,6 +67,8 @@ interface Props {
   material: string
   tipoTapete: string[]
   extras: string[]
+  quantidade?: number
+  maisInfo?: string
   estado: string
   precoBase: number
   somaExtras: number
@@ -136,6 +138,15 @@ export default function DocumentoPedidoTermica(props: Props) {
             <Text style={s.extrasValor}>{props.extras.join(' · ')}</Text>
           </View>
         )}
+        {props.quantidade && props.quantidade > 1 && (
+          <Linha l="Quantidade" v={String(props.quantidade)} negrito />
+        )}
+        {props.maisInfo ? (
+          <View style={s.extrasBloco}>
+            <Text style={s.extrasLabel}>Notas</Text>
+            <Text style={s.extrasValor}>{props.maisInfo}</Text>
+          </View>
+        ) : null}
 
         {/* Valores */}
         <Text style={s.tracejado}>{SEP}</Text>

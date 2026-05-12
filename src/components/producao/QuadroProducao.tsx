@@ -120,11 +120,11 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
   return (
     <div className="-mx-4 -my-6">
       {/* Barra de tabs */}
-      <div className="bg-slate-800 dark:bg-slate-950 px-4 pt-3">
+      <div className="bg-slate-100 dark:bg-slate-950 px-4 pt-3">
         <div className="flex items-center justify-between mb-0">
-          <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{tenantNome} · Produção</span>
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">{tenantNome} · Produção</span>
           {actualizadoAs && (
-            <span className="text-slate-500 text-xs">Actualizado às {actualizadoAs}</span>
+            <span className="text-slate-400 dark:text-slate-500 text-xs">Actualizado às {actualizadoAs}</span>
           )}
         </div>
         <div className="flex gap-1 mt-2 overflow-x-auto pb-0">
@@ -137,8 +137,8 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
                 onClick={() => setTabActiva(est.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium whitespace-nowrap transition-all ${
                   activa
-                    ? 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>{est.label}</span>
@@ -237,10 +237,10 @@ function CardPedido({ pedido, vip, estadoCor, onClick }: CardProps) {
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 w-40 text-left rounded-xl border bg-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
+      className={`shrink-0 w-40 text-left rounded-xl border bg-white dark:bg-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
         vip
           ? 'border-red-500 border-l-4'
-          : 'border-slate-700'
+          : 'border-slate-200 dark:border-slate-700'
       }`}
     >
       <div className="p-2.5 space-y-1">

@@ -53,6 +53,8 @@ export async function GET(
     material:          String(dados?.material ?? ''),
     tipoTapete:        Array.isArray(dados?.tipo_tapete) ? (dados.tipo_tapete as string[]) : Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[]) : [],
     extras:            Array.isArray(dados?.extras) ? (dados.extras as string[]) : [],
+    quantidade:        dados?.quantidade ? Number(dados.quantidade) : undefined,
+    maisInfo:          String(dados?.maisInfo ?? dados?.mais_info ?? '') || undefined,
     estado:            estado?.nome ?? '—',
     corEstado:         estado?.cor ?? '#64748b',
     precoBase:         Number(pedido.preco_base),

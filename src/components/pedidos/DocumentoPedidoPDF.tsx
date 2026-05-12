@@ -48,6 +48,8 @@ interface Props {
   material: string
   tipoTapete: string[]
   extras: string[]
+  quantidade?: number
+  maisInfo?: string
   estado: string
   corEstado: string
   precoBase: number
@@ -138,6 +140,18 @@ export default function DocumentoPedidoPDF(props: Props) {
               <Text style={styles.campoValor}>{props.extras.join(', ')}</Text>
             </View>
           )}
+          {props.quantidade && props.quantidade > 1 && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.campoLabel}>Quantidade</Text>
+              <Text style={styles.campoValor}>{props.quantidade}</Text>
+            </View>
+          )}
+          {props.maisInfo ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.campoLabel}>Notas</Text>
+              <Text style={styles.campoValor}>{props.maisInfo}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.separador} />
