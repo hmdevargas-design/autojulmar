@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { calcularPreco } from '@/core/pricing/engine'
 import { carregarConfigPreco } from '@/lib/tenant/config'
-import { enviarMensagem } from '@/lib/whatsapp/sender'
+import { enviarMensagem }              from '@/lib/whatsapp/sender'
+import { marcarPedidoNoAtendimento }  from '@/lib/whatsapp/log-atendimento'
 import { z } from 'zod'
 
 const schemaCriarPedido = z.object({
@@ -201,7 +202,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erro: 'Erro ao criar pedido' }, { status: 500 })
     }
 
-    // 7. Notificação para grupo WhatsApp
+    // 7. Marcar log de atendimento se o pedido veio do WhatsApp
+    if (input.origem === 'whatsapp') {
+      const tel = input.clienteContacto.replace(/\D/g, '')
+      marcarPedidoNoAtendimento(input.tenantId, tel, pedido.numero_pedido).catch(e =>
+        console.warn('[Pedidos] Falha ao marcar pedido no log de atendimento:', String(e))
+      )
+    }
+
+    // 8. Notificação para grupo WhatsApp
     const grupoId = process.env.WHATSAPP_GRUPO_PEDIDOS
     console.log('[Grupo] grupoId:', grupoId ?? '(não configurado)')
     if (grupoId) {

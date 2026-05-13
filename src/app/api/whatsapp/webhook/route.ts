@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processarComAgente, pausarBot } from '@/lib/whatsapp/agente'
 import { enviarMensagem }                from '@/lib/whatsapp/sender'
+import { registarAtendimento }           from '@/lib/whatsapp/log-atendimento'
 import { criarClienteAdmin }             from '@/lib/supabase/admin'
 import { transcreverAudio }              from '@/lib/whatsapp/transcricao'
 import { resolverTenant }                from '@/lib/tenant/resolver'
@@ -138,6 +139,11 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('[WhatsApp] Audio transcrito:', telefone, '|', transcricao)
+      if (!eAdmin(telefone)) {
+        registarAtendimento(telefone, msg.senderName).catch(e =>
+          console.warn('[WhatsApp] Falha ao registar atendimento (audio):', String(e))
+        )
+      }
       await enviarMensagem(telefone, `🎙️ _${transcricao}_`)
       await processarComAgente(telefone, transcricao)
       return NextResponse.json({ ok: true })
@@ -171,6 +177,12 @@ export async function POST(request: NextRequest) {
       .then(() => { /* fire-and-forget */ })
 
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())
+
+    if (!eAdmin(telefone)) {
+      registarAtendimento(telefone, msg.senderName).catch(e =>
+        console.warn('[WhatsApp] Falha ao registar atendimento:', String(e))
+      )
+    }
 
     try {
       await processarComAgente(telefone, msg.text.trim())
