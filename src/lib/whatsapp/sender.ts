@@ -1,5 +1,37 @@
 // Envia mensagens de texto e imagens via uazapi
 
+export async function enviarMensagemComMencoes(
+  para: string,
+  texto: string,
+  mencoes: string[]   // números no formato 351XXXXXXXXX (sem @)
+): Promise<void> {
+  const baseUrl = process.env.UAZAPI_URL
+  const token   = process.env.UAZAPI_TOKEN
+
+  if (!baseUrl || !token) {
+    console.warn('[WhatsApp] Credenciais uazapi não configuradas — mensagem não enviada')
+    return
+  }
+
+  // uazapi aceita mentionedList como array de JIDs s.whatsapp.net
+  const mentionedList = mencoes.map(n => `${n}@s.whatsapp.net`)
+
+  const res = await fetch(`${baseUrl}/send/text`, {
+    method: 'POST',
+    headers: { token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number: para, text: texto, mentionedList }),
+  })
+
+  if (!res.ok) {
+    const erro = await res.text()
+    console.error('[WhatsApp] Erro ao enviar mensagem com menções:', res.status, erro)
+    // fallback: envia sem menções
+    await enviarMensagem(para, texto)
+  } else {
+    console.log('[WhatsApp] Mensagem com menções enviada para:', para)
+  }
+}
+
 export async function enviarMensagem(para: string, texto: string): Promise<void> {
   const baseUrl = process.env.UAZAPI_URL
   const token   = process.env.UAZAPI_TOKEN
