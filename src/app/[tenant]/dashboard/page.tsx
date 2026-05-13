@@ -12,7 +12,7 @@ interface Props {
 
 function CardMetrica({ titulo, valor, sub, cor }: { titulo: string; valor: string; sub?: string; cor: string }) {
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
       <div className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{titulo}</div>
       <div className={`text-2xl font-bold ${cor}`}>{valor}</div>
       {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
@@ -168,29 +168,29 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-100">Dashboard</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
 
       {/* Métricas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}             cor="text-slate-100" />
+        <CardMetrica titulo="Total pedidos"  valor={String(totalPedidos)}             cor="text-slate-900 dark:text-slate-100" />
         <CardMetrica titulo="Faturado total" valor={`${totalFaturado.toFixed(2)}€`}   cor="text-gold" />
-        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}     sub={`${pedidosMes} pedidos`} cor="text-green-400" />
-        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}               sub="pedidos"   cor="text-slate-300" />
+        <CardMetrica titulo="Este mês"       valor={`${faturadoMes.toFixed(2)}€`}     sub={`${pedidosMes} pedidos`} cor="text-green-500 dark:text-green-400" />
+        <CardMetrica titulo="Hoje"           valor={String(pedidosHoje)}               sub="pedidos"   cor="text-slate-600 dark:text-slate-300" />
         <CardMetrica titulo="Por receber"    valor={`${valorPorReceber.toFixed(2)}€`}  sub="em aberto" cor="text-gold" />
-        <CardMetrica titulo="Ticket médio"   valor={`${valorMedio.toFixed(2)}€`}       sub={periodo === 'tudo' ? 'todos os tempos' : 'no período'} cor="text-slate-400" />
+        <CardMetrica titulo="Ticket médio"   valor={`${valorMedio.toFixed(2)}€`}       sub={periodo === 'tudo' ? 'todos os tempos' : 'no período'} cor="text-slate-500 dark:text-slate-400" />
       </div>
 
       {/* Pipeline */}
       {estadosOrdenados.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Pipeline</h2>
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Pipeline</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {estadosOrdenados.map(e => (
-              <div key={e.nome} className="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex items-center gap-3 shadow-sm">
+              <div key={e.nome} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 shadow-sm">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: e.cor }} />
                 <div>
-                  <div className="text-2xl font-bold text-slate-100">{e.total}</div>
-                  <div className="text-xs text-slate-400 leading-tight">{e.nome}</div>
+                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{e.total}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{e.nome}</div>
                 </div>
               </div>
             ))}
@@ -200,8 +200,8 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
 
       {/* Evolução mensal */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Evolução mensal</h2>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Evolução mensal</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
           <div className="flex items-end gap-1.5" style={{ height: '80px' }}>
             {evolucao.map(m => {
               const pct   = Math.round((m.faturado / maxEvolucao) * 100)
@@ -213,7 +213,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                   title={`${m.label}: ${m.faturado.toFixed(2)}€ (${m.total} pedidos)`}
                 >
                   <div
-                    className={`w-full rounded-t transition-all ${atual ? 'bg-gold' : 'bg-slate-700 hover:bg-slate-600'}`}
+                    className={`w-full rounded-t transition-all ${atual ? 'bg-gold' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     style={{ height: pct > 0 ? `${Math.max(pct, 3)}%` : '2px' }}
                   />
                 </div>
@@ -224,7 +224,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
             {evolucao.map(m => (
               <div
                 key={m.key}
-                className={`flex-1 text-center text-[10px] leading-tight ${m.key === mesAtualKey ? 'text-gold font-medium' : 'text-slate-600'}`}
+                className={`flex-1 text-center text-[10px] leading-tight ${m.key === mesAtualKey ? 'text-gold font-medium' : 'text-slate-500 dark:text-slate-600'}`}
               >
                 {m.label}
               </div>
@@ -236,32 +236,32 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Materiais + filtro período */}
       <div>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Materiais</h2>
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Materiais</h2>
           <Suspense>
             <FiltrosPeriodo periodoActual={periodo} />
           </Suspense>
         </div>
         {materiais.length === 0 ? (
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 py-10 text-center text-sm text-slate-500">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 py-10 text-center text-sm text-slate-500">
             Sem pedidos no período seleccionado.
           </div>
         ) : (
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {materiais.map((m, i) => {
               const pct = Math.round((m.total / maxTotal) * 100)
               return (
-                <div key={m.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
-                  <span className="text-xs font-mono text-slate-500 w-5 shrink-0">{i + 1}</span>
+                <div key={m.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-100 truncate">{m.nome}</span>
-                      <span className="text-xs text-slate-400 ml-2 shrink-0">{m.faturado.toFixed(2)}€</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{m.nome}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 shrink-0">{m.faturado.toFixed(2)}€</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-100 w-8 text-right shrink-0">{m.total}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{m.total}</span>
                 </div>
               )
             })}
@@ -272,22 +272,22 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Tipos de Tapete */}
       {tiposTapete.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Tipos de Tapete</h2>
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Tipos de Tapete</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {tiposTapete.map((t, i) => {
               const pct = Math.round((t.total / maxTipo) * 100)
               return (
-                <div key={t.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
-                  <span className="text-xs font-mono text-slate-500 w-5 shrink-0">{i + 1}</span>
+                <div key={t.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-100 truncate">{t.nome}</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{t.nome}</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-400 dark:bg-slate-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-100 w-8 text-right shrink-0">{t.total}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{t.total}</span>
                 </div>
               )
             })}
@@ -298,23 +298,23 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Top clientes (histórico total) */}
       {topClientes.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Top Clientes</h2>
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Top Clientes</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {topClientes.map((c, i) => {
               const pct = Math.round((c.faturado / maxClienteFaturado) * 100)
               return (
-                <div key={c.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
-                  <span className="text-xs font-mono text-slate-500 w-5 shrink-0">{i + 1}</span>
+                <div key={c.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-100 truncate">{c.nome}</span>
-                      <span className="text-xs text-slate-400 ml-2 shrink-0">{c.faturado.toFixed(2)}€</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{c.nome}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 shrink-0">{c.faturado.toFixed(2)}€</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 dark:bg-green-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-100 w-8 text-right shrink-0">{c.total}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{c.total}</span>
                 </div>
               )
             })}
@@ -325,23 +325,23 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Formas de pagamento (período filtrado) */}
       {pagamentos.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Pagamentos</h2>
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Pagamentos</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             {pagamentos.map((pg, i) => {
               const pct = Math.round((pg.total / maxPagamento) * 100)
               return (
-                <div key={pg.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
-                  <span className="text-xs font-mono text-slate-500 w-5 shrink-0">{i + 1}</span>
+                <div key={pg.nome} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-100 truncate">{pg.nome}</span>
-                      <span className="text-xs text-slate-400 ml-2 shrink-0">{pg.faturado.toFixed(2)}€</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{pg.nome}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 shrink-0">{pg.faturado.toFixed(2)}€</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-400 dark:bg-slate-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-100 w-8 text-right shrink-0">{pg.total}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100 w-8 text-right shrink-0">{pg.total}</span>
                 </div>
               )
             })}
@@ -352,7 +352,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
       {/* Pedidos recentes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Recentes</h2>
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Recentes</h2>
           <Link href={`/${slug}/pedidos`} className="text-sm text-gold hover:underline font-medium">Ver todos →</Link>
         </div>
 
@@ -362,13 +362,13 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
             const cliente = p.clientes as unknown as { nome: string } | null
             const estado  = p.estados_fluxo as unknown as { nome: string; cor: string } | null
             return (
-              <div key={p.numero_pedido} className="bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
+              <div key={p.numero_pedido} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
                 <div>
-                  <div className="text-sm font-medium text-slate-100">{cliente?.nome ?? '—'}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">#{p.numero_pedido}</div>
+                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">#{p.numero_pedido}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-bold text-slate-100">{Number(p.valor_final).toFixed(2)}€</div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</div>
                   {estado && (
                     <span className="text-xs font-medium" style={{ color: estado.cor }}>{estado.nome}</span>
                   )}
@@ -379,14 +379,14 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
         </div>
 
         {/* Tabela desktop */}
-        <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+        <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-800/50 border-b border-slate-700">
-                <th className="text-left px-4 py-2.5 font-medium text-slate-400">#</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-400">Cliente</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-400">Estado</th>
-                <th className="text-right px-4 py-2.5 font-medium text-slate-400">Valor</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">#</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Cliente</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Estado</th>
+                <th className="text-right px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Valor</th>
               </tr>
             </thead>
             <tbody>
@@ -394,9 +394,9 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                 const cliente = p.clientes as unknown as { nome: string } | null
                 const estado  = p.estados_fluxo as unknown as { nome: string; cor: string } | null
                 return (
-                  <tr key={p.numero_pedido} className="border-b border-slate-800 last:border-0 hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-2.5 font-mono text-slate-500">#{p.numero_pedido}</td>
-                    <td className="px-4 py-2.5 text-slate-100">{cliente?.nome ?? '—'}</td>
+                  <tr key={p.numero_pedido} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-slate-400 dark:text-slate-500">#{p.numero_pedido}</td>
+                    <td className="px-4 py-2.5 text-slate-900 dark:text-slate-100">{cliente?.nome ?? '—'}</td>
                     <td className="px-4 py-2.5">
                       {estado && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: estado.cor + '20', color: estado.cor }}>
@@ -405,7 +405,7 @@ export default async function PaginaDashboard({ params, searchParams }: Props) {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-slate-100">{Number(p.valor_final).toFixed(2)}€</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-900 dark:text-slate-100">{Number(p.valor_final).toFixed(2)}€</td>
                   </tr>
                 )
               })}

@@ -64,7 +64,7 @@ export default async function PaginaEditarPedido({ params }: Props) {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-slate-100 mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
         Editar Pedido #{p.numero_pedido}
       </h1>
       <FormularioEditarPedido

@@ -43,7 +43,7 @@ interface Props {
 
 // Classes reutilizáveis para consistência
 const inputCls = 'w-full border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-gold'
-const labelCls = 'block text-sm font-medium text-slate-300 mb-1'
+const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'
 
 export default function FormularioPedido({ config, configPreco, tenantId, tenantSlug }: Props) {
   const [submetido, setSubmetido] = useState(false)

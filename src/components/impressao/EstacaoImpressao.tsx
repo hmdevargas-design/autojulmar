@@ -101,10 +101,10 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
     <div className="w-full max-w-md">
 
       {/* Status principal */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center mb-6 shadow-lg">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center mb-6 shadow-lg">
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className={`w-4 h-4 rounded-full ${activa ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
-          <span className="text-lg font-semibold text-slate-100">
+          <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {activa ? 'Estação activa' : 'Estação parada'}
           </span>
         </div>
@@ -115,7 +115,7 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
           onClick={() => setActiva(a => !a)}
           className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${
             activa
-              ? 'border border-slate-600 text-slate-300 hover:bg-slate-800'
+              ? 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               : 'bg-gold hover:bg-gold-dark text-slate-900'
           }`}
         >
@@ -124,7 +124,7 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
       </div>
 
       {/* Log de impressões */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-lg">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
           Impressões desta sessão
         </h2>
@@ -134,7 +134,7 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
           <ul className="space-y-2">
             {log.map(e => (
               <li key={e.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-300 font-medium">Pedido #{e.numero}</span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Pedido #{e.numero}</span>
                 <span className="text-slate-500 text-xs">{e.hora}</span>
                 <span className={`text-xs font-medium ${estadoCor[e.estado]}`}>
                   {estadoLabel[e.estado]}

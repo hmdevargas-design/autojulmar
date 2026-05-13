@@ -4,9 +4,9 @@
 # =============================================================
 
 # ── CONFIGURAÇÃO (preenche estes 3 valores) ──────────────────
-$APP_URL    = "https://autojulmar.pt"
-$TENANT_ID  = "COLE_AQUI_O_TENANT_ID"       # ver instruções abaixo
-$PRINT_KEY  = "COLE_AQUI_A_CHAVE_IMPRESSAO"  # definida na Vercel
+$APP_URL    = "https://autojulmar.vercel.app"
+$TENANT_ID  = "00000000-0000-0000-0000-000000000001"
+$PRINT_KEY  = "COLE_AQUI_A_CHAVE_IMPRESSAO"  # o valor que definiste na Vercel em IMPRESSAO_API_KEY
 $IMPRESSORA = "Bixolon SRP-350Plus III"       # nome exacto da impressora no Windows
 $SUMATRA    = "C:\SumatraPDF\SumatraPDF.exe"  # caminho do Sumatra PDF
 # ─────────────────────────────────────────────────────────────

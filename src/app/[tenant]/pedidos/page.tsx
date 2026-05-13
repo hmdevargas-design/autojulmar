@@ -136,7 +136,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
           const dados   = pedido.dados as Record<string, string>
           const data    = new Date(pedido.criado_em).toLocaleDateString('pt-PT')
           return (
-            <div key={pedido.id} className="bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 shadow-sm">
+            <div key={pedido.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <Link href={`/${slug}/pedidos/${pedido.id}`} className="min-w-0 flex-1">
                   <div className="font-medium text-slate-900 dark:text-slate-100 truncate">{cliente?.nome ?? '—'}</div>
@@ -178,7 +178,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
       </div>
 
       {/* Tabela desktop */}
-      <div className="hidden md:block bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">

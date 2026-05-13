@@ -30,11 +30,11 @@ export default function AdminNav({ slug, mobile }: Props) {
       <div className="mb-4 relative">
         <button
           onClick={() => setAberto(!aberto)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-slate-900 border border-slate-700 rounded-2xl text-sm font-medium text-slate-900 dark:text-slate-100 shadow-sm"
+          className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium text-slate-900 dark:text-slate-100 shadow-sm"
         >
           <span className="flex items-center gap-2">
             <span className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Admin</span>
-            <span className="text-slate-300 dark:text-slate-600">›</span>
+            <span className="text-slate-400 dark:text-slate-500">›</span>
             <span>{actual?.label ?? 'Seleccionar'}</span>
           </span>
           <svg
@@ -50,7 +50,7 @@ export default function AdminNav({ slug, mobile }: Props) {
         {aberto && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
-            <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-slate-900 border border-slate-700 rounded-2xl shadow-xl overflow-hidden">
+            <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden">
               {navLinks.map((link) => {
                 const activo = pathname.startsWith(link.href)
                 return (

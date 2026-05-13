@@ -80,11 +80,11 @@ export default async function PaginaDetalhe({ params }: Props) {
     <div className="max-w-2xl">
       {/* Cabeçalho */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/${slug}/pedidos`} className="text-slate-400 hover:text-slate-300 transition-colors">
+        <Link href={`/${slug}/pedidos`} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
           &larr; Pedidos
         </Link>
-        <span className="text-slate-700">/</span>
-        <h1 className="text-xl font-bold text-slate-100">
+        <span className="text-slate-400 dark:text-slate-600">/</span>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
           Pedido #{p.numero_pedido}
         </h1>
         {estado != null && (
@@ -96,8 +96,8 @@ export default async function PaginaDetalhe({ params }: Props) {
 
       <div className="space-y-4">
         {/* Cliente */}
-        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Cliente</h2>
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Cliente</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Nome"     valor={cliente?.nome ?? null} />
             <Campo label="Contacto" valor={cliente?.contacto ?? null} />
@@ -109,8 +109,8 @@ export default async function PaginaDetalhe({ params }: Props) {
 
         {/* Viatura */}
         {(matriculaFmt != null || viatura != null) ? (
-          <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Viatura</h2>
+          <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Viatura</h2>
             <div className="grid grid-cols-2 gap-3">
               {matriculaFmt != null ? <Campo label="Matrícula" valor={matriculaFmt} mono /> : null}
               {viatura != null      ? <Campo label="Viatura"   valor={viatura} />           : null}
@@ -120,8 +120,8 @@ export default async function PaginaDetalhe({ params }: Props) {
         ) : null}
 
         {/* Produto */}
-        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Produto</h2>
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Produto</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Material"    valor={material ?? '—'} />
             <Campo label="Tipo tapete" valor={tipoTapetes || '—'} />
@@ -132,8 +132,8 @@ export default async function PaginaDetalhe({ params }: Props) {
         </section>
 
         {/* Valores */}
-        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Valores</h2>
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Valores</h2>
           <div className="space-y-2 text-sm">
             <LinhaPoco label="Preço base" valor={`${Number(p.preco_base).toFixed(2)}€`} />
             {Number(p.soma_extras) > 0
@@ -145,7 +145,7 @@ export default async function PaginaDetalhe({ params }: Props) {
             {Number(p.desconto_manual) > 0
               ? <LinhaPoco label="Desc. manual" valor={`-${Number(p.desconto_manual).toFixed(2)}€`} />
               : null}
-            <div className="border-t border-slate-800 pt-2 mt-2 flex justify-between font-bold text-slate-100">
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-2 mt-2 flex justify-between font-bold text-slate-900 dark:text-slate-100">
               <span>Total</span>
               <span>{Number(p.valor_final).toFixed(2)}€</span>
             </div>
@@ -153,7 +153,7 @@ export default async function PaginaDetalhe({ params }: Props) {
               ? <LinhaPoco label="Sinal pago" valor={`-${Number(p.sinal).toFixed(2)}€`} />
               : null}
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-800">
+          <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
             <Campo label="Forma pagamento" valor={p.forma_pagamento ?? '—'} />
             <Campo label="Origem"          valor={origemLabel[p.origem ?? ''] ?? p.origem ?? '—'} />
           </div>
@@ -168,17 +168,17 @@ export default async function PaginaDetalhe({ params }: Props) {
           <a
             href={`/api/pedidos/${p.id}/pdf`}
             target="_blank"
-            className="py-2.5 px-4 border border-slate-600 text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-800 transition-colors"
+            className="py-2.5 px-4 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             PDF
           </a>
           <Link
             href={`/${slug}/pedidos/${p.id}/editar`}
-            className="flex-1 text-center py-2.5 border border-slate-600 text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-800 transition-colors"
+            className="flex-1 text-center py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             Editar
           </Link>
-          <div className="text-xs text-slate-400 self-center ml-2 shrink-0">
+          <div className="text-xs text-slate-400 dark:text-slate-500 self-center ml-2 shrink-0">
             {new Date(p.criado_em).toLocaleString('pt-PT')}
           </div>
         </div>
@@ -190,8 +190,8 @@ export default async function PaginaDetalhe({ params }: Props) {
 function Campo({ label, valor, mono, className }: { label: string; valor?: string | null; mono?: boolean; className?: string }) {
   return (
     <div className={className ?? ''}>
-      <div className="text-xs text-slate-400 mb-0.5">{label}</div>
-      <div className={`text-sm font-medium text-slate-100${mono ? ' font-mono' : ''}`}>
+      <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{label}</div>
+      <div className={`text-sm font-medium text-slate-900 dark:text-slate-100${mono ? ' font-mono' : ''}`}>
         {valor ?? '—'}
       </div>
     </div>
@@ -200,7 +200,7 @@ function Campo({ label, valor, mono, className }: { label: string; valor?: strin
 
 function LinhaPoco({ label, valor }: { label: string; valor: string }) {
   return (
-    <div className="flex justify-between text-slate-400">
+    <div className="flex justify-between text-slate-500 dark:text-slate-400">
       <span>{label}</span>
       <span>{valor}</span>
     </div>
