@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/relatorio-diario",
-      "schedule": "59 23 * * *"
+      "schedule": "5 0 * * *"
     }
   ]
 }

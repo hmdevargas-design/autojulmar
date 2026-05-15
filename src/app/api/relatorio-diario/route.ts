@@ -31,20 +31,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, motivo: 'tenant não encontrado' })
   }
 
-  const hoje = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  // Cron corre às 00:05 UTC — consulta o dia anterior (ontem) para evitar boundary de meia-noite
+  const dataOntem  = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const ontem      = dataOntem.toISOString().slice(0, 10)
 
   const { data: atendimentos } = await supabase
     .from('log_atendimentos_whatsapp')
     .select('telefone, nome, num_mensagens, resultou_em_pedido, numero_pedido')
     .eq('tenant_id', tenant.id)
-    .eq('dia', hoje)
+    .eq('dia', ontem)
     .order('num_mensagens', { ascending: false })
 
   const lista = atendimentos ?? []
 
   const mensagem = lista.length === 0
-    ? formatarVazio(new Date(), ADMINS)
-    : formatarRelatorio(lista, new Date(), ADMINS)
+    ? formatarVazio(dataOntem, ADMINS)
+    : formatarRelatorio(lista, dataOntem, ADMINS)
 
   await enviarMensagemComMencoes(grupoJid, mensagem, ADMINS)
 
