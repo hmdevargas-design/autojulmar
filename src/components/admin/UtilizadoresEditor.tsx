@@ -35,14 +35,23 @@ export default function UtilizadoresEditor({ tenantId }: Props) {
   const [role,     setRole]     = useState<'admin' | 'operador'>('operador')
   const [criando,  setCriando]  = useState(false)
 
-  async function carregar() {
-    setLoading(true)
-    const res = await fetch(`/api/admin/utilizadores?tenantId=${tenantId}`)
-    if (res.ok) setUtilizadores(await res.json())
-    setLoading(false)
-  }
+  useEffect(() => {
+    let cancelado = false
 
-  useEffect(() => { carregar() }, [tenantId])
+    async function carregarUtilizadores() {
+      const res = await fetch(`/api/admin/utilizadores?tenantId=${tenantId}`)
+      if (cancelado) return
+
+      if (res.ok) setUtilizadores(await res.json())
+      setLoading(false)
+    }
+
+    void carregarUtilizadores()
+
+    return () => {
+      cancelado = true
+    }
+  }, [tenantId])
 
   async function criar() {
     if (!nome.trim() || !email.trim() || !password.trim()) return
