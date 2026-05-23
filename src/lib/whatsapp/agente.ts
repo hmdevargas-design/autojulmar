@@ -110,7 +110,6 @@ export async function pausarBot(tenantId: string, telefone: string): Promise<voi
 }
 
 async function retomarBot(tenantId: string, telefone: string): Promise<void> {
-  const supabase  = criarClienteAdmin()
   const sessao    = await obterSessao(tenantId, telefone)
   const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
   await guardarSessao(tenantId, telefone, { step: 'conversando', dados: { historico } })
