@@ -25,7 +25,7 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
   const { data: orcamento } = await supabase
     .from('orcamentos')
     .select(`
-      id, numero_orcamento, estado, categoria, produto, descricao, valor_estimado, validade_em, origem, criado_em,
+      id, numero_orcamento, estado, categoria, produto, descricao, dados, valor_estimado, validade_em, origem, criado_em,
       clientes ( nome, contacto, email, nif )
     `)
     .eq('id', id)
@@ -35,6 +35,7 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
   if (!orcamento) notFound()
 
   const cliente = orcamento.clientes as unknown as ClienteRow | null
+  const dados = (orcamento.dados ?? {}) as Record<string, string>
   const criadoEm = new Date(orcamento.criado_em).toLocaleString('pt-PT')
   const validade = orcamento.validade_em ? new Date(orcamento.validade_em).toLocaleDateString('pt-PT') : null
   const origemLabel: Record<string, string> = { web: 'Web', whatsapp: 'WhatsApp', api: 'API' }
@@ -64,6 +65,15 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
         </section>
 
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Viatura</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <Campo label="Matrícula" valor={dados.matricula || '—'} />
+            <Campo label="Viatura" valor={dados.viatura || '—'} />
+            <Campo label="Ano" valor={dados.ano || '—'} />
+          </div>
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Produto</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Categoria" valor={labelCategoriaOrcamento(orcamento.categoria)} />
@@ -81,6 +91,16 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
             <Campo label="Criado em" valor={criadoEm} />
           </div>
         </section>
+      </div>
+
+      <div className="mt-4">
+        <a
+          href={`/api/orcamentos/${orcamento.id}/pdf`}
+          target="_blank"
+          className="inline-flex px-4 py-2 bg-gold text-slate-900 text-sm font-medium rounded-xl hover:bg-gold-dark transition-colors shadow-sm"
+        >
+          Abrir PDF
+        </a>
       </div>
     </div>
   )

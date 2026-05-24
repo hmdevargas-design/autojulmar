@@ -9,11 +9,13 @@ import { CATEGORIAS_ORCAMENTO, PRODUTOS_ORCAMENTO, type CategoriaOrcamento } fro
 const schema = z.object({
   nomeCliente: z.string().min(1, 'Nome do cliente obrigatório'),
   contacto: z.string().min(9, 'Contacto obrigatório'),
-  categoria: z.enum(['reparacao', 'copas', 'outros']),
+  categoria: z.enum(['reparacao', 'capas', 'outros']),
   produto: z.string().min(1, 'Produto obrigatório'),
   descricao: z.string().optional(),
+  matricula: z.string().optional(),
+  viatura: z.string().optional(),
+  ano: z.string().optional(),
   valorEstimado: z.number().min(0),
-  validadeEm: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -84,8 +86,10 @@ export default function FormularioOrcamento({ tenantId, tenantSlug }: Props) {
           categoria: data.categoria,
           produto: data.produto,
           descricao: data.descricao,
+          matricula: data.matricula,
+          viatura: data.viatura,
+          ano: data.ano,
           valorEstimado: data.valorEstimado,
-          validadeEm: data.validadeEm || null,
           origem: 'web',
         }),
       })
@@ -148,6 +152,24 @@ export default function FormularioOrcamento({ tenantId, tenantSlug }: Props) {
       </section>
 
       <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Viatura</h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className={labelCls}>Matrícula</label>
+            <input {...register('matricula')} className={inputCls} placeholder="AA-00-AA" />
+          </div>
+          <div>
+            <label className={labelCls}>Viatura</label>
+            <input {...register('viatura')} className={inputCls} placeholder="Marca / modelo" />
+          </div>
+          <div>
+            <label className={labelCls}>Ano</label>
+            <input {...register('ano')} className={inputCls} placeholder="2024" />
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Produto</h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -179,15 +201,10 @@ export default function FormularioOrcamento({ tenantId, tenantSlug }: Props) {
 
       <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Condições</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>Valor estimado</label>
-            <input type="number" step="0.01" min="0" {...register('valorEstimado', { valueAsNumber: true })} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Validade</label>
-            <input type="date" {...register('validadeEm')} className={inputCls} />
-          </div>
+        <div>
+          <label className={labelCls}>Valor estimado</label>
+          <input type="number" step="0.01" min="0" {...register('valorEstimado', { valueAsNumber: true })} className={inputCls} />
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A validade será definida automaticamente para 30 dias.</p>
         </div>
       </section>
 

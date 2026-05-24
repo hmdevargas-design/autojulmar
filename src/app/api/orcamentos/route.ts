@@ -6,9 +6,12 @@ const schemaCriarOrcamento = z.object({
   tenantId:        z.string().min(1),
   clienteNome:     z.string().min(1),
   clienteContacto: z.string().min(9),
-  categoria:       z.enum(['reparacao', 'copas', 'outros']),
+  categoria:       z.enum(['reparacao', 'capas', 'outros']),
   produto:         z.string().min(1),
   descricao:       z.string().optional().default(''),
+  matricula:       z.string().optional().default(''),
+  viatura:         z.string().optional().default(''),
+  ano:             z.string().optional().default(''),
   valorEstimado:   z.coerce.number().min(0).default(0),
   validadeEm:      z.string().optional().nullable(),
   origem:          z.enum(['web', 'whatsapp', 'api']).default('web'),
@@ -19,6 +22,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const input = schemaCriarOrcamento.parse(body)
     const supabase = criarClienteAdmin()
+    const validadePadrao = new Date()
+    validadePadrao.setDate(validadePadrao.getDate() + 30)
+    const validadeEm = input.validadeEm || validadePadrao.toISOString().slice(0, 10)
 
     let clienteId: string
     const contacto = input.clienteContacto.replace(/\s/g, '')
@@ -68,9 +74,13 @@ export async function POST(request: NextRequest) {
         produto: input.produto,
         descricao: input.descricao.trim() || null,
         valor_estimado: input.valorEstimado,
-        validade_em: input.validadeEm || null,
+        validade_em: validadeEm,
         origem: input.origem,
-        dados: {},
+        dados: {
+          matricula: input.matricula.trim(),
+          viatura: input.viatura.trim(),
+          ano: input.ano.trim(),
+        },
         criado_por: '00000000-0000-0000-0000-000000000001',
       })
       .select('id, numero_orcamento, valor_estimado')

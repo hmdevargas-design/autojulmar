@@ -13,7 +13,7 @@ interface Props {
 }
 
 const CAMPOS_ORCAMENTO = `
-  id, numero_orcamento, estado, categoria, produto, descricao, valor_estimado, validade_em, criado_em,
+  id, numero_orcamento, estado, categoria, produto, descricao, dados, valor_estimado, validade_em, criado_em,
   clientes ( nome, contacto )
 `
 
@@ -24,6 +24,7 @@ interface OrcamentoRow {
   categoria: string
   produto: string
   descricao: string | null
+  dados: Record<string, unknown> | null
   valor_estimado: number | string
   validade_em: string | null
   criado_em: string
@@ -57,10 +58,14 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
   if (termo) {
     orcamentos = orcamentos.filter(o => {
       const cliente = o.clientes
+      const dados = (o.dados ?? {}) as Record<string, string>
       const haystack = [
         String(o.numero_orcamento),
         cliente?.nome,
         cliente?.contacto,
+        dados.matricula,
+        dados.viatura,
+        dados.ano,
         labelCategoriaOrcamento(o.categoria),
         labelProdutoOrcamento(o.categoria, o.produto),
         o.descricao,
@@ -92,6 +97,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
       <div className="md:hidden space-y-2">
         {orcamentos.map(orcamento => {
           const cliente = orcamento.clientes
+          const dados = (orcamento.dados ?? {}) as Record<string, string>
           const dataCriacao = new Date(orcamento.criado_em).toLocaleDateString('pt-PT')
           return (
             <div key={orcamento.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm">
@@ -99,6 +105,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
                 <Link href={`/${slug}/orcamentos/${orcamento.id}`} className="min-w-0 flex-1">
                   <div className="font-medium text-slate-900 dark:text-slate-100 truncate">{cliente?.nome ?? '—'}</div>
                   <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">#{orcamento.numero_orcamento} · {labelCategoriaOrcamento(orcamento.categoria)}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{[dados.matricula, dados.viatura, dados.ano].filter(Boolean).join(' · ') || '—'}</div>
                 </Link>
                 <div className="text-right shrink-0">
                   <div className="font-bold text-slate-900 dark:text-slate-100">{Number(orcamento.valor_estimado).toFixed(2)}€</div>
@@ -107,7 +114,10 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
               </div>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-slate-600 dark:text-slate-300">{labelProdutoOrcamento(orcamento.categoria, orcamento.produto)}</span>
-                <SeletorEstadoOrcamento orcamentoId={orcamento.id} tenantId={tenant.id} estadoAtual={orcamento.estado} />
+                <div className="flex items-center gap-2">
+                  <a href={`/api/orcamentos/${orcamento.id}/pdf`} target="_blank" className="text-xs text-gold font-medium hover:underline">PDF</a>
+                  <SeletorEstadoOrcamento orcamentoId={orcamento.id} tenantId={tenant.id} estadoAtual={orcamento.estado} />
+                </div>
               </div>
             </div>
           )
@@ -121,16 +131,19 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
             <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">#</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cliente</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Viatura</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Produto</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
               <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Valor</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Validade</th>
               <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Data</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {orcamentos.map(orcamento => {
               const cliente = orcamento.clientes
+              const dados = (orcamento.dados ?? {}) as Record<string, string>
               const dataCriacao = new Date(orcamento.criado_em).toLocaleDateString('pt-PT')
               const validade = orcamento.validade_em ? new Date(orcamento.validade_em).toLocaleDateString('pt-PT') : '—'
               return (
@@ -145,6 +158,10 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
                     </Link>
                   </td>
                   <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900 dark:text-slate-100">{dados.viatura || '—'}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{[dados.matricula, dados.ano].filter(Boolean).join(' · ') || '—'}</div>
+                  </td>
+                  <td className="px-4 py-3">
                     <div className="font-medium text-slate-900 dark:text-slate-100">{labelProdutoOrcamento(orcamento.categoria, orcamento.produto)}</div>
                     <div className="text-xs text-slate-400 dark:text-slate-500">{labelCategoriaOrcamento(orcamento.categoria)}</div>
                   </td>
@@ -154,6 +171,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
                   <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">{Number(orcamento.valor_estimado).toFixed(2)}€</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{validade}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{dataCriacao}</td>
+                  <td className="px-4 py-2"><a href={`/api/orcamentos/${orcamento.id}/pdf`} target="_blank" className="text-xs text-gold hover:underline">PDF</a></td>
                 </tr>
               )
             })}
