@@ -31,6 +31,15 @@ const links = (slug: string) => [
     ),
   },
   {
+    href:  `/${slug}/orcamentos`,
+    label: 'Orçamentos',
+    icon:  (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 .621.504 1.125 1.125 1.125h13.5c1.036 0 1.875-.84 1.875-1.875V6.621c0-.497-.197-.974-.549-1.326L16.455 2.05a1.875 1.875 0 00-1.326-.55H5.625zm5.845 7.72a.75.75 0 011.06 0l.97.97.97-.97a.75.75 0 111.06 1.06l-.97.97.97.97a.75.75 0 11-1.06 1.06l-.97-.97-.97.97a.75.75 0 11-1.06-1.06l.97-.97-.97-.97a.75.75 0 010-1.06zM7.5 15a.75.75 0 000 1.5h9a.75.75 0 000-1.5h-9z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
     href:  `/${slug}/producao`,
     label: 'Produção',
     icon:  (
@@ -72,6 +81,9 @@ const links = (slug: string) => [
 export default function NavTenant({ tenant }: Props) {
   const pathname  = usePathname()
   const navLinks  = links(tenant.slug)
+  const acaoRapida = pathname.startsWith(`/${tenant.slug}/orcamentos`)
+    ? { href: `/${tenant.slug}/orcamentos/novo`, label: 'Novo Orçamento' }
+    : { href: `/${tenant.slug}/pedidos/novo`, label: 'Novo Pedido' }
 
   return (
     <>
@@ -124,11 +136,11 @@ export default function NavTenant({ tenant }: Props) {
               <ThemeToggle />
               <BotaoLogout />
               <Link
-                href={`/${tenant.slug}/pedidos/novo`}
+                href={acaoRapida.href}
                 className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
                 style={{ backgroundColor: tenant.corPrimaria }}
               >
-                <span className="text-base leading-none">+</span> Novo Pedido
+                <span className="text-base leading-none">+</span> {acaoRapida.label}
               </Link>
             </div>
           </div>
@@ -137,7 +149,7 @@ export default function NavTenant({ tenant }: Props) {
 
       {/* ── Bottom nav — mobile only ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
-        <div className="grid grid-cols-5 h-16">
+        <div className="grid h-16" style={{ gridTemplateColumns: `repeat(${navLinks.length}, minmax(0, 1fr))` }}>
           {navLinks.map((link) => {
             const activo = pathname.startsWith(link.href)
             return (
@@ -161,10 +173,10 @@ export default function NavTenant({ tenant }: Props) {
 
       {/* ── FAB Novo Pedido — mobile only ── */}
       <Link
-        href={`/${tenant.slug}/pedidos/novo`}
+        href={acaoRapida.href}
         className="fixed bottom-20 right-4 z-50 md:hidden flex items-center justify-center w-14 h-14 text-white rounded-full shadow-lg transition-colors text-2xl font-light"
         style={{ backgroundColor: tenant.corPrimaria }}
-        aria-label="Novo Pedido"
+        aria-label={acaoRapida.label}
       >
         +
       </Link>
