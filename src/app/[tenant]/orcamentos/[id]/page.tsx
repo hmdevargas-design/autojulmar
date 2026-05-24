@@ -3,7 +3,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import SeletorEstadoOrcamento from '@/components/orcamentos/SeletorEstadoOrcamento'
-import { labelCategoriaOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
+import { formatarNumeroOrcamento, labelCategoriaOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
 
 interface Props {
   params: Promise<{ tenant: string; id: string }>
@@ -47,7 +47,7 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
           &larr; Orçamentos
         </Link>
         <span className="text-slate-400 dark:text-slate-600">/</span>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Orçamento #{orcamento.numero_orcamento}</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Orçamento {formatarNumeroOrcamento(orcamento.numero_orcamento)}</h1>
         <div className="ml-auto">
           <SeletorEstadoOrcamento orcamentoId={orcamento.id} tenantId={tenant.id} estadoAtual={orcamento.estado} />
         </div>

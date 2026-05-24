@@ -33,6 +33,10 @@ export const PRODUTOS_ORCAMENTO = {
 export type EstadoOrcamento = typeof ESTADOS_ORCAMENTO[number]['valor']
 export type CategoriaOrcamento = typeof CATEGORIAS_ORCAMENTO[number]['valor']
 
+export function formatarNumeroOrcamento(numero: number | string) {
+  return `OR-${String(numero).padStart(4, '0')}`
+}
+
 export function labelEstadoOrcamento(valor: string) {
   return ESTADOS_ORCAMENTO.find(e => e.valor === valor)?.label ?? valor
 }

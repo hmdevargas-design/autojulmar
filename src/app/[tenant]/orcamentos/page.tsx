@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import FiltrosOrcamentos from './FiltrosOrcamentos'
 import SeletorEstadoOrcamento from '@/components/orcamentos/SeletorEstadoOrcamento'
-import { corEstadoOrcamento, labelCategoriaOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
+import { corEstadoOrcamento, formatarNumeroOrcamento, labelCategoriaOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
 
 interface Props {
   params: Promise<{ tenant: string }>
@@ -60,7 +60,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
       const cliente = o.clientes
       const dados = (o.dados ?? {}) as Record<string, string>
       const haystack = [
-        String(o.numero_orcamento),
+        formatarNumeroOrcamento(o.numero_orcamento),
         cliente?.nome,
         cliente?.contacto,
         dados.matricula,
@@ -104,7 +104,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
               <div className="flex items-start justify-between gap-2">
                 <Link href={`/${slug}/orcamentos/${orcamento.id}`} className="min-w-0 flex-1">
                   <div className="font-medium text-slate-900 dark:text-slate-100 truncate">{cliente?.nome ?? '—'}</div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">#{orcamento.numero_orcamento} · {labelCategoriaOrcamento(orcamento.categoria)}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatarNumeroOrcamento(orcamento.numero_orcamento)} · {labelCategoriaOrcamento(orcamento.categoria)}</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{[dados.matricula, dados.viatura, dados.ano].filter(Boolean).join(' · ') || '—'}</div>
                 </Link>
                 <div className="text-right shrink-0">
@@ -149,7 +149,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
               return (
                 <tr key={orcamento.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-slate-400 dark:text-slate-500">
-                    <Link href={`/${slug}/orcamentos/${orcamento.id}`} className="hover:text-gold transition-colors">#{orcamento.numero_orcamento}</Link>
+                    <Link href={`/${slug}/orcamentos/${orcamento.id}`} className="hover:text-gold transition-colors">{formatarNumeroOrcamento(orcamento.numero_orcamento)}</Link>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/${slug}/orcamentos/${orcamento.id}`} className="block hover:text-gold transition-colors">

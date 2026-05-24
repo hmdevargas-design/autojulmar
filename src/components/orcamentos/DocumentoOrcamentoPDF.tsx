@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { formatarNumeroOrcamento } from '@/lib/orcamentos/config'
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#111827' },
@@ -51,7 +52,7 @@ export default function DocumentoOrcamentoPDF(props: Props) {
           </View>
           <View>
             <Text style={styles.labelTopo}>Orçamento</Text>
-            <Text style={styles.numero}>#{props.numeroOrcamento}</Text>
+            <Text style={styles.numero}>{formatarNumeroOrcamento(props.numeroOrcamento)}</Text>
             <Text style={[styles.labelTopo, { marginTop: 2 }]}>{props.data}</Text>
           </View>
         </View>

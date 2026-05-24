@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CATEGORIAS_ORCAMENTO, PRODUTOS_ORCAMENTO, type CategoriaOrcamento } from '@/lib/orcamentos/config'
+import { CATEGORIAS_ORCAMENTO, PRODUTOS_ORCAMENTO, formatarNumeroOrcamento, type CategoriaOrcamento } from '@/lib/orcamentos/config'
 
 const schema = z.object({
   nomeCliente: z.string().min(1, 'Nome do cliente obrigatório'),
@@ -108,7 +108,7 @@ export default function FormularioOrcamento({ tenantId, tenantSlug }: Props) {
   if (submetido && numeroOrcamento) {
     return (
       <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl p-6 text-center">
-        <h2 className="text-xl font-bold text-green-600 dark:text-green-400">Orçamento #{numeroOrcamento} criado</h2>
+        <h2 className="text-xl font-bold text-green-600 dark:text-green-400">Orçamento {formatarNumeroOrcamento(numeroOrcamento)} criado</h2>
         <p className="text-slate-600 dark:text-slate-300 mt-1">Valor estimado: <strong>{valorCriado.toFixed(2)}€</strong></p>
         <div className="mt-4 flex gap-3 justify-center">
           <a href={`/${tenantSlug}/orcamentos`} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-700">Ver listagem</a>

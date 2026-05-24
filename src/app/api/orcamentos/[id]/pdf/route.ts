@@ -3,7 +3,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import DocumentoOrcamentoPDF from '@/components/orcamentos/DocumentoOrcamentoPDF'
 import React, { type ReactElement } from 'react'
-import { corEstadoOrcamento, labelCategoriaOrcamento, labelEstadoOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
+import { corEstadoOrcamento, formatarNumeroOrcamento, labelCategoriaOrcamento, labelEstadoOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
 
 export async function GET(
   _request: Request,
@@ -58,7 +58,7 @@ export async function GET(
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="orcamento-${orcamento.numero_orcamento}.pdf"`,
+      'Content-Disposition': `inline; filename="${formatarNumeroOrcamento(orcamento.numero_orcamento).toLowerCase()}.pdf"`,
     },
   })
 }

@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
+async function obterProximoNumeroOrcamento(supabase: ReturnType<typeof criarClienteAdmin>, tenantId: string) {
+  const { data: numeroData, error: numeroError } = await supabase
+    .rpc('proximo_numero_orcamento', { p_tenant_id: tenantId })
+
+  if (!numeroError && typeof numeroData === 'number') return numeroData
+
+  console.warn('[Orcamentos] Falha ao usar RPC de numeracao, aplicando fallback:', numeroError?.message)
+
+  const { data: ultimoOrcamento, error: ultimoError } = await supabase
+    .from('orcamentos')
+    .select('numero_orcamento')
+    .eq('tenant_id', tenantId)
+    .order('numero_orcamento', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (ultimoError) throw new Error('Erro ao gerar numero de orcamento')
+
+  return Number(ultimoOrcamento?.numero_orcamento ?? 0) + 1
+}
+
 const schemaCriarOrcamento = z.object({
   tenantId:        z.string().min(1),
   clienteNome:     z.string().min(1),
@@ -56,11 +77,12 @@ export async function POST(request: NextRequest) {
       clienteId = novoCliente.id
     }
 
-    const { data: numeroData, error: numeroError } = await supabase
-      .rpc('proximo_numero_orcamento', { p_tenant_id: input.tenantId })
-
-    if (numeroError) {
-      return NextResponse.json({ erro: 'Erro ao gerar número de orçamento' }, { status: 500 })
+    let numeroData: number
+    try {
+      numeroData = await obterProximoNumeroOrcamento(supabase, input.tenantId)
+    } catch (error) {
+      console.error('[Orcamentos] Erro ao gerar numero:', error)
+      return NextResponse.json({ erro: 'Erro ao gerar numero de orcamento' }, { status: 500 })
     }
 
     const { data: orcamento, error: erroOrcamento } = await supabase
