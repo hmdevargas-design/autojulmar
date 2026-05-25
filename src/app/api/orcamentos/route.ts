@@ -6,6 +6,19 @@ function erroNumeroDuplicado(error: { code?: string; message?: string } | null) 
   return error?.code === '23505' || error?.message?.includes('duplicate key')
 }
 
+function erroCheckCategoria(error: { code?: string; message?: string; details?: string } | null) {
+  const texto = [error?.message, error?.details].filter(Boolean).join(' ')
+  return error?.code === '23514' && texto.includes('categoria')
+}
+
+function detalhesErro(error: unknown) {
+  if (error && typeof error === 'object') {
+    const e = error as { code?: string; message?: string; details?: string; hint?: string }
+    return [e.code, e.message, e.details, e.hint].filter(Boolean).join(' | ')
+  }
+  return String(error ?? 'erro desconhecido')
+}
+
 async function obterNumeroInicialOrcamento(supabase: ReturnType<typeof criarClienteAdmin>, tenantId: string) {
   const { data: ultimoOrcamento } = await supabase
     .from('orcamentos')
@@ -41,7 +54,11 @@ export async function POST(request: NextRequest) {
     const validadePadrao = new Date()
     validadePadrao.setDate(validadePadrao.getDate() + 30)
     const validadeEm = input.validadeEm || validadePadrao.toISOString().slice(0, 10)
-    const categoriaDb = input.categoria === 'capas' ? 'copas' : input.categoria
+    const categoriasDb = Array.from(new Set([
+      input.categoria,
+      input.categoria === 'capas' ? 'copas' : null,
+      input.categoria === 'copas' ? 'capas' : null,
+    ].filter(Boolean))) as Array<'reparacao' | 'copas' | 'capas' | 'outros'>
 
     let clienteId: string
     const contacto = input.clienteContacto.replace(/\s/g, '')
@@ -77,7 +94,7 @@ export async function POST(request: NextRequest) {
       tenant_id: input.tenantId,
       cliente_id: clienteId,
       estado: 'rascunho',
-      categoria: categoriaDb,
+      categoria: categoriasDb[0],
       produto: input.produto,
       descricao: input.descricao.trim() || null,
       valor_estimado: input.valorEstimado,
@@ -95,26 +112,39 @@ export async function POST(request: NextRequest) {
     let orcamento: { id: string; numero_orcamento: number; valor_estimado: number | string } | null = null
     let ultimoErro: unknown = null
 
-    for (let tentativa = 0; tentativa < 25; tentativa += 1) {
-      const { data, error } = await supabase
-        .from('orcamentos')
-        .insert({ ...payloadBase, numero_orcamento: numeroTentativa })
-        .select('id, numero_orcamento, valor_estimado')
-        .single()
+    for (const categoriaDb of categoriasDb) {
+      numeroTentativa = await obterNumeroInicialOrcamento(supabase, input.tenantId)
 
-      if (!error && data) {
-        orcamento = data
+      for (let tentativa = 0; tentativa < 25; tentativa += 1) {
+        const { data, error } = await supabase
+          .from('orcamentos')
+          .insert({ ...payloadBase, categoria: categoriaDb, numero_orcamento: numeroTentativa })
+          .select('id, numero_orcamento, valor_estimado')
+          .single()
+
+        if (!error && data) {
+          orcamento = data
+          break
+        }
+
+        ultimoErro = error
+        if (erroNumeroDuplicado(error)) {
+          numeroTentativa += 1
+          continue
+        }
+        if (erroCheckCategoria(error)) break
         break
       }
 
-      ultimoErro = error
-      if (!erroNumeroDuplicado(error)) break
-      numeroTentativa += 1
+      if (orcamento) break
     }
 
     if (!orcamento) {
       console.error('Erro ao criar orcamento:', ultimoErro)
-      return NextResponse.json({ erro: 'Erro ao criar orcamento' }, { status: 500 })
+      return NextResponse.json({
+        erro: 'Erro ao criar orcamento',
+        detalhes: detalhesErro(ultimoErro),
+      }, { status: 500 })
     }
 
     return NextResponse.json({
