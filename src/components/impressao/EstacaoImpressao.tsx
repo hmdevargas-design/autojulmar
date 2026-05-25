@@ -15,24 +15,26 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
 
   const imprimirPedido = useCallback((pedido: Pedido): Promise<void> => {
     return new Promise((resolve) => {
-      const url = `/api/pedidos/${pedido.id}/pdf?formato=termica`
+      const url = `/api/pedidos/${pedido.id}/termica`
       let carregado = false
 
       const iframe = document.createElement('iframe')
-      iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.01;left:-9999px;top:-9999px'
+      iframe.style.cssText = 'position:fixed;width:80mm;height:1200px;opacity:0;pointer-events:none;right:0;bottom:0;border:0'
       iframe.src = url
       document.body.appendChild(iframe)
 
       iframe.addEventListener('load', () => {
         carregado = true
-        try {
-          iframe.contentWindow?.focus()
-          iframe.contentWindow?.print()
-        } catch {
-          window.open(url, '_blank')
-        }
-        setTimeout(() => iframe.parentNode?.removeChild(iframe), 120_000)
-        resolve()
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus()
+            iframe.contentWindow?.print()
+          } catch {
+            window.open(url, '_blank')
+          }
+          setTimeout(() => iframe.parentNode?.removeChild(iframe), 30_000)
+          resolve()
+        }, 500)
       })
 
       setTimeout(() => {

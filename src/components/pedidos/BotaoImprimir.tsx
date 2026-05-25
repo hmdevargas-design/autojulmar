@@ -16,24 +16,30 @@ export default function BotaoImprimir({ pedidoId, className, formato = 'termica'
     if (loading) return
     setLoading(true)
 
-    const url = `/api/pedidos/${pedidoId}/pdf?formato=${formato}`
+    const url = formato === 'termica'
+      ? `/api/pedidos/${pedidoId}/termica`
+      : `/api/pedidos/${pedidoId}/pdf?formato=${formato}`
     let carregado = false
 
     const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.01;left:-9999px;top:-9999px'
+    iframe.style.cssText = formato === 'termica'
+      ? 'position:fixed;width:80mm;height:1200px;opacity:0;pointer-events:none;right:0;bottom:0;border:0'
+      : 'position:fixed;width:1px;height:1px;opacity:0.01;left:-9999px;top:-9999px;border:0'
     iframe.src = url
     document.body.appendChild(iframe)
 
     iframe.addEventListener('load', () => {
       carregado = true
-      try {
-        iframe.contentWindow?.focus()
-        iframe.contentWindow?.print()
-      } catch {
-        window.open(url, '_blank')
-      }
-      setLoading(false)
-      setTimeout(() => iframe.parentNode?.removeChild(iframe), 120_000)
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+        } catch {
+          window.open(url, '_blank')
+        }
+        setLoading(false)
+        setTimeout(() => iframe.parentNode?.removeChild(iframe), formato === 'termica' ? 30_000 : 120_000)
+      }, formato === 'termica' ? 500 : 0)
     })
 
     // Fallback: se o PDF não carregar em 15s, abre em nova tab
