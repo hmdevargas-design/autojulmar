@@ -9,7 +9,7 @@ import { CATEGORIAS_ORCAMENTO, PRODUTOS_ORCAMENTO, formatarNumeroOrcamento, type
 const schema = z.object({
   nomeCliente: z.string().min(1, 'Nome do cliente obrigatório'),
   contacto: z.string().min(9, 'Contacto obrigatório'),
-  categoria: z.enum(['reparacao', 'capas', 'outros']),
+  categoria: z.enum(['reparacao', 'copas', 'capas', 'outros']),
   produto: z.string().min(1, 'Produto obrigatório'),
   descricao: z.string().optional(),
   matricula: z.string().optional(),

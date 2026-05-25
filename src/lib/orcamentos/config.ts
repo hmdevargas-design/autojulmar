@@ -9,7 +9,7 @@ export const ESTADOS_ORCAMENTO = [
 
 export const CATEGORIAS_ORCAMENTO = [
   { valor: 'reparacao', label: 'Reparação' },
-  { valor: 'capas', label: 'Capas' },
+  { valor: 'copas', label: 'Capas' },
   { valor: 'outros', label: 'Outros orçamentos' },
 ] as const
 
@@ -20,7 +20,7 @@ export const PRODUTOS_ORCAMENTO = {
     { valor: 'tejadilho', label: 'Tejadilho' },
     { valor: 'outros', label: 'Outros' },
   ],
-  capas: [
+  copas: [
     { valor: 'tecido_daiana', label: 'Tecido Daiana' },
     { valor: 'napa', label: 'Napa' },
     { valor: 'tecido', label: 'Tecido' },

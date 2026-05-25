@@ -22,7 +22,7 @@ const schemaCriarOrcamento = z.object({
   tenantId:        z.string().min(1),
   clienteNome:     z.string().min(1),
   clienteContacto: z.string().min(9),
-  categoria:       z.enum(['reparacao', 'capas', 'outros']),
+  categoria:       z.enum(['reparacao', 'copas', 'capas', 'outros']),
   produto:         z.string().min(1),
   descricao:       z.string().optional().default(''),
   matricula:       z.string().optional().default(''),
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const validadePadrao = new Date()
     validadePadrao.setDate(validadePadrao.getDate() + 30)
     const validadeEm = input.validadeEm || validadePadrao.toISOString().slice(0, 10)
+    const categoriaDb = input.categoria === 'capas' ? 'copas' : input.categoria
 
     let clienteId: string
     const contacto = input.clienteContacto.replace(/\s/g, '')
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       tenant_id: input.tenantId,
       cliente_id: clienteId,
       estado: 'rascunho',
-      categoria: input.categoria,
+      categoria: categoriaDb,
       produto: input.produto,
       descricao: input.descricao.trim() || null,
       valor_estimado: input.valorEstimado,
