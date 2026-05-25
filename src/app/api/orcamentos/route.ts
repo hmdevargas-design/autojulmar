@@ -2,23 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
-async function obterProximoNumeroOrcamento(supabase: ReturnType<typeof criarClienteAdmin>, tenantId: string) {
-  const { data: numeroData, error: numeroError } = await supabase
-    .rpc('proximo_numero_orcamento', { p_tenant_id: tenantId })
+function erroNumeroDuplicado(error: { code?: string; message?: string } | null) {
+  return error?.code === '23505' || error?.message?.includes('duplicate key')
+}
 
-  if (!numeroError && typeof numeroData === 'number') return numeroData
-
-  console.warn('[Orcamentos] Falha ao usar RPC de numeracao, aplicando fallback:', numeroError?.message)
-
-  const { data: ultimoOrcamento, error: ultimoError } = await supabase
+async function obterNumeroInicialOrcamento(supabase: ReturnType<typeof criarClienteAdmin>, tenantId: string) {
+  const { data: ultimoOrcamento } = await supabase
     .from('orcamentos')
     .select('numero_orcamento')
     .eq('tenant_id', tenantId)
     .order('numero_orcamento', { ascending: false })
     .limit(1)
     .maybeSingle()
-
-  if (ultimoError) throw new Error('Erro ao gerar numero de orcamento')
 
   return Number(ultimoOrcamento?.numero_orcamento ?? 0) + 1
 }
@@ -77,50 +72,58 @@ export async function POST(request: NextRequest) {
       clienteId = novoCliente.id
     }
 
-    let numeroData: number
-    try {
-      numeroData = await obterProximoNumeroOrcamento(supabase, input.tenantId)
-    } catch (error) {
-      console.error('[Orcamentos] Erro ao gerar numero:', error)
-      return NextResponse.json({ erro: 'Erro ao gerar numero de orcamento' }, { status: 500 })
+    const payloadBase = {
+      tenant_id: input.tenantId,
+      cliente_id: clienteId,
+      estado: 'rascunho',
+      categoria: input.categoria,
+      produto: input.produto,
+      descricao: input.descricao.trim() || null,
+      valor_estimado: input.valorEstimado,
+      validade_em: validadeEm,
+      origem: input.origem,
+      dados: {
+        matricula: input.matricula.trim(),
+        viatura: input.viatura.trim(),
+        ano: input.ano.trim(),
+      },
+      criado_por: '00000000-0000-0000-0000-000000000001',
     }
 
-    const { data: orcamento, error: erroOrcamento } = await supabase
-      .from('orcamentos')
-      .insert({
-        tenant_id: input.tenantId,
-        cliente_id: clienteId,
-        numero_orcamento: numeroData,
-        estado: 'rascunho',
-        categoria: input.categoria,
-        produto: input.produto,
-        descricao: input.descricao.trim() || null,
-        valor_estimado: input.valorEstimado,
-        validade_em: validadeEm,
-        origem: input.origem,
-        dados: {
-          matricula: input.matricula.trim(),
-          viatura: input.viatura.trim(),
-          ano: input.ano.trim(),
-        },
-        criado_por: '00000000-0000-0000-0000-000000000001',
-      })
-      .select('id, numero_orcamento, valor_estimado')
-      .single()
+    let numeroTentativa = await obterNumeroInicialOrcamento(supabase, input.tenantId)
+    let orcamento: { id: string; numero_orcamento: number; valor_estimado: number | string } | null = null
+    let ultimoErro: unknown = null
 
-    if (erroOrcamento || !orcamento) {
-      console.error('Erro ao criar orçamento:', erroOrcamento)
-      return NextResponse.json({ erro: 'Erro ao criar orçamento' }, { status: 500 })
+    for (let tentativa = 0; tentativa < 25; tentativa += 1) {
+      const { data, error } = await supabase
+        .from('orcamentos')
+        .insert({ ...payloadBase, numero_orcamento: numeroTentativa })
+        .select('id, numero_orcamento, valor_estimado')
+        .single()
+
+      if (!error && data) {
+        orcamento = data
+        break
+      }
+
+      ultimoErro = error
+      if (!erroNumeroDuplicado(error)) break
+      numeroTentativa += 1
+    }
+
+    if (!orcamento) {
+      console.error('Erro ao criar orcamento:', ultimoErro)
+      return NextResponse.json({ erro: 'Erro ao criar orcamento' }, { status: 500 })
     }
 
     return NextResponse.json({
       id: orcamento.id,
       numeroOrcamento: orcamento.numero_orcamento,
-      valorEstimado: orcamento.valor_estimado,
+      valorFinal: orcamento.valor_estimado,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ erro: 'Dados inválidos', detalhes: error.issues }, { status: 400 })
+      return NextResponse.json({ erro: 'Dados invalidos', detalhes: error.issues }, { status: 400 })
     }
     console.error('Erro inesperado:', error)
     return NextResponse.json({ erro: 'Erro interno' }, { status: 500 })
