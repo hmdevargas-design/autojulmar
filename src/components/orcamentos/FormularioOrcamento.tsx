@@ -95,7 +95,10 @@ export default function FormularioOrcamento({ tenantId, tenantSlug }: Props) {
       })
 
       const resultado = await response.json()
-      if (!response.ok) throw new Error(resultado.erro ?? 'Erro ao criar orçamento')
+      if (!response.ok) {
+        const detalhes = resultado.detalhes ? `\n${resultado.detalhes}` : ''
+        throw new Error((resultado.erro ?? 'Erro ao criar orcamento') + detalhes)
+      }
 
       setNumeroOrcamento(resultado.numeroOrcamento)
       setValorCriado(Number(resultado.valorEstimado) || 0)
