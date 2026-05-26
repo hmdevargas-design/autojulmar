@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import SeletorEstado from '@/components/pedidos/SeletorEstado'
+import BotaoImprimirLote from '@/components/pedidos/BotaoImprimirLote'
 import FiltrosPedidos from './FiltrosPedidos'
 
 interface Props {
@@ -114,12 +115,19 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{pedidos.length} resultado(s)</p>
           )}
         </div>
-        <Link
-          href={`/${slug}/pedidos/novo`}
-          className="px-4 py-2 bg-gold text-slate-900 text-sm font-medium rounded-xl hover:bg-gold-dark transition-colors shadow-sm"
-        >
-          + Novo Pedido
-        </Link>
+        <div className="flex items-center gap-2">
+          <BotaoImprimirLote
+            tenantId={tenant.id}
+            pedidoIds={pedidos.map(p => p.id)}
+            className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <Link
+            href={`/${slug}/pedidos/novo`}
+            className="px-4 py-2 bg-gold text-slate-900 text-sm font-medium rounded-xl hover:bg-gold-dark transition-colors shadow-sm"
+          >
+            + Novo Pedido
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4">
