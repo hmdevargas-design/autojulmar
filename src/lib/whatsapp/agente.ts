@@ -11,6 +11,9 @@ import { criarClienteAdmin }                             from '@/lib/supabase/ad
 const claude              = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MAX_HISTORICO       = 14
 const TELEFONE_INSTRUCOES = '__instrucoes_agente__'
+const RATE_LIMIT_ALERT_COOLDOWN_MS = 10 * 60 * 1000
+
+let ultimoAlertaRateLimit = 0
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -53,6 +56,61 @@ async function notificarTodosAdmins(mensagem: string): Promise<void> {
 
   const destinos = [...new Set([owner, ...admins].filter(Boolean))]
   await Promise.all(destinos.map(n => enviarMensagem(n, mensagem)))
+}
+
+function erroParaTexto(err: unknown): string {
+  if (err instanceof Error) return err.message
+  return String(err)
+}
+
+function isRateLimitError(err: unknown): boolean {
+  const texto = erroParaTexto(err).toLowerCase()
+  return texto.includes('rate_limit') || texto.includes('rate limit') || texto.includes('429')
+}
+
+function resumirErroTecnico(err: unknown): string {
+  const texto = erroParaTexto(err)
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (isRateLimitError(err)) {
+    return 'Rate limit do Claude atingido. O agente vai responder em modo fallback e tentar novamente nas proximas mensagens.'
+  }
+
+  return texto.slice(0, 500)
+}
+
+async function notificarErroAgente(telefone: string, mensagem: string, err: unknown): Promise<void> {
+  const numeroHumano = obterNumeroHumano()
+  if (!numeroHumano) return
+
+  if (isRateLimitError(err)) {
+    const agora = Date.now()
+    if (agora - ultimoAlertaRateLimit < RATE_LIMIT_ALERT_COOLDOWN_MS) return
+    ultimoAlertaRateLimit = agora
+  }
+
+  await enviarMensagem(numeroHumano, [
+    'ERRO AGENTE',
+    `Cliente: ${telefone}`,
+    `Mensagem: "${mensagem.slice(0, 180)}${mensagem.length > 180 ? '...' : ''}"`,
+    `Erro: ${resumirErroTecnico(err)}`,
+  ].join('\n'))
+}
+
+async function chamarClaude(
+  model: string,
+  system: string,
+  messages: Msg[],
+): Promise<string> {
+  const res = await claude.messages.create({
+    model,
+    max_tokens: 500,
+    system,
+    messages,
+  })
+  return (res.content[0] as { type: string; text: string }).text.trim()
 }
 
 // ─── Delay humano ─────────────────────────────────────────────────────────────
@@ -742,7 +800,6 @@ async function tratarConfirmacao(
 
 export async function processarComAgente(telefone: string, mensagem: string): Promise<void> {
   const tenantSlug   = process.env.WHATSAPP_TENANT_SLUG
-  const numeroHumano = obterNumeroHumano()
   const nomeOwner    = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'
   const isOwner      = eOwner(telefone)
   const isAdmin      = eAdmin(telefone)
@@ -851,22 +908,35 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   // ── Chama Claude Sonnet ──────────────────────────────────────────────────
   let resposta: string
+  const systemPrompt = buildSystemPrompt(
+    instrucoes,
+    tipoUtilizador,
+    nomeOwner,
+    tabelaPrecos,
+    perfilCliente ?? undefined,
+    descontoCupao
+  )
+
   try {
-    const res = await claude.messages.create({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 500,
-      system:     buildSystemPrompt(instrucoes, tipoUtilizador, nomeOwner, tabelaPrecos, perfilCliente ?? undefined, descontoCupao),
-      messages:   historico,
-    })
-    resposta = (res.content[0] as { type: string; text: string }).text.trim()
+    resposta = await chamarClaude('claude-sonnet-4-6', systemPrompt, historico)
   } catch (err) {
     console.error('[Agente] Erro Claude Sonnet:', String(err))
-    if (numeroHumano) {
-      await enviarMensagem(numeroHumano,
-        `ERRO AGENTE\nCliente: ${telefone}\nMensagem: "${mensagem}"\nErro: ${String(err)}`)
+
+    if (isRateLimitError(err)) {
+      try {
+        resposta = await chamarClaude('claude-haiku-4-5-20251001', systemPrompt, historico.slice(-6))
+      } catch (fallbackErr) {
+        console.error('[Agente] Erro Claude Haiku fallback:', String(fallbackErr))
+        await notificarErroAgente(telefone, mensagem, fallbackErr)
+        await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
+        await enviarComDelay(telefone, 'Recebemos a sua mensagem. Estamos com muito movimento neste momento, mas a nossa equipa vai acompanhar o seu pedido em breve.')
+        return
+      }
+    } else {
+      await notificarErroAgente(telefone, mensagem, err)
+      await enviarComDelay(telefone, 'Problema tecnico. A nossa equipa contacta em breve.')
+      return
     }
-    await enviarComDelay(telefone, 'Problema tecnico. A nossa equipa contacta em breve.')
-    return
   }
 
   // ── Pedido pendente ──────────────────────────────────────────────────────
