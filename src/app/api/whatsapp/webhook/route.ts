@@ -60,6 +60,11 @@ export async function POST(request: NextRequest) {
 
     if (payload.EventType !== 'messages') return NextResponse.json({ ok: true })
 
+    if (process.env.WHATSAPP_AGENT_ENABLED !== 'true') {
+      console.warn('[WhatsApp] Agente bloqueado por WHATSAPP_AGENT_ENABLED != true')
+      return NextResponse.json({ ok: true, paused: true })
+    }
+
     const msg = payload.message
 
     if (msg.isGroup === true) return NextResponse.json({ ok: true })

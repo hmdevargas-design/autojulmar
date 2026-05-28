@@ -1,5 +1,9 @@
 // Envia mensagens de texto e imagens via uazapi
 
+function envioWhatsappAtivo(): boolean {
+  return process.env.WHATSAPP_SEND_ENABLED === 'true'
+}
+
 export async function enviarMensagemComMencoes(
   para: string,
   texto: string,
@@ -7,6 +11,11 @@ export async function enviarMensagemComMencoes(
 ): Promise<void> {
   const baseUrl = process.env.UAZAPI_URL
   const token   = process.env.UAZAPI_TOKEN
+
+  if (!envioWhatsappAtivo()) {
+    console.warn('[WhatsApp] Envio bloqueado por WHATSAPP_SEND_ENABLED != true')
+    return
+  }
 
   if (!baseUrl || !token) {
     console.warn('[WhatsApp] Credenciais uazapi não configuradas — mensagem não enviada')
@@ -38,6 +47,11 @@ export async function enviarMensagem(para: string, texto: string): Promise<void>
 
   console.log('[WhatsApp] enviarMensagem → baseUrl:', baseUrl ?? '(não definido)', '| para:', para)
 
+  if (!envioWhatsappAtivo()) {
+    console.warn('[WhatsApp] Envio bloqueado por WHATSAPP_SEND_ENABLED != true | para:', para)
+    return
+  }
+
   if (!baseUrl || !token) {
     console.warn('[WhatsApp] Credenciais uazapi não configuradas — mensagem não enviada')
     return
@@ -67,6 +81,11 @@ export async function enviarMensagem(para: string, texto: string): Promise<void>
 export async function enviarImagem(para: string, imageUrl: string, caption?: string): Promise<void> {
   const baseUrl = process.env.UAZAPI_URL
   const token   = process.env.UAZAPI_TOKEN
+
+  if (!envioWhatsappAtivo()) {
+    console.warn('[WhatsApp] Envio de imagem bloqueado por WHATSAPP_SEND_ENABLED != true | para:', para)
+    return
+  }
 
   if (!baseUrl || !token) {
     console.warn('[WhatsApp] Credenciais uazapi não configuradas — imagem não enviada')
