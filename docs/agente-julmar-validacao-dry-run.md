@@ -30,6 +30,8 @@ CRON_SECRET=<secret forte>
 
 O endpoint `/api/whatsapp/outbox/process` aceita `Authorization: Bearer <secret>` com `WHATSAPP_OUTBOX_WORKER_SECRET` ou `CRON_SECRET`.
 
+Nota Vercel Hobby: cron sub-diario, como `*/5 * * * *`, nao e permitido. O `vercel.json` usa um cron diario para manter deploy compativel. Para processamento frequente da outbox, usar Vercel Pro, cron externo ou worker dedicado no `atendimento-agent`.
+
 Nao mudar `WHATSAPP_SEND_ENABLED` para `true` nesta fase.
 
 O webhook exige duas flags para sair da pausa:

@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/whatsapp/outbox/process",
-      "schedule": "*/5 * * * *"
+      "schedule": "10 8 * * *"
     }
   ]
 }
