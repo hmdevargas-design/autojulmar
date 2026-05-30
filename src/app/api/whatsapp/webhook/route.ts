@@ -48,6 +48,11 @@ function eAdmin(telefone: string): boolean {
   return numerosAdmin().some(n => t.endsWith(n))
 }
 
+function agenteWhatsappAtivo(): boolean {
+  return process.env.WHATSAPP_AGENT_ENABLED === 'true'
+    && process.env.WHATSAPP_OUTBOX_READY === 'true'
+}
+
 export async function GET() {
   return NextResponse.json({ ok: true, servico: 'uazapi' })
 }
@@ -60,8 +65,8 @@ export async function POST(request: NextRequest) {
 
     if (payload.EventType !== 'messages') return NextResponse.json({ ok: true })
 
-    if (process.env.WHATSAPP_AGENT_ENABLED !== 'true') {
-      console.warn('[WhatsApp] Agente bloqueado por WHATSAPP_AGENT_ENABLED != true')
+    if (!agenteWhatsappAtivo()) {
+      console.warn('[WhatsApp] Agente bloqueado por flags de seguranca')
       return NextResponse.json({ ok: true, paused: true })
     }
 

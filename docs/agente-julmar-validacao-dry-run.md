@@ -9,6 +9,7 @@ Manter:
 ```txt
 WHATSAPP_AGENT_ENABLED=false
 WHATSAPP_SEND_ENABLED=false
+WHATSAPP_OUTBOX_READY=false
 WHATSAPP_OUTBOX_ENABLED=true
 WHATSAPP_OUTBOX_DRY_RUN=true
 WHATSAPP_OUTBOX_WORKER_ENABLED=false
@@ -30,6 +31,15 @@ CRON_SECRET=<secret forte>
 O endpoint `/api/whatsapp/outbox/process` aceita `Authorization: Bearer <secret>` com `WHATSAPP_OUTBOX_WORKER_SECRET` ou `CRON_SECRET`.
 
 Nao mudar `WHATSAPP_SEND_ENABLED` para `true` nesta fase.
+
+O webhook exige duas flags para sair da pausa:
+
+```txt
+WHATSAPP_AGENT_ENABLED=true
+WHATSAPP_OUTBOX_READY=true
+```
+
+Enquanto `WHATSAPP_OUTBOX_READY` nao for exactamente `true`, o agente responde `paused:true` mesmo que `WHATSAPP_AGENT_ENABLED` esteja activo por engano.
 
 ## Migrations necessarias
 
