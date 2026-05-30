@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { processarComAgente, pausarBot } from '@/lib/whatsapp/agente'
+import { processarComAgenteJulmar, pausarAgenteJulmar } from '@/lib/whatsapp/agente-julmar'
 import { enviarMensagem }                from '@/lib/whatsapp/sender'
 import { registarAtendimento }           from '@/lib/whatsapp/log-atendimento'
 import { criarClienteAdmin }             from '@/lib/supabase/admin'
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           if (tenantSlug) {
             const tenant = await resolverTenant(tenantSlug)
             if (tenant) {
-              await pausarBot(tenant.id, clienteTel)
+              await pausarAgenteJulmar(tenant.id, clienteTel)
               console.log('[WhatsApp] Takeover — bot pausado para:', clienteTel)
             }
           }
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
         )
       }
       await enviarMensagem(telefone, `🎙️ _${transcricao}_`)
-      await processarComAgente(telefone, transcricao)
+      await processarComAgenteJulmar(telefone, transcricao)
       return NextResponse.json({ ok: true })
     }
 
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await processarComAgente(telefone, msg.text.trim())
+      await processarComAgenteJulmar(telefone, msg.text.trim())
     } catch (err) {
       console.error('[WhatsApp] Erro:', String(err))
     }

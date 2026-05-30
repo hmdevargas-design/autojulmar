@@ -1,15 +1,27 @@
-// Agente de atendimento WhatsApp — Claude Sonnet
+// Agente Julmar — atendimento WhatsApp com Claude
 // Representa a Autojulmar sem se identificar como IA
 // Suporta: delay humano, admin parcial, audio, instrucoes dinamicas, palavra-chave SISTEMA
 
 import Anthropic from '@anthropic-ai/sdk'
-import { enviarMensagem, enviarImagem }                  from './sender'
+import {
+  enviarMensagem as enviarMensagemWhatsapp,
+  enviarImagem as enviarImagemWhatsapp,
+} from './sender'
 import { obterSessao, guardarSessao, eliminarSessao }    from './session'
+import {
+  memoriaParaPrompt,
+  obterMemoriaConversa,
+  registrarTurnoConversa,
+} from './conversation-memory'
 import { resolverTenant }                                from '@/lib/tenant/resolver'
 import { criarClienteAdmin }                             from '@/lib/supabase/admin'
 
+export const AGENTE_JULMAR_NOME = 'Agente Julmar'
+
 const claude              = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MAX_HISTORICO       = 14
+const AGENTE_JULMAR_SOURCE = 'agente-julmar'
+// Mantem a chave antiga para nao perder instrucoes ja guardadas antes da renomeacao interna.
 const TELEFONE_INSTRUCOES = '__instrucoes_agente__'
 const RATE_LIMIT_ALERT_COOLDOWN_MS = 10 * 60 * 1000
 
@@ -27,6 +39,44 @@ interface DadosPedidoPendente {
   extras?:         string[]
   quantidade?:     number
   formaPagamento?: string
+}
+
+async function enviarMensagem(para: string, texto: string): Promise<void> {
+  await enviarMensagemWhatsapp(para, texto, { source: AGENTE_JULMAR_SOURCE })
+}
+
+async function enviarImagem(para: string, imageUrl: string, caption?: string): Promise<void> {
+  await enviarImagemWhatsapp(para, imageUrl, caption, { source: AGENTE_JULMAR_SOURCE })
+}
+
+async function registarTurnoAgenteJulmar(
+  tenantId: string,
+  telefone: string,
+  userMessage: string,
+  assistantMessage: string,
+  state: string,
+): Promise<void> {
+  await registrarTurnoConversa({
+    tenantId,
+    telefone,
+    userMessage,
+    assistantMessage,
+    state,
+    metadata: { source: AGENTE_JULMAR_SOURCE },
+  })
+}
+
+interface PerfilClienteAgenteJulmar {
+  nome: string | null
+  tipoNome: string | null
+  ultimoPedido: {
+    numeroPedido: number
+    criadoEm: string
+    material: string | null
+    tipoTapete: string[]
+    matricula: string | null
+    viatura: string | null
+  } | null
 }
 
 // ─── Helpers de identidade ─────────────────────────────────────────────────────
@@ -92,7 +142,7 @@ async function notificarErroAgente(telefone: string, mensagem: string, err: unkn
   }
 
   await enviarMensagem(numeroHumano, [
-    'ERRO AGENTE',
+    'ERRO AGENTE JULMAR',
     `Cliente: ${telefone}`,
     `Mensagem: "${mensagem.slice(0, 180)}${mensagem.length > 180 ? '...' : ''}"`,
     `Erro: ${resumirErroTecnico(err)}`,
@@ -203,7 +253,7 @@ async function guardarInstrucao(tenantId: string, novaInstrucao: string): Promis
     )
 
   if (error) {
-    console.error('[Agente] Erro ao guardar instrucao:', error.message, error.code)
+    console.error('[Agente Julmar] Erro ao guardar instrucao:', error.message, error.code)
     return false
   }
   return true
@@ -234,18 +284,51 @@ async function verificarEhVip(tenantId: string, contacto: string): Promise<boole
 async function carregarPerfilCliente(
   tenantId: string,
   telefone: string
-): Promise<{ nome: string | null; tipoNome: string | null }> {
+): Promise<PerfilClienteAgenteJulmar> {
   const supabase  = criarClienteAdmin()
   const contactoN = telefone.replace(/\D/g, '').slice(-9)
-  const { data }  = await supabase
+  const { data } = await supabase
     .from('clientes')
-    .select('nome, tipos_cliente ( nome )')
+    .select('id, nome, tipos_cliente ( nome )')
     .eq('tenant_id', tenantId)
     .eq('contacto', contactoN)
     .single()
+
+  const clienteId = data?.id as string | undefined
+  let ultimoPedido: PerfilClienteAgenteJulmar['ultimoPedido'] = null
+
+  if (clienteId) {
+    const { data: pedido } = await supabase
+      .from('pedidos')
+      .select('numero_pedido, criado_em, dados')
+      .eq('tenant_id', tenantId)
+      .eq('cliente_id', clienteId)
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const dadosPedido = (pedido?.dados as {
+      matricula?: string
+      viatura?: string
+      material?: string
+      tipo_tapete?: unknown
+    } | null) ?? null
+    ultimoPedido = pedido
+      ? {
+          numeroPedido: Number(pedido.numero_pedido),
+          criadoEm: String(pedido.criado_em),
+          material: dadosPedido?.material ?? null,
+          tipoTapete: Array.isArray(dadosPedido?.tipo_tapete) ? dadosPedido.tipo_tapete.map(String) : [],
+          matricula: dadosPedido?.matricula ?? null,
+          viatura: dadosPedido?.viatura ?? null,
+        }
+      : null
+  }
+
   return {
     nome:     (data?.nome as string | null) ?? null,
     tipoNome: (data?.tipos_cliente as unknown as { nome: string } | null)?.nome ?? null,
+    ultimoPedido,
   }
 }
 
@@ -318,13 +401,29 @@ async function carregarTabelaPrecos(tenantId: string): Promise<string> {
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
+function resumoUltimoPedido(ultimoPedido: PerfilClienteAgenteJulmar['ultimoPedido']): string {
+  if (!ultimoPedido) return ''
+
+  const partes = [
+    `#${ultimoPedido.numeroPedido}`,
+    ultimoPedido.viatura,
+    ultimoPedido.matricula,
+    ultimoPedido.material,
+    ultimoPedido.tipoTapete.length > 0 ? ultimoPedido.tipoTapete.join(' + ') : null,
+  ].filter(Boolean)
+
+  return partes.join(' | ')
+}
+
 function buildSystemPrompt(
   instrucoes:      string,
   tipoUtilizador:  'owner' | 'admin' | 'cliente',
   nomeOwner:       string,
   tabelaPrecos:    string,
-  perfilCliente?:  { nome: string | null; tipoNome: string | null },
-  descontoCupao?:  number
+  perfilCliente?:  PerfilClienteAgenteJulmar,
+  descontoCupao?:  number,
+  saudacaoAtiva?:  boolean,
+  memoriaCompacta?: string
 ): string {
   const nomeLoja = process.env.WHATSAPP_LOJA_NOME    ?? 'Autojulmar'
   const morada   = process.env.WHATSAPP_LOJA_MORADA  ?? 'R. Camara de Lobos 7 Loja C, 2670-489 Loures'
@@ -341,20 +440,31 @@ function buildSystemPrompt(
     ? `\nINSTRUCOES ADICIONAIS DO DONO:\n${instrucoes}\n`
     : ''
 
-  const secaoPerfilCliente = (tipoUtilizador === 'cliente' && perfilCliente?.tipoNome)
-    ? `\nPERFIL DO CLIENTE (injectado pelo core):\n- Tipo: ${perfilCliente.tipoNome}${perfilCliente.nome ? `\n- Nome: ${perfilCliente.nome}` : ''}\n`
+  const ultimoPedidoResumo = resumoUltimoPedido(perfilCliente?.ultimoPedido ?? null)
+  const secaoPerfilCliente = (tipoUtilizador === 'cliente' && (perfilCliente?.tipoNome || perfilCliente?.nome || perfilCliente?.ultimoPedido))
+    ? `\nPERFIL DO CLIENTE (injectado pelo core):\n${perfilCliente.nome ? `- Nome: ${perfilCliente.nome}\n` : ''}${perfilCliente.tipoNome ? `- Tipo: ${perfilCliente.tipoNome}\n` : ''}${ultimoPedidoResumo ? `- Ultimo pedido: ${ultimoPedidoResumo}\n` : ''}`
+    : ''
+
+  const secaoSaudacaoAtiva = (tipoUtilizador === 'cliente' && saudacaoAtiva)
+    ? `\nSAUDACAO ACTIVA / TRANSPARENCIA:\nEsta e a primeira mensagem desta conversa. A primeira resposta deve identificar de forma natural que es o assistente inteligente da ${nomeLoja}.\n- Nao digas que es humano.\n- Nao uses a expressao "sou uma IA" salvo se o cliente perguntar directamente.\n- Usa "assistente inteligente da ${nomeLoja}" ou "sistema criado pela ${nomeLoja}" de forma simples.\n- Se o cliente ja veio com um pedido directo, responde ao pedido na mesma mensagem depois da identificacao curta.\n- Cliente novo: base recomendada: "Ola! Sou o assistente inteligente da ${nomeLoja}. Consigo ajudar com orcamentos, materiais, prazos e pedidos. Em que posso ajudar?"\n- Cliente com historico: trata pelo nome quando existir e podes referir o ultimo pedido/viatura se for natural. Exemplo: "Ola ${perfilCliente?.nome ?? ''}! Sou o assistente inteligente da ${nomeLoja}. Vi o seu historico connosco e consigo ajudar com novos pedidos, precos ou estado dos tapetes."\n- Stands, lojas, oficinas, taxi/TVDE e VIP: saudacao mais curta e directa, sem tom promocional.\n`
     : ''
 
   const secaoCupao = (descontoCupao && descontoCupao > 0)
     ? `\nCUPAO ACTIVO: AMERICO10 — desconto de ${descontoCupao}EUR aplicado no jogo\n`
     : ''
 
-  return `${secaoUtilizador}${secaoPerfilCliente}${secaoCupao}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
+  const secaoMemoria = memoriaCompacta
+    ? `\n${memoriaCompacta}\n`
+    : ''
+
+  return `${secaoUtilizador}${secaoPerfilCliente}${secaoMemoria}${secaoSaudacaoAtiva}${secaoCupao}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
 
 IDENTIDADE:
-- Nunca digas que es uma IA, robot, assistente virtual, chatbot ou sistema automatico
+- Es o assistente inteligente da ${nomeLoja}, um sistema criado para responder mais rapido, consultar contexto da loja e encaminhar para a equipa quando necessario.
+- Nunca digas que es humano.
+- Nao uses espontaneamente as palavras IA, robot, bot ou chatbot, excepto se o cliente perguntar directamente.
 - Se perguntarem o que es ou se es um bot/IA/robot/humano, responde EXACTAMENTE com:
-  "Sou o assistente da ${nomeLoja}! Um sistema criado pelo ${nomeOwner} para responder mais rapido e gerir os pedidos da loja. Se tiver curiosidade sobre o sistema ou quiser saber como funciona, escreva SISTEMA que aviso o ${nomeOwner} para entrar em contacto consigo."
+  "Sou o assistente inteligente da ${nomeLoja}! Um sistema criado pelo ${nomeOwner} para responder mais rapido, consultar pedidos e ajudar com orcamentos. Se quiser falar com a equipa, e so pedir."
 - Representes a loja, nao te identificas com nenhum nome proprio
 
 CAPACIDADES DO SISTEMA:
@@ -405,7 +515,7 @@ ${secaoInstrucoes}REGRAS:
 2. Adapta o tom ao cliente
 3. Emojis: so se o cliente os usar primeiro (excepcao: saudacao AMERICO10)
 4. Responde sempre em portugues de Portugal (nao PT-BR)
-5. Nunca uses as palavras: IA, inteligencia artificial, bot, chatbot, assistente virtual, sistema automatico
+5. Mantem transparencia: se for a primeira resposta da conversa, identifica-te como assistente inteligente da loja; se perguntarem directamente, explica que es um sistema de atendimento da Autojulmar.
 
 QUANDO ESCALAR — responder APENAS com [ESCALAR] motivo:
 Usa SEMPRE o formato: [ESCALAR] descricao do pedido do cliente
@@ -558,9 +668,9 @@ async function tratarKeywordSistema(tenantId: string, telefone: string): Promise
   const numeroHumano = obterNumeroHumano()
   const nomeLoja     = process.env.WHATSAPP_LOJA_NOME ?? 'Autojulmar'
   const nomeOwner    = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'
+  const resposta      = `Optimo! O ${nomeOwner} vai entrar em contacto consigo em breve.`
 
-  await enviarComDelay(telefone,
-    `Optimo! O ${nomeOwner} vai entrar em contacto consigo em breve.`)
+  await enviarComDelay(telefone, resposta)
 
   if (numeroHumano) {
     await enviarMensagem(numeroHumano,
@@ -570,8 +680,9 @@ async function tratarKeywordSistema(tenantId: string, telefone: string): Promise
   const sessao    = await obterSessao(tenantId, telefone)
   const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
   historico.push({ role: 'user',      content: 'SISTEMA' })
-  historico.push({ role: 'assistant', content: `Optimo! O ${nomeOwner} vai entrar em contacto consigo em breve.` })
+  historico.push({ role: 'assistant', content: resposta })
   await guardarSessao(tenantId, telefone, { step: 'conversando', dados: { historico } })
+  await registarTurnoAgenteJulmar(tenantId, telefone, 'SISTEMA', resposta, 'conversando')
 }
 
 // ─── Preview para admin/owner (com confirmacao SIM/NAO) ───────────────────────
@@ -614,6 +725,7 @@ async function mostrarPreviewAdmin(
 async function processarPedidoCliente(
   tenantId: string,
   telefone: string,
+  mensagemOriginal: string,
   dados: DadosPedidoPendente,
   historico: Msg[],
   descontoManual: number = 0
@@ -668,8 +780,10 @@ async function processarPedidoCliente(
   const resultado = await res.json()
 
   if (!res.ok) {
-    await enviarComDelay(telefone, 'Ocorreu um erro ao registar o pedido. A nossa equipa contacta em breve.')
-    console.error('[Agente] Erro ao criar pedido de cliente:', resultado)
+    const msgErro = 'Ocorreu um erro ao registar o pedido. A nossa equipa contacta em breve.'
+    await enviarComDelay(telefone, msgErro)
+    console.error('[Agente Julmar] Erro ao criar pedido de cliente:', resultado)
+    await registarTurnoAgenteJulmar(tenantId, telefone, mensagemOriginal, msgErro, 'erro_pedido')
     return
   }
 
@@ -692,21 +806,31 @@ async function processarPedidoCliente(
   }
 
   // Avisa o cliente para aguardar
-  await enviarComDelay(telefone,
-    `Pedido registado. Por favor aguarde enquanto a nossa equipa confirma a disponibilidade.`)
+  const respostasCliente = [
+    `Pedido registado. Por favor aguarde enquanto a nossa equipa confirma a disponibilidade.`,
+  ]
+  await enviarComDelay(telefone, respostasCliente[0])
 
   // Mensagem de pagamento para nao-VIP
   const ehVip = await verificarEhVip(tenantId, contacto)
   if (!ehVip && mbway) {
     const metade = (valorFinal / 2).toFixed(2)
+    const msgPagamento = `O pedido sera processado a partir do pagamento de ${valorFinal.toFixed(2)}EUR (ou 50% = ${metade}EUR) via MBWay: ${mbway}`
     await new Promise(r => setTimeout(r, 2000))
-    await enviarMensagem(telefone,
-      `O pedido sera processado a partir do pagamento de ${valorFinal.toFixed(2)}EUR (ou 50% = ${metade}EUR) via MBWay: ${mbway}`)
+    await enviarMensagem(telefone, msgPagamento)
+    respostasCliente.push(msgPagamento)
   }
 
   // Guarda historico
   historico.push({ role: 'assistant', content: `Pedido #${resultado.numeroPedido} registado.` })
   await guardarSessao(tenantId, telefone, { step: 'pedido_criado', dados: { historico } })
+  await registarTurnoAgenteJulmar(
+    tenantId,
+    telefone,
+    mensagemOriginal,
+    respostasCliente.join('\n'),
+    'pedido_criado',
+  )
 }
 
 // ─── Confirmacao de pedido (fluxo admin/owner com SIM/NAO) ────────────────────
@@ -721,12 +845,16 @@ async function tratarConfirmacao(
 
   if (['NAO', 'NÃO', 'CANCELAR', 'N', 'NO'].includes(respNorm)) {
     await eliminarSessao(tenantId, telefone)
-    await enviarMensagem(telefone, 'Pedido cancelado.')
+    const resposta = 'Pedido cancelado.'
+    await enviarMensagem(telefone, resposta)
+    await registarTurnoAgenteJulmar(tenantId, telefone, mensagem, resposta, 'cancelado')
     return
   }
 
   if (!['SIM', 'S', 'CONFIRMAR', 'OK'].includes(respNorm)) {
-    await enviarMensagem(telefone, 'Responde SIM para criar o pedido ou NAO para cancelar.')
+    const resposta = 'Responde SIM para criar o pedido ou NAO para cancelar.'
+    await enviarMensagem(telefone, resposta)
+    await registarTurnoAgenteJulmar(tenantId, telefone, mensagem, resposta, 'aguarda_confirmacao')
     return
   }
 
@@ -777,7 +905,9 @@ async function tratarConfirmacao(
   const resultado = await res.json()
 
   if (!res.ok) {
-    await enviarMensagem(telefone, `Erro ao criar pedido: ${resultado.erro ?? 'tente novamente'}`)
+    const resposta = `Erro ao criar pedido: ${resultado.erro ?? 'tente novamente'}`
+    await enviarMensagem(telefone, resposta)
+    await registarTurnoAgenteJulmar(tenantId, telefone, mensagem, resposta, 'erro_pedido')
     return
   }
 
@@ -794,6 +924,7 @@ async function tratarConfirmacao(
   ].filter(Boolean).join('\n')
 
   await enviarMensagem(telefone, confirmacao)
+  await registarTurnoAgenteJulmar(tenantId, telefone, mensagem, confirmacao, 'pedido_criado')
 }
 
 // ─── Entrada principal ────────────────────────────────────────────────────────
@@ -804,10 +935,10 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   const isOwner      = eOwner(telefone)
   const isAdmin      = eAdmin(telefone)
 
-  if (!tenantSlug) { console.error('[Agente] WHATSAPP_TENANT_SLUG nao configurado'); return }
+  if (!tenantSlug) { console.error('[Agente Julmar] WHATSAPP_TENANT_SLUG nao configurado'); return }
 
   const tenant = await resolverTenant(tenantSlug)
-  if (!tenant)  { console.error('[Agente] Tenant nao encontrado:', tenantSlug); return }
+  if (!tenant)  { console.error('[Agente Julmar] Tenant nao encontrado:', tenantSlug); return }
 
   // ── Keyword SISTEMA ──────────────────────────────────────────────────────
   if (mensagem.trim().toUpperCase() === 'SISTEMA') {
@@ -870,10 +1001,10 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     const takeoverTtl = Number(process.env.WHATSAPP_TAKEOVER_TTL ?? 7200) * 1000
     const takeoverTs  = (sessao.dados?.takeoverTs as number | undefined) ?? 0
     if (takeoverTs && Date.now() - takeoverTs > takeoverTtl) {
-      console.log('[Agente] Takeover expirado — a retomar bot para:', telefone)
+      console.log('[Agente Julmar] Takeover expirado — a retomar bot para:', telefone)
       await retomarBot(tenant.id, telefone)
     } else {
-      console.log('[Agente] Takeover activo — ignorando mensagem de:', telefone)
+      console.log('[Agente Julmar] Takeover activo — ignorando mensagem de:', telefone)
       return
     }
   }
@@ -897,11 +1028,15 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     ? descontoCupaoSessao
     : (!isOwner && !isAdmin && historico.length === 0 && mensagem.toUpperCase().includes('AMERICO10') ? 10 : 0)
 
-  const [instrucoes, tabelaPrecos, perfilCliente] = await Promise.all([
+  const primeiraMensagemCliente = tipoUtilizador === 'cliente' && historico.length === 0
+
+  const [instrucoes, tabelaPrecos, perfilCliente, memoriaConversa] = await Promise.all([
     carregarInstrucoes(tenant.id),
     carregarTabelaPrecos(tenant.id),
     (!isOwner && !isAdmin) ? carregarPerfilCliente(tenant.id, telefone) : Promise.resolve(undefined),
+    (!isOwner && !isAdmin) ? obterMemoriaConversa(tenant.id, telefone) : Promise.resolve(null),
   ])
+  const memoriaCompacta = memoriaParaPrompt(memoriaConversa)
 
   historico.push({ role: 'user', content: mensagem })
   if (historico.length > MAX_HISTORICO) historico.splice(0, historico.length - MAX_HISTORICO)
@@ -914,27 +1049,33 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     nomeOwner,
     tabelaPrecos,
     perfilCliente ?? undefined,
-    descontoCupao
+    descontoCupao,
+    primeiraMensagemCliente,
+    memoriaCompacta
   )
 
   try {
     resposta = await chamarClaude('claude-sonnet-4-6', systemPrompt, historico)
   } catch (err) {
-    console.error('[Agente] Erro Claude Sonnet:', String(err))
+    console.error('[Agente Julmar] Erro Claude Sonnet:', String(err))
 
     if (isRateLimitError(err)) {
       try {
         resposta = await chamarClaude('claude-haiku-4-5-20251001', systemPrompt, historico.slice(-6))
       } catch (fallbackErr) {
-        console.error('[Agente] Erro Claude Haiku fallback:', String(fallbackErr))
+        console.error('[Agente Julmar] Erro Claude Haiku fallback:', String(fallbackErr))
         await notificarErroAgente(telefone, mensagem, fallbackErr)
         await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
-        await enviarComDelay(telefone, 'Recebemos a sua mensagem. Estamos com muito movimento neste momento, mas a nossa equipa vai acompanhar o seu pedido em breve.')
+        const msgFallback = 'Recebemos a sua mensagem. Estamos com muito movimento neste momento, mas a nossa equipa vai acompanhar o seu pedido em breve.'
+        await enviarComDelay(telefone, msgFallback)
+        await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgFallback, 'escalado')
         return
       }
     } else {
       await notificarErroAgente(telefone, mensagem, err)
-      await enviarComDelay(telefone, 'Problema tecnico. A nossa equipa contacta em breve.')
+      const msgErro = 'Problema tecnico. A nossa equipa contacta em breve.'
+      await enviarComDelay(telefone, msgErro)
+      await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgErro, sessao?.step ?? 'erro')
       return
     }
   }
@@ -951,16 +1092,17 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
         await mostrarPreviewAdmin(tenant.id, telefone, dados, historico)
       } else {
         // Cliente: cria pedido, notifica admin, envia mensagem de pagamento
-        await processarPedidoCliente(tenant.id, telefone, dados, historico, descontoCupao)
+        await processarPedidoCliente(tenant.id, telefone, mensagem, dados, historico, descontoCupao)
       }
     } catch {
-      console.error('[Agente] JSON invalido no PEDIDO_PENDENTE:', jsonStr)
+      console.error('[Agente Julmar] JSON invalido no PEDIDO_PENDENTE:', jsonStr)
       await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: { historico } })
       const msgErro = isOwner || isAdmin
         ? 'Nao consegui processar o pedido. Pode repetir os dados?'
         : 'Ocorreu um problema. A nossa equipa contacta em breve.'
       if (isOwner || isAdmin) await enviarMensagem(telefone, msgErro)
       else await enviarComDelay(telefone, msgErro)
+      await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgErro, 'conversando')
     }
     return
   }
@@ -980,6 +1122,13 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       await enviarComDelay(telefone, textoLimpo)
     }
     await enviarFotosMaterial(telefone, filtro)
+    await registarTurnoAgenteJulmar(
+      tenant.id,
+      telefone,
+      mensagem,
+      textoLimpo,
+      'conversando',
+    )
     return
   }
 
@@ -987,9 +1136,11 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   if (resposta.startsWith('[ESCALAR]')) {
     const motivo = resposta.replace('[ESCALAR]', '').trim()
     await notificarTodosAdmins(`ORCAMENTO/ESCALAMENTO\nCliente: ${telefone}\n${motivo}`)
-    await enviarComDelay(telefone, 'Vou passar o seu pedido a nossa equipa, que entra em contacto para confirmar o orcamento.')
+    const msgEscalar = 'Vou passar o seu pedido a nossa equipa, que entra em contacto para confirmar o orcamento.'
+    await enviarComDelay(telefone, msgEscalar)
     historico.push({ role: 'assistant', content: resposta })
     await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
+    await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgEscalar, 'escalado')
     return
   }
 
@@ -1003,4 +1154,5 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   } else {
     await enviarComDelay(telefone, resposta)
   }
+  await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, resposta, 'conversando')
 }

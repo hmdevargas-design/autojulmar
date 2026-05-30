@@ -4,6 +4,10 @@
     {
       "path": "/api/relatorio-diario",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/whatsapp/outbox/process",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
