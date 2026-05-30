@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   cooldownGlobalSegundos,
   delayInicialSegundos,
+  envioRealPermitidoParaNumero,
   limitePorExecucao,
   maxPorNumeroPorHora,
+  numerosTesteWhatsapp,
   outboxAtiva,
   outboxDryRunAtivo,
   retryBackoffSegundos,
@@ -46,5 +48,19 @@ describe('whatsapp outbox config', () => {
     expect(retryBackoffSegundos(1)).toBe(60)
     expect(retryBackoffSegundos(2)).toBe(120)
     expect(retryBackoffSegundos(20)).toBe(3600)
+  })
+
+  it('restricts real sends to test numbers when configured', () => {
+    vi.stubEnv('WHATSAPP_NUMEROS_TESTE', '351916958780, 351999000222@s.whatsapp.net')
+
+    expect(numerosTesteWhatsapp()).toEqual(['351916958780', '351999000222'])
+    expect(envioRealPermitidoParaNumero('351916958780@s.whatsapp.net')).toBe(true)
+    expect(envioRealPermitidoParaNumero('351000000000')).toBe(false)
+  })
+
+  it('allows real sends when no test number allowlist is configured', () => {
+    vi.stubEnv('WHATSAPP_NUMEROS_TESTE', '')
+
+    expect(envioRealPermitidoParaNumero('351000000000')).toBe(true)
   })
 })

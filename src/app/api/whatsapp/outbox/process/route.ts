@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  cancelarMensagem,
   claimProximasMensagens,
+  envioRealPermitidoParaNumero,
   limitePorExecucao,
   marcarEnviada,
   marcarFalha,
@@ -32,7 +34,7 @@ function segredoValido(request: NextRequest): boolean {
   return [bearer, headerSecret, querySecret].some(valor => secrets.includes(valor))
 }
 
-async function processarItem(item: WhatsappOutboxItem, dryRun: boolean): Promise<'sent' | 'dry-run'> {
+async function processarItem(item: WhatsappOutboxItem, dryRun: boolean): Promise<'sent' | 'dry-run' | 'blocked'> {
   if (dryRun) {
     await marcarEnviada(item.id, 'dry-run: mensagem validada sem envio pela UAZAPI')
     return 'dry-run'
@@ -40,6 +42,14 @@ async function processarItem(item: WhatsappOutboxItem, dryRun: boolean): Promise
 
   if (process.env.WHATSAPP_SEND_ENABLED !== 'true') {
     throw new Error('WHATSAPP_SEND_ENABLED != true; envio real bloqueado')
+  }
+
+  if (!envioRealPermitidoParaNumero(item.to_number)) {
+    await cancelarMensagem(
+      item.id,
+      'envio real bloqueado: numero fora de WHATSAPP_NUMEROS_TESTE',
+    )
+    return 'blocked'
   }
 
   if (item.message_type === 'text') {

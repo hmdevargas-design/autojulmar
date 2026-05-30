@@ -54,6 +54,18 @@ export function workerAtivo(): boolean {
   return process.env.WHATSAPP_OUTBOX_WORKER_ENABLED === 'true'
 }
 
+export function numerosTesteWhatsapp(): string[] {
+  return (process.env.WHATSAPP_NUMEROS_TESTE ?? '')
+    .split(/[\s,;]+/)
+    .map(normalizarNumero)
+    .filter(Boolean)
+}
+
+export function envioRealPermitidoParaNumero(numero: string): boolean {
+  const numerosTeste = numerosTesteWhatsapp()
+  return numerosTeste.length === 0 || numerosTeste.includes(normalizarNumero(numero))
+}
+
 export function limitePorExecucao(): number {
   return Math.max(1, intEnv('WHATSAPP_SEND_MAX_PER_RUN', 1))
 }
@@ -226,11 +238,11 @@ export async function marcarFalha(item: WhatsappOutboxItem, erro: unknown): Prom
   if (error) throw error
 }
 
-export async function cancelarMensagem(id: string): Promise<void> {
+export async function cancelarMensagem(id: string, detalhe?: string): Promise<void> {
   const supabase = criarClienteAdmin()
   const { error } = await supabase
     .from('whatsapp_outbox')
-    .update({ status: 'cancelled', locked_until: null })
+    .update({ status: 'cancelled', locked_until: null, last_error: detalhe ?? null })
     .eq('id', id)
 
   if (error) throw error
