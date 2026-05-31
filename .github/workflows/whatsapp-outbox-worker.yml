@@ -1,0 +1,23 @@
+name: WhatsApp outbox worker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Process outbox
+        env:
+          WORKER_SECRET: ${{ secrets.WHATSAPP_OUTBOX_WORKER_SECRET }}
+        run: |
+          test -n "$WORKER_SECRET"
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer $WORKER_SECRET" \
+            https://www.autojulmar.pt/api/whatsapp/outbox/process
