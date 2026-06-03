@@ -212,9 +212,14 @@ async function enviarFotosMaterial(telefone: string, filtro?: string): Promise<v
 // ─── Takeover (pausa/retoma o bot para um numero) ────────────────────────────
 
 export async function pausarBot(tenantId: string, telefone: string): Promise<void> {
-  const sessao    = await obterSessao(tenantId, telefone)
-  const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
-  await guardarSessao(tenantId, telefone, { step: 'takeover', dados: { historico, takeoverTs: Date.now() } })
+  await guardarSessao(tenantId, telefone, {
+    step: 'takeover',
+    dados: {
+      historico: [],
+      takeoverTs: Date.now(),
+      motivo: 'human_takeover',
+    },
+  })
 }
 
 async function retomarBot(tenantId: string, telefone: string): Promise<void> {
