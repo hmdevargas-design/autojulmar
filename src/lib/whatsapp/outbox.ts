@@ -247,3 +247,23 @@ export async function cancelarMensagem(id: string, detalhe?: string): Promise<vo
 
   if (error) throw error
 }
+
+export async function cancelarPendentesPorNumero(
+  numero: string,
+  detalhe = 'cancelado por takeover humano',
+  source?: string,
+): Promise<number> {
+  const supabase = criarClienteAdmin()
+  let query = supabase
+    .from('whatsapp_outbox')
+    .update({ status: 'cancelled', locked_until: null, last_error: detalhe })
+    .eq('to_number', normalizarNumero(numero))
+    .in('status', ['pending', 'locked'])
+
+  if (source) query = query.eq('source', source)
+
+  const { data, error } = await query.select('id')
+
+  if (error) throw error
+  return data?.length ?? 0
+}

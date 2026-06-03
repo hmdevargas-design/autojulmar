@@ -5,6 +5,7 @@ import { registarAtendimento }           from '@/lib/whatsapp/log-atendimento'
 import { criarClienteAdmin }             from '@/lib/supabase/admin'
 import { transcreverAudio }              from '@/lib/whatsapp/transcricao'
 import { resolverTenant }                from '@/lib/tenant/resolver'
+import { cancelarPendentesPorNumero }     from '@/lib/whatsapp/outbox'
 
 interface MensagemUazapi {
   fromMe:       boolean
@@ -53,6 +54,41 @@ function agenteWhatsappAtivo(): boolean {
     && process.env.WHATSAPP_OUTBOX_READY === 'true'
 }
 
+function normalizarTelefone(valor: string | undefined): string {
+  return (valor ?? '')
+    .replace('@s.whatsapp.net', '')
+    .replace('@c.us', '')
+    .replace('@lid', '')
+    .replace(/\D/g, '')
+}
+
+function telefoneClienteFromMe(msg: MensagemUazapi): string {
+  return normalizarTelefone(msg.chatid ?? msg.sender_pn ?? msg.sender)
+}
+
+function mensagemManualHumana(msg: MensagemUazapi): boolean {
+  if (msg.fromMe !== true) return false
+  return msg.wasSentByApi !== true
+}
+
+async function pausarPorTakeoverHumano(clienteTel: string): Promise<void> {
+  if (!clienteTel || eAdmin(clienteTel)) return
+
+  const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
+  if (!tenantSlug) return
+
+  const tenant = await resolverTenant(tenantSlug)
+  if (!tenant) return
+
+  await pausarAgenteJulmar(tenant.id, clienteTel)
+  const canceladas = await cancelarPendentesPorNumero(
+    clienteTel,
+    'cancelado por takeover humano',
+    'agente-julmar',
+  )
+  console.log('[WhatsApp] Takeover humano - bot pausado para:', clienteTel, '| pendentes canceladas:', canceladas)
+}
+
 export async function GET() {
   return NextResponse.json({ ok: true, servico: 'uazapi' })
 }
@@ -73,6 +109,11 @@ export async function POST(request: NextRequest) {
     const msg = payload.message
 
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
+
+    if (mensagemManualHumana(msg)) {
+      await pausarPorTakeoverHumano(telefoneClienteFromMe(msg))
+      return NextResponse.json({ ok: true })
+    }
 
     // Takeover: admin enviou mensagem manual (fromMe=true, nao via API)
     // Pausa o bot para o cliente desse chat
