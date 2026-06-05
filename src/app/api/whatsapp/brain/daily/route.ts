@@ -31,10 +31,14 @@ interface MemoryRow {
 }
 
 function autorizado(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET ?? process.env.WHATSAPP_OUTBOX_WORKER_SECRET ?? ''
-  if (!secret) return false
+  const secrets = [
+    process.env.CRON_SECRET,
+    process.env.WHATSAPP_OUTBOX_WORKER_SECRET,
+  ].filter(Boolean)
+  if (secrets.length === 0) return false
   const auth = request.headers.get('authorization') ?? ''
-  return auth === `Bearer ${secret}`
+  const bearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : ''
+  return secrets.includes(bearer)
 }
 
 function inicioJanela(request: NextRequest): Date {
