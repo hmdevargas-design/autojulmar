@@ -195,6 +195,16 @@ export async function GET(request: NextRequest) {
     },
     candidateFaqs: topFaqs(logRows),
     possibleRedundancy: redundancias,
+    outboxIssues: outboxRows
+      .filter(o => o.status === 'failed' || o.status === 'pending' || o.status === 'locked')
+      .slice(0, 10)
+      .map(o => ({
+        toNumber: o.to_number,
+        status: o.status,
+        lastError: o.last_error,
+        createdAt: o.created_at,
+        sentAt: o.sent_at,
+      })),
     recentMemory: memoryRows.map(m => ({
       telefone: m.telefone,
       state: m.state,
