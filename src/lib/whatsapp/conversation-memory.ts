@@ -2,6 +2,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 
 const MAX_MEMORY_CHARS = 1400
 const MAX_MESSAGE_CHARS = 360
+const DEFAULT_GREETING_COOLDOWN_DAYS = 7
 
 export interface ConversationMemory {
   summary: string
@@ -17,6 +18,15 @@ export interface RegistrarTurnoParams {
   telefone: string
   userMessage?: string
   assistantMessage?: string
+  state?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface RegistrarEventoSistemaParams {
+  tenantId: string
+  telefone: string
+  eventType: string
+  content: string
   state?: string
   metadata?: Record<string, unknown>
 }
@@ -60,10 +70,34 @@ function linhaTurno(userMessage?: string, assistantMessage?: string, state?: str
   return partes.length > 0 ? `- ${partes.join(' | ')}` : ''
 }
 
+function linhaSistema(content: string, state?: string): string {
+  const texto = compactarTexto(content, 260)
+  const partes = [
+    state ? `estado=${state}` : null,
+    texto ? `sistema: ${texto}` : null,
+  ].filter(Boolean)
+
+  return partes.length > 0 ? `- ${partes.join(' | ')}` : ''
+}
+
+export function deveUsarSaudacaoAtiva(
+  memoria: ConversationMemory | null,
+  cooldownDays = DEFAULT_GREETING_COOLDOWN_DAYS,
+): boolean {
+  if (!memoria?.lastInteractionAt) return true
+
+  const ultimaInteracao = new Date(memoria.lastInteractionAt).getTime()
+  if (!Number.isFinite(ultimaInteracao)) return true
+
+  const cooldownMs = Math.max(1, cooldownDays) * 24 * 60 * 60 * 1000
+  return Date.now() - ultimaInteracao > cooldownMs
+}
+
 export const __conversationMemoryTestables = {
   compactarTexto,
   compactarResumo,
   linhaTurno,
+  linhaSistema,
   MAX_MEMORY_CHARS,
 }
 
@@ -159,4 +193,45 @@ export async function registrarTurnoConversa(params: RegistrarTurnoParams): Prom
     )
 
   if (error) console.warn('[Agente Julmar] Falha ao actualizar memoria compacta:', error.message)
+}
+
+export async function registrarEventoSistemaConversa(params: RegistrarEventoSistemaParams): Promise<void> {
+  const supabase = criarClienteAdmin()
+  const agora = new Date().toISOString()
+  const content = compactarTexto(params.content)
+
+  const { error: logError } = await supabase.from('whatsapp_conversation_logs').insert({
+    tenant_id: params.tenantId,
+    telefone: params.telefone,
+    direction: 'system',
+    event_type: params.eventType,
+    content,
+    metadata: params.metadata ?? {},
+  })
+
+  if (logError) console.warn('[Agente Julmar] Falha ao gravar evento de sistema:', logError.message)
+
+  const memoriaAtual = await obterMemoriaConversa(params.tenantId, params.telefone)
+  const novaLinha = linhaSistema(content, params.state)
+  const novoResumo = compactarResumo(
+    [memoriaAtual?.summary ?? '', novaLinha].filter(Boolean).join('\n')
+  )
+
+  const { error } = await supabase
+    .from('whatsapp_conversation_memory')
+    .upsert(
+      {
+        tenant_id: params.tenantId,
+        telefone: params.telefone,
+        summary: novoResumo,
+        state: params.state ?? memoriaAtual?.state ?? null,
+        message_count: memoriaAtual?.messageCount ?? 0,
+        last_user_message: memoriaAtual?.lastUserMessage ?? null,
+        last_assistant_message: memoriaAtual?.lastAssistantMessage ?? null,
+        last_interaction_at: agora,
+      },
+      { onConflict: 'tenant_id,telefone' },
+    )
+
+  if (error) console.warn('[Agente Julmar] Falha ao actualizar memoria de sistema:', error.message)
 }

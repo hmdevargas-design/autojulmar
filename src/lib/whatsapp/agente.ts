@@ -9,6 +9,7 @@ import {
 } from './sender'
 import { obterSessao, guardarSessao, eliminarSessao }    from './session'
 import {
+  deveUsarSaudacaoAtiva,
   memoriaParaPrompt,
   obterMemoriaConversa,
   registrarTurnoConversa,
@@ -1033,8 +1034,6 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     ? descontoCupaoSessao
     : (!isOwner && !isAdmin && historico.length === 0 && mensagem.toUpperCase().includes('AMERICO10') ? 10 : 0)
 
-  const primeiraMensagemCliente = tipoUtilizador === 'cliente' && historico.length === 0
-
   const [instrucoes, tabelaPrecos, perfilCliente, memoriaConversa] = await Promise.all([
     carregarInstrucoes(tenant.id),
     carregarTabelaPrecos(tenant.id),
@@ -1042,6 +1041,9 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     (!isOwner && !isAdmin) ? obterMemoriaConversa(tenant.id, telefone) : Promise.resolve(null),
   ])
   const memoriaCompacta = memoriaParaPrompt(memoriaConversa)
+  const primeiraMensagemCliente = tipoUtilizador === 'cliente'
+    && historico.length === 0
+    && deveUsarSaudacaoAtiva(memoriaConversa)
 
   historico.push({ role: 'user', content: mensagem })
   if (historico.length > MAX_HISTORICO) historico.splice(0, historico.length - MAX_HISTORICO)

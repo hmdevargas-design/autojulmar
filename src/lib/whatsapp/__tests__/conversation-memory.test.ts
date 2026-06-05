@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   __conversationMemoryTestables,
+  deveUsarSaudacaoAtiva,
   memoriaParaPrompt,
   type ConversationMemory,
 } from '../conversation-memory'
 
-const { compactarResumo, compactarTexto, linhaTurno, MAX_MEMORY_CHARS } = __conversationMemoryTestables
+const { compactarResumo, compactarTexto, linhaSistema, linhaTurno, MAX_MEMORY_CHARS } = __conversationMemoryTestables
 
 describe('whatsapp conversation memory', () => {
   it('compacts text and removes internal agent markers', () => {
@@ -24,6 +25,11 @@ describe('whatsapp conversation memory', () => {
   it('builds a compact turn line with state and both sides', () => {
     expect(linhaTurno('quero tapetes borracha', 'Temos borracha 3D.', 'conversando'))
       .toBe('- estado=conversando | cliente: quero tapetes borracha | julmar: Temos borracha 3D.')
+  })
+
+  it('builds a compact system line', () => {
+    expect(linhaSistema('Atendimento assumido por humano', 'takeover'))
+      .toBe('- estado=takeover | sistema: Atendimento assumido por humano')
   })
 
   it('keeps only the latest summary lines inside the token budget', () => {
@@ -53,5 +59,29 @@ describe('whatsapp conversation memory', () => {
     expect(prompt).toContain('MEMORIA COMPACTA DA CONVERSA')
     expect(prompt).toContain('Estado anterior: conversando')
     expect(prompt).toContain('nao repetir perguntas')
+  })
+
+  it('uses active greeting only when memory is absent or old', () => {
+    expect(deveUsarSaudacaoAtiva(null)).toBe(true)
+
+    const recente = new Date().toISOString()
+    expect(deveUsarSaudacaoAtiva({
+      summary: '- cliente: ola',
+      state: 'conversando',
+      messageCount: 1,
+      lastUserMessage: 'ola',
+      lastAssistantMessage: null,
+      lastInteractionAt: recente,
+    })).toBe(false)
+
+    const antiga = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+    expect(deveUsarSaudacaoAtiva({
+      summary: '- cliente: ola',
+      state: 'conversando',
+      messageCount: 1,
+      lastUserMessage: 'ola',
+      lastAssistantMessage: null,
+      lastInteractionAt: antiga,
+    })).toBe(true)
   })
 })

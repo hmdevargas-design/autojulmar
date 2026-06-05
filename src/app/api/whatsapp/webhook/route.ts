@@ -6,6 +6,7 @@ import { criarClienteAdmin }             from '@/lib/supabase/admin'
 import { transcreverAudio }              from '@/lib/whatsapp/transcricao'
 import { resolverTenant }                from '@/lib/tenant/resolver'
 import { cancelarPendentesPorNumero }     from '@/lib/whatsapp/outbox'
+import { registrarEventoSistemaConversa } from '@/lib/whatsapp/conversation-memory'
 
 interface MensagemUazapi {
   fromMe:       boolean
@@ -86,6 +87,14 @@ async function pausarPorTakeoverHumano(clienteTel: string): Promise<void> {
     'cancelado por takeover humano',
     'agente-julmar',
   )
+  await registrarEventoSistemaConversa({
+    tenantId: tenant.id,
+    telefone: clienteTel,
+    eventType: 'human_takeover',
+    content: 'Atendimento assumido por humano; agente pausado para este cliente.',
+    state: 'takeover',
+    metadata: { pendingCancelled: canceladas },
+  })
   console.log('[WhatsApp] Takeover humano - bot pausado para:', clienteTel, '| pendentes canceladas:', canceladas)
 }
 
