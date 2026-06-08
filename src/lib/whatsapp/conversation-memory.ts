@@ -31,6 +31,17 @@ export interface RegistrarEventoSistemaParams {
   metadata?: Record<string, unknown>
 }
 
+export interface RegistrarMensagemConversaParams {
+  tenantId: string
+  telefone: string
+  direction: 'inbound' | 'outbound'
+  content: string
+  actor?: 'cliente' | 'humano' | 'agente'
+  state?: string
+  eventType?: string
+  metadata?: Record<string, unknown>
+}
+
 function compactarTexto(texto: string | undefined, max = MAX_MESSAGE_CHARS): string {
   if (!texto) return ''
   const normalizado = texto
@@ -75,6 +86,18 @@ function linhaSistema(content: string, state?: string): string {
   const partes = [
     state ? `estado=${state}` : null,
     texto ? `sistema: ${texto}` : null,
+  ].filter(Boolean)
+
+  return partes.length > 0 ? `- ${partes.join(' | ')}` : ''
+}
+
+function linhaMensagem(direction: 'inbound' | 'outbound', content: string, actor?: string, state?: string): string {
+  const texto = compactarTexto(content, 260)
+  const origem = actor
+    ?? (direction === 'inbound' ? 'cliente' : 'saida')
+  const partes = [
+    state ? `estado=${state}` : null,
+    texto ? `${origem}: ${texto}` : null,
   ].filter(Boolean)
 
   return partes.length > 0 ? `- ${partes.join(' | ')}` : ''
@@ -193,6 +216,55 @@ export async function registrarTurnoConversa(params: RegistrarTurnoParams): Prom
     )
 
   if (error) console.warn('[Agente Julmar] Falha ao actualizar memoria compacta:', error.message)
+}
+
+export async function registrarMensagemConversa(params: RegistrarMensagemConversaParams): Promise<void> {
+  const supabase = criarClienteAdmin()
+  const agora = new Date().toISOString()
+  const content = compactarTexto(params.content)
+  if (!content) return
+
+  const { error: logError } = await supabase.from('whatsapp_conversation_logs').insert({
+    tenant_id: params.tenantId,
+    telefone: params.telefone,
+    direction: params.direction,
+    event_type: params.eventType ?? 'message',
+    content,
+    metadata: {
+      ...(params.metadata ?? {}),
+      actor: params.actor ?? (params.direction === 'inbound' ? 'cliente' : 'humano'),
+    },
+  })
+
+  if (logError) console.warn('[Agente Julmar] Falha ao gravar mensagem observada:', logError.message)
+
+  const memoriaAtual = await obterMemoriaConversa(params.tenantId, params.telefone)
+  const actor = params.actor ?? (params.direction === 'inbound' ? 'cliente' : 'humano')
+  const novaLinha = linhaMensagem(params.direction, content, actor, params.state)
+  const novoResumo = compactarResumo(
+    [memoriaAtual?.summary ?? '', novaLinha].filter(Boolean).join('\n')
+  )
+
+  const isInbound = params.direction === 'inbound'
+  const isOutbound = params.direction === 'outbound'
+
+  const { error } = await supabase
+    .from('whatsapp_conversation_memory')
+    .upsert(
+      {
+        tenant_id: params.tenantId,
+        telefone: params.telefone,
+        summary: novoResumo,
+        state: params.state ?? memoriaAtual?.state ?? null,
+        message_count: (memoriaAtual?.messageCount ?? 0) + 1,
+        last_user_message: isInbound ? content : memoriaAtual?.lastUserMessage ?? null,
+        last_assistant_message: isOutbound ? content : memoriaAtual?.lastAssistantMessage ?? null,
+        last_interaction_at: agora,
+      },
+      { onConflict: 'tenant_id,telefone' },
+    )
+
+  if (error) console.warn('[Agente Julmar] Falha ao actualizar memoria observada:', error.message)
 }
 
 export async function registrarEventoSistemaConversa(params: RegistrarEventoSistemaParams): Promise<void> {

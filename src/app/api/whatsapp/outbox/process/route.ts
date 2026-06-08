@@ -35,6 +35,14 @@ function segredoValido(request: NextRequest): boolean {
 }
 
 async function processarItem(item: WhatsappOutboxItem, dryRun: boolean): Promise<'sent' | 'dry-run' | 'blocked'> {
+  if (process.env.WHATSAPP_OBSERVER_MODE === 'true' && item.source === 'agente-julmar') {
+    await cancelarMensagem(
+      item.id,
+      'cancelado: Agente Julmar em modo observador',
+    )
+    return 'blocked'
+  }
+
   if (dryRun) {
     await marcarEnviada(item.id, 'dry-run: mensagem validada sem envio pela UAZAPI')
     return 'dry-run'

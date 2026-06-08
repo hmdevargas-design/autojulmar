@@ -6,7 +6,10 @@ import { criarClienteAdmin }             from '@/lib/supabase/admin'
 import { transcreverAudio }              from '@/lib/whatsapp/transcricao'
 import { resolverTenant }                from '@/lib/tenant/resolver'
 import { cancelarPendentesPorNumero }     from '@/lib/whatsapp/outbox'
-import { registrarEventoSistemaConversa } from '@/lib/whatsapp/conversation-memory'
+import {
+  registrarEventoSistemaConversa,
+  registrarMensagemConversa,
+} from '@/lib/whatsapp/conversation-memory'
 
 interface MensagemUazapi {
   fromMe:       boolean
@@ -55,6 +58,14 @@ function agenteWhatsappAtivo(): boolean {
     && process.env.WHATSAPP_OUTBOX_READY === 'true'
 }
 
+function modoObservadorAtivo(): boolean {
+  return process.env.WHATSAPP_OBSERVER_MODE === 'true'
+}
+
+function webhookPodeProcessar(): boolean {
+  return agenteWhatsappAtivo() || modoObservadorAtivo()
+}
+
 function normalizarTelefone(valor: string | undefined): string {
   return (valor ?? '')
     .replace('@s.whatsapp.net', '')
@@ -98,6 +109,37 @@ async function pausarPorTakeoverHumano(clienteTel: string): Promise<void> {
   console.log('[WhatsApp] Takeover humano - bot pausado para:', clienteTel, '| pendentes canceladas:', canceladas)
 }
 
+async function resolverTenantWhatsapp() {
+  const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
+  if (!tenantSlug) return null
+  return resolverTenant(tenantSlug)
+}
+
+async function registrarMensagemObservada(
+  telefone: string,
+  direction: 'inbound' | 'outbound',
+  content: string,
+  actor: 'cliente' | 'humano',
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  if (!telefone || !content.trim()) return
+  const tenant = await resolverTenantWhatsapp()
+  if (!tenant) return
+
+  await registrarMensagemConversa({
+    tenantId: tenant.id,
+    telefone,
+    direction,
+    content,
+    actor,
+    state: modoObservadorAtivo() ? 'observer' : undefined,
+    metadata: {
+      ...(metadata ?? {}),
+      observerMode: modoObservadorAtivo(),
+    },
+  })
+}
+
 export async function GET() {
   return NextResponse.json({ ok: true, servico: 'uazapi' })
 }
@@ -110,8 +152,8 @@ export async function POST(request: NextRequest) {
 
     if (payload.EventType !== 'messages') return NextResponse.json({ ok: true })
 
-    if (!agenteWhatsappAtivo()) {
-      console.warn('[WhatsApp] Agente bloqueado por flags de seguranca')
+    if (!webhookPodeProcessar()) {
+      console.warn('[WhatsApp] Webhook bloqueado por flags de seguranca')
       return NextResponse.json({ ok: true, paused: true })
     }
 
@@ -120,7 +162,15 @@ export async function POST(request: NextRequest) {
     if (msg.isGroup === true) return NextResponse.json({ ok: true })
 
     if (mensagemManualHumana(msg)) {
-      await pausarPorTakeoverHumano(telefoneClienteFromMe(msg))
+      const clienteTel = telefoneClienteFromMe(msg)
+      await registrarMensagemObservada(
+        clienteTel,
+        'outbound',
+        msg.text?.trim() || msg.caption?.trim() || '[mensagem humana sem texto]',
+        'humano',
+        { messageId: msg.messageid ?? msg.messageId, type: msg.type },
+      )
+      await pausarPorTakeoverHumano(clienteTel)
       return NextResponse.json({ ok: true })
     }
 
@@ -194,6 +244,16 @@ export async function POST(request: NextRequest) {
 
       if (!transcricao) {
         console.warn('[WhatsApp] Transcricao falhou para:', telefone)
+        if (modoObservadorAtivo()) {
+          await registrarMensagemObservada(
+            telefone,
+            'inbound',
+            '[audio recebido; transcricao falhou]',
+            'cliente',
+            { messageId, type: msg.type, mediaType: msg.mediaType },
+          )
+          return NextResponse.json({ ok: true, observer: true })
+        }
         await enviarMensagem(telefone, 'Nao consegui perceber o audio. Pode enviar em texto?')
         return NextResponse.json({ ok: true })
       }
@@ -203,6 +263,17 @@ export async function POST(request: NextRequest) {
         registarAtendimento(telefone, msg.senderName).catch(e =>
           console.warn('[WhatsApp] Falha ao registar atendimento (audio):', String(e))
         )
+      }
+      if (modoObservadorAtivo()) {
+        await registrarMensagemObservada(
+          telefone,
+          'inbound',
+          transcricao,
+          'cliente',
+          { messageId, type: msg.type, mediaType: msg.mediaType, transcribed: true },
+        )
+        console.log('[WhatsApp] Modo observador - audio registado sem resposta:', telefone)
+        return NextResponse.json({ ok: true, observer: true })
       }
       await enviarMensagem(telefone, `🎙️ _${transcricao}_`)
       await processarComAgenteJulmar(telefone, transcricao)
@@ -242,6 +313,18 @@ export async function POST(request: NextRequest) {
       registarAtendimento(telefone, msg.senderName).catch(e =>
         console.warn('[WhatsApp] Falha ao registar atendimento:', String(e))
       )
+    }
+
+    if (modoObservadorAtivo()) {
+      await registrarMensagemObservada(
+        telefone,
+        'inbound',
+        msg.text.trim(),
+        'cliente',
+        { messageId: msg.messageId ?? msg.messageid, type: msg.type },
+      )
+      console.log('[WhatsApp] Modo observador - mensagem registada sem resposta:', telefone)
+      return NextResponse.json({ ok: true, observer: true })
     }
 
     try {
