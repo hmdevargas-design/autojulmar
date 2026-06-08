@@ -9,6 +9,7 @@ interface ConversationLogRow {
   direction: 'inbound' | 'outbound' | 'system'
   event_type: string
   content: string | null
+  metadata: Record<string, unknown> | null
   created_at: string
 }
 
@@ -78,6 +79,20 @@ function topFaqs(logs: ConversationLogRow[]): Array<{ pergunta: string; ocorrenc
     .map(([pergunta, ocorrencias]) => ({ pergunta, ocorrencias }))
 }
 
+function actorLog(log: ConversationLogRow): string {
+  const actor = log.metadata?.actor
+  return typeof actor === 'string' ? actor : ''
+}
+
+function isHumano(log: ConversationLogRow): boolean {
+  return actorLog(log) === 'humano'
+}
+
+function isAgente(log: ConversationLogRow): boolean {
+  const actor = actorLog(log)
+  return actor === 'agente' || (log.direction === 'outbound' && actor !== 'humano')
+}
+
 function detectarRedundancia(logs: ConversationLogRow[]): Array<{ telefone: string; motivo: string }> {
   const porTelefone = new Map<string, ConversationLogRow[]>()
   for (const log of logs) {
@@ -87,7 +102,7 @@ function detectarRedundancia(logs: ConversationLogRow[]): Array<{ telefone: stri
 
   const achados: Array<{ telefone: string; motivo: string }> = []
   for (const [telefone, linhas] of porTelefone) {
-    const outbound = linhas.filter(l => l.direction === 'outbound' && l.content)
+    const outbound = linhas.filter(l => l.direction === 'outbound' && l.content && isAgente(l))
     const saudacoes = outbound.filter(l => /assistente inteligente|sou o assistente|em que posso ajudar/i.test(l.content ?? ''))
     if (saudacoes.length > 1) {
       achados.push({ telefone, motivo: `${saudacoes.length} saudacoes detectadas na janela` })
@@ -100,6 +115,62 @@ function detectarRedundancia(logs: ConversationLogRow[]): Array<{ telefone: stri
   }
 
   return achados.slice(0, 10)
+}
+
+function exemplosAtendimentoHumano(logs: ConversationLogRow[]): Array<{ telefone: string; cliente: string; humano: string }> {
+  const exemplos: Array<{ telefone: string; cliente: string; humano: string }> = []
+  const porTelefone = new Map<string, ConversationLogRow[]>()
+
+  for (const log of logs) {
+    if (!porTelefone.has(log.telefone)) porTelefone.set(log.telefone, [])
+    porTelefone.get(log.telefone)!.push(log)
+  }
+
+  for (const [telefone, linhas] of porTelefone) {
+    for (let i = 0; i < linhas.length; i += 1) {
+      const atual = linhas[i]
+      if (!atual.content || !isHumano(atual)) continue
+
+      const clienteAnterior = linhas
+        .slice(Math.max(0, i - 4), i)
+        .reverse()
+        .find(l => l.direction === 'inbound' && l.content)
+
+      exemplos.push({
+        telefone,
+        cliente: clienteAnterior?.content ?? '',
+        humano: atual.content,
+      })
+      break
+    }
+  }
+
+  return exemplos.slice(0, 8)
+}
+
+function oportunidadesAprendizagem(logs: ConversationLogRow[]): string[] {
+  const saidas: string[] = []
+  const exemplos = exemplosAtendimentoHumano(logs)
+  const humanos = logs.filter(l => l.direction === 'outbound' && isHumano(l)).length
+  const clientes = logs.filter(l => l.direction === 'inbound').length
+
+  if (humanos > 0) {
+    saidas.push('Extrair padroes das respostas humanas para transformar em regras aprovadas do tenant.')
+  }
+  if (clientes > 0 && humanos === 0) {
+    saidas.push('Ha mensagens de clientes sem resposta humana observada nesta janela; verificar se foram respondidas fora do webhook ou se houve perda de evento.')
+  }
+  if (exemplos.some(e => /preco|preÃ§o|valor|quanto/i.test(`${e.cliente} ${e.humano}`))) {
+    saidas.push('Rever como humanos tratam pedidos de preco para separar regra generica de regra comercial AutoJulmar.')
+  }
+  if (exemplos.some(e => /prazo|quando|levant|entrega|encomenda/i.test(`${e.cliente} ${e.humano}`))) {
+    saidas.push('Criar ou melhorar regra de acompanhamento de encomendas e pedidos de levantamento.')
+  }
+  if (saidas.length === 0) {
+    saidas.push('Continuar observacao: ainda nao ha padroes humanos suficientes para promover conhecimento.')
+  }
+
+  return saidas
 }
 
 function sugestoes(
@@ -119,6 +190,9 @@ function sugestoes(
   }
   if (takeover > 0 || memoriasTakeover > 0) {
     saidas.push('Analisar conversas assumidas por humano para extrair regras que o agente ainda nao domina.')
+  }
+  if (logs.some(l => l.direction === 'outbound' && isHumano(l))) {
+    saidas.push('Usar respostas humanas observadas como material de rascunho para FAQs e regras, sempre com aprovacao humana.')
   }
   if (falhas > 0) {
     saidas.push('Investigar falhas de envio na outbox antes de aumentar volume do agente.')
@@ -156,7 +230,7 @@ export async function GET(request: NextRequest) {
   const [{ data: logs }, { data: outbox }, { data: memorias }] = await Promise.all([
     supabase
       .from('whatsapp_conversation_logs')
-      .select('telefone, direction, event_type, content, created_at')
+      .select('telefone, direction, event_type, content, metadata, created_at')
       .eq('tenant_id', tenant.id)
       .gte('created_at', sinceIso)
       .order('created_at', { ascending: true }),
@@ -186,6 +260,9 @@ export async function GET(request: NextRequest) {
     metrics: {
       inbound: logRows.filter(l => l.direction === 'inbound').length,
       outbound: logRows.filter(l => l.direction === 'outbound').length,
+      customerInbound: logRows.filter(l => l.direction === 'inbound').length,
+      humanOutbound: logRows.filter(l => l.direction === 'outbound' && isHumano(l)).length,
+      agentOutbound: logRows.filter(l => l.direction === 'outbound' && isAgente(l)).length,
       system: logRows.filter(l => l.direction === 'system').length,
       conversations: new Set(logRows.map(l => l.telefone)).size,
       takeover: logRows.filter(l => l.event_type === 'human_takeover').length,
@@ -195,6 +272,8 @@ export async function GET(request: NextRequest) {
     },
     candidateFaqs: topFaqs(logRows),
     possibleRedundancy: redundancias,
+    humanServiceExamples: exemplosAtendimentoHumano(logRows),
+    learningOpportunities: oportunidadesAprendizagem(logRows),
     outboxIssues: outboxRows
       .filter(o => o.status === 'failed' || o.status === 'pending' || o.status === 'locked')
       .slice(0, 10)
