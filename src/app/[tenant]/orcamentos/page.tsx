@@ -115,6 +115,7 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-slate-600 dark:text-slate-300">{labelProdutoOrcamento(orcamento.categoria, orcamento.produto)}</span>
                 <div className="flex items-center gap-2">
+                  <a href={`/api/orcamentos/${orcamento.id}/termica`} target="_blank" className="text-xs text-gold font-medium hover:underline">Talao</a>
                   <a href={`/api/orcamentos/${orcamento.id}/pdf`} target="_blank" className="text-xs text-gold font-medium hover:underline">PDF</a>
                   <SeletorEstadoOrcamento orcamentoId={orcamento.id} tenantId={tenant.id} estadoAtual={orcamento.estado} />
                 </div>
@@ -171,7 +172,12 @@ export default async function PaginaOrcamentos({ params, searchParams }: Props) 
                   <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">{Number(orcamento.valor_estimado).toFixed(2)}€</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{validade}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{dataCriacao}</td>
-                  <td className="px-4 py-2"><a href={`/api/orcamentos/${orcamento.id}/pdf`} target="_blank" className="text-xs text-gold hover:underline">PDF</a></td>
+                  <td className="px-4 py-2">
+                    <div className="flex justify-end gap-2">
+                      <a href={`/api/orcamentos/${orcamento.id}/termica`} target="_blank" className="text-xs text-gold hover:underline">Talao</a>
+                      <a href={`/api/orcamentos/${orcamento.id}/pdf`} target="_blank" className="text-xs text-gold hover:underline">PDF</a>
+                    </div>
+                  </td>
                 </tr>
               )
             })}

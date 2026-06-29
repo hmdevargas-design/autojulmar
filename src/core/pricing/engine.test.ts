@@ -12,6 +12,9 @@ const configTeste: ConfigPreco = {
     { campo1Valor: 'ECO PRETO',  campo2Valor: 'JOGO',       preco: 24 },
     { campo1Valor: 'ECO PRETO',  campo2Valor: 'JOGO EM 3',  preco: 21 },
     { campo1Valor: 'ECO PRETO',  campo2Valor: 'FRENTES',    preco: 14 },
+    { campo1Valor: 'ECO PRETO',  campo2Valor: 'CONDUTOR',   preco: 9 },
+    { campo1Valor: 'ECO PRETO',  campo2Valor: 'PENDURA',     preco: 9 },
+    { campo1Valor: 'ECO PRETO',  campo2Valor: 'TRASEIRO DIREITO', preco: 6 },
     { campo1Valor: 'GTI PRETO',  campo2Valor: 'FRENTES',    preco: 32 },
   ],
   tabelaExtras: [
@@ -42,6 +45,7 @@ describe('calcularPreco — casos base', () => {
     }
     const resultado = calcularPreco(input, configTeste)
     expect(resultado.precoBase).toBe(58)
+    expect(resultado.parcelasBase).toEqual([{ campo2Valor: 'JOGO EM 4', preco: 58 }])
     expect(resultado.somaExtras).toBe(0)
     expect(resultado.valorFinal).toBe(58)
     expect(resultado.valorEmFalta).toBe(58)
@@ -85,6 +89,27 @@ describe('calcularPreco — casos base', () => {
     const resultado = calcularPreco(input, configTeste)
     expect(resultado.precoBase).toBe(21)
     expect(resultado.valorFinal).toBe(17.85)  // 21 × 0.85
+  })
+
+  it('soma partes selecionadas no preco base', () => {
+    const input: InputPreco = {
+      campo1Valor: 'ECO PRETO',
+      campo2Valor: 'CONDUTOR',
+      campo2Valores: ['CONDUTOR', 'PENDURA', 'TRASEIRO DIREITO'],
+      extras: [],
+      tipoClienteId: 'NORMAL',
+      quantidade: 1,
+      descontoManual: 0,
+      sinal: 0,
+    }
+    const resultado = calcularPreco(input, configTeste)
+    expect(resultado.precoBase).toBe(24)
+    expect(resultado.parcelasBase).toEqual([
+      { campo2Valor: 'CONDUTOR', preco: 9 },
+      { campo2Valor: 'PENDURA', preco: 9 },
+      { campo2Valor: 'TRASEIRO DIREITO', preco: 6 },
+    ])
+    expect(resultado.valorFinal).toBe(24)
   })
 })
 

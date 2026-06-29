@@ -16,6 +16,17 @@ export default function ResumoPreco({ resultado }: Props) {
         <span>{resultado.precoBase.toFixed(2)}€</span>
       </div>
 
+      {resultado.parcelasBase.length > 1 && (
+        <div className="space-y-1 pl-3">
+          {resultado.parcelasBase.map(parcela => (
+            <div key={parcela.campo2Valor} className="flex justify-between text-xs text-slate-500 dark:text-slate-500">
+              <span>{parcela.campo2Valor}</span>
+              <span>{parcela.preco.toFixed(2)}€</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {resultado.somaExtras > 0 && (
         <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
           <span>Extras</span>

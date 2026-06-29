@@ -121,6 +121,7 @@ export default function FormularioEditarPedido({
   const inputPreco: InputPreco = {
     campo1Valor:       material        || '',
     campo2Valor:       tipoTapete?.[0] || '',
+    campo2Valores:     tipoTapete      || [],
     extras:            extras          || [],
     extrasQuantidades,
     tipoClienteId:     tipoClienteId   || 'NORMAL',
@@ -250,6 +251,9 @@ export default function FormularioEditarPedido({
             />
           )}
         />
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Pode selecionar várias partes; o preço base soma cada parte configurada.
+        </p>
         {errors.tipoTapete && <p className="mt-1 text-xs text-red-400">{errors.tipoTapete.message}</p>}
       </div>
 

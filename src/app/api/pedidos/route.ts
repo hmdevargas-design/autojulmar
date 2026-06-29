@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
         {
           campo1Valor:       input.material,
           campo2Valor:       input.tipoTapete[0] ?? '',
+          campo2Valores:     input.tipoTapete,
           extras:            input.extras,
           extrasQuantidades: input.extrasQuantidades,
           tipoClienteId:     tipoClienteInfo?.id ?? input.tipoClienteId,

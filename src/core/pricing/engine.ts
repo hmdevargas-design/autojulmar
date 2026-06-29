@@ -8,7 +8,7 @@ import type { InputPreco, ConfigPreco, ResultadoPreco } from './types'
  * Função pura: mesmos inputs → mesmo output, sem side effects.
  *
  * Fórmula:
- *   1. precoBase     = tabelaBase[campo1][campo2]
+ *   1. precoBase     = soma da tabelaBase[campo1][campo2] para cada parte selecionada
  *   2. somaExtras    = soma de cada extra seleccionado
  *   3. precoUnitario = precoBase + somaExtras
  *   4. subtotal      = precoUnitario × quantidade
@@ -20,13 +20,20 @@ export function calcularPreco(
   input: InputPreco,
   config: ConfigPreco
 ): ResultadoPreco {
-  // 1. Preço base
-  const entradaBase = config.tabelaBase.find(
-    (t) =>
-      t.campo1Valor === input.campo1Valor &&
-      t.campo2Valor === input.campo2Valor
-  )
-  const precoBase = entradaBase?.preco ?? 0
+  // 1. Preço base (suporta produto composto por varias partes)
+  const campo2Valores = (input.campo2Valores?.length ? input.campo2Valores : [input.campo2Valor])
+    .filter(Boolean)
+
+  const parcelasBase = campo2Valores.map((campo2Valor) => {
+    const entradaBase = config.tabelaBase.find(
+      (t) =>
+        t.campo1Valor === input.campo1Valor &&
+        t.campo2Valor === campo2Valor
+    )
+    return { campo2Valor, preco: entradaBase?.preco ?? 0 }
+  })
+
+  const precoBase = parcelasBase.reduce((acc, parcela) => acc + parcela.preco, 0)
 
   // 2. Extras (suporta quantidade por extra, ex: velcro × 3)
   const somaExtras = input.extras.reduce((acc, extra) => {
@@ -60,6 +67,7 @@ export function calcularPreco(
 
   return {
     precoBase,
+    parcelasBase,
     somaExtras,
     precoUnitario,
     subtotal,

@@ -3,6 +3,7 @@
 export interface InputPreco {
   campo1Valor: string        // ex: "ECO PRETO" (material)
   campo2Valor: string        // ex: "JOGO" (tipo tapete)
+  campo2Valores?: string[]    // ex: ["CONDUTOR", "PENDURA"] — soma partes do produto
   extras: string[]           // ex: ["reforço borracha", "velcro"]
   extrasQuantidades?: Record<string, number>  // ex: { "velcro": 3 } — quantidade por extra
   tipoClienteId: string
@@ -31,6 +32,7 @@ export interface TabelaPrecoExtra {
 
 export interface ResultadoPreco {
   precoBase: number
+  parcelasBase: { campo2Valor: string; preco: number }[]
   somaExtras: number
   precoUnitario: number
   subtotal: number
