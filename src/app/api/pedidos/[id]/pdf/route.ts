@@ -3,6 +3,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import DocumentoPedidoPDF from '@/components/pedidos/DocumentoPedidoPDF'
 import DocumentoPedidoTermica from '@/components/pedidos/DocumentoPedidoTermica'
+import { labelTabelaPreco } from '@/core/pricing/tabelas'
 import React, { type ReactElement } from 'react'
 
 export async function GET(
@@ -45,7 +46,8 @@ export async function GET(
     numeroPedido:      pedido.numero_pedido,
     nomeCliente:       cliente?.nome ?? '—',
     contacto:          cliente?.contacto ?? '—',
-    tipoCliente:       cliente?.tipos_cliente?.nome ?? '—',
+    tipoCliente:       String(dados?.tipo_cliente_pedido_nome ?? cliente?.tipos_cliente?.nome ?? '—'),
+    tabelaPreco:       labelTabelaPreco(String(dados?.tabela_preco ?? 'balcao')),
     matricula:         String(dados?.matricula ?? ''),
     viatura:           String(dados?.viatura ?? ''),
     ano:               String(dados?.ano ?? ''),

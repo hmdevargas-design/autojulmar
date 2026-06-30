@@ -2,6 +2,7 @@
 // Partilhado entre interface web (tempo real) e WhatsApp (servidor)
 
 import type { InputPreco, ConfigPreco, ResultadoPreco } from './types'
+import { normalizarTabelaPreco, TABELA_PRECO_PADRAO } from './tabelas'
 
 /**
  * Calcula o preço final com base nos inputs e configuração do tenant.
@@ -20,6 +21,8 @@ export function calcularPreco(
   input: InputPreco,
   config: ConfigPreco
 ): ResultadoPreco {
+  const tabelaPreco = normalizarTabelaPreco(input.tabelaPreco)
+
   // 1. Preço base (suporta produto composto por varias partes)
   const campo2Valores = (input.campo2Valores?.length ? input.campo2Valores : [input.campo2Valor])
     .filter(Boolean)
@@ -27,8 +30,17 @@ export function calcularPreco(
   const parcelasBase = campo2Valores.map((campo2Valor) => {
     const entradaBase = config.tabelaBase.find(
       (t) =>
+        t.tabelaPreco === tabelaPreco &&
         t.campo1Valor === input.campo1Valor &&
         t.campo2Valor === campo2Valor
+    ) ?? (tabelaPreco !== TABELA_PRECO_PADRAO
+      ? config.tabelaBase.find(
+          (t) =>
+            t.tabelaPreco === TABELA_PRECO_PADRAO &&
+            t.campo1Valor === input.campo1Valor &&
+            t.campo2Valor === campo2Valor
+        )
+      : undefined
     )
     return { campo2Valor, preco: entradaBase?.preco ?? 0 }
   })
@@ -66,6 +78,7 @@ export function calcularPreco(
   const valorEmFalta = arredondar(valorFinal - sinal)
 
   return {
+    tabelaPreco,
     precoBase,
     parcelasBase,
     somaExtras,
@@ -89,7 +102,10 @@ export function temEntradaBase(
   config: ConfigPreco
 ): boolean {
   return config.tabelaBase.some(
-    (t) => t.campo1Valor === campo1Valor && t.campo2Valor === campo2Valor
+    (t) =>
+      t.tabelaPreco === TABELA_PRECO_PADRAO &&
+      t.campo1Valor === campo1Valor &&
+      t.campo2Valor === campo2Valor
   )
 }
 

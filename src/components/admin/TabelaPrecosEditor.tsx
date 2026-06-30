@@ -3,6 +3,7 @@
 import { useState, type KeyboardEvent } from 'react'
 
 interface EntradaBase {
+  tabelaPreco: string
   campo1Valor: string
   campo2Valor: string
   preco: number
@@ -21,6 +22,7 @@ interface Props {
   opcoesCampo2: string[]
   opcoesCampo2Detalhe?: OpcaoCampo[]
   nomeCampo2?: string
+  tabelasPreco: { id: string; label: string; descricao: string }[]
   labelCampo1: string
   labelCampo2: string
   tabelaInicial: EntradaBase[]
@@ -32,10 +34,12 @@ export default function TabelaPrecosEditor({
   opcoesCampo2,
   opcoesCampo2Detalhe,
   nomeCampo2,
+  tabelasPreco,
   labelCampo1,
   labelCampo2,
   tabelaInicial,
 }: Props) {
+  const [tabelaPreco, setTabelaPreco] = useState(tabelasPreco[0]?.id ?? 'balcao')
   const [opcoes2, setOpcoes2] = useState(opcoesCampo2)
   const [opcoes2Detalhe, setOpcoes2Detalhe] = useState<OpcaoCampo[]>(() =>
     opcoesCampo2Detalhe?.length
@@ -45,7 +49,7 @@ export default function TabelaPrecosEditor({
   const [precos, setPrecos] = useState<Record<string, number>>(() => {
     const map: Record<string, number> = {}
     tabelaInicial.forEach(e => {
-      map[`${e.campo1Valor}||${e.campo2Valor}`] = e.preco
+      map[`${e.tabelaPreco}||${e.campo1Valor}||${e.campo2Valor}`] = e.preco
     })
     return map
   })
@@ -58,7 +62,7 @@ export default function TabelaPrecosEditor({
   const [erroTipo, setErroTipo] = useState<string | null>(null)
 
   function chave(c1: string, c2: string) {
-    return `${c1}||${c2}`
+    return `${tabelaPreco}||${c1}||${c2}`
   }
 
   function iniciarEdicao(c1: string, c2: string) {
@@ -76,7 +80,7 @@ export default function TabelaPrecosEditor({
     const res = await fetch('/api/admin/precos-base', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId, campo1Valor: c1, campo2Valor: c2, preco }),
+      body: JSON.stringify({ tenantId, tabelaPreco, campo1Valor: c1, campo2Valor: c2, preco }),
     })
 
     if (res.ok) {
@@ -142,6 +146,24 @@ export default function TabelaPrecosEditor({
       <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-3">
         Preços Base — {labelCampo1} × {labelCampo2}
       </h2>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {tabelasPreco.map(tabela => (
+          <button
+            key={tabela.id}
+            type="button"
+            onClick={() => setTabelaPreco(tabela.id)}
+            className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+              tabelaPreco === tabela.id
+                ? 'border-gold bg-gold/15 text-slate-900 dark:text-slate-100'
+                : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-gold'
+            }`}
+          >
+            <span className="block font-medium">{tabela.label}</span>
+            <span className="block text-[11px] text-slate-500 dark:text-slate-400">{tabela.descricao}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <table className="text-sm border-collapse w-full">

@@ -1,6 +1,7 @@
 // Tipos do motor de preços — partilhados entre web e WhatsApp
 
 export interface InputPreco {
+  tabelaPreco?: string        // ex: "balcao", "revenda", "frota_tvde"
   campo1Valor: string        // ex: "ECO PRETO" (material)
   campo2Valor: string        // ex: "JOGO" (tipo tapete)
   campo2Valores?: string[]    // ex: ["CONDUTOR", "PENDURA"] — soma partes do produto
@@ -19,6 +20,7 @@ export interface ConfigPreco {
 }
 
 export interface TabelaPrecoBase {
+  tabelaPreco: string
   campo1Valor: string
   campo2Valor: string
   preco: number
@@ -31,6 +33,7 @@ export interface TabelaPrecoExtra {
 }
 
 export interface ResultadoPreco {
+  tabelaPreco: string
   precoBase: number
   parcelasBase: { campo2Valor: string; preco: number }[]
   somaExtras: number

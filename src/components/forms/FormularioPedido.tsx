@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ConfigTenant } from '@/core/entities'
 import { calcularPreco } from '@/core/pricing/engine'
+import { TABELAS_PRECO } from '@/core/pricing/tabelas'
 import type { InputPreco, ConfigPreco } from '@/core/pricing/types'
 import ResumoPreco from './ResumoPreco'
 import CampoMatricula from './fields/CampoMatricula'
@@ -20,10 +21,11 @@ const schema = z.object({
   combustivel:     z.string().optional(),
   nomeCliente:     z.string().min(1, 'Nome do cliente obrigatório'),
   contacto:        z.string().min(9, 'Contacto obrigatório'),
+  tabelaPreco:     z.string(),
   material:        z.string().min(1, 'Material obrigatório'),
   tipoTapete:      z.array(z.string()).min(1, 'Tipo de tapete obrigatório'),
   extras:          z.array(z.string()),
-  tipoClienteId:   z.string().min(1, 'Tipo de cliente obrigatório'),
+  tipoClienteId:   z.string(),
   quantidade:      z.number().min(1),
   maisInfo:        z.string().optional(),
   descontoManual:  z.number().min(0),
@@ -88,6 +90,8 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
     defaultValues: {
       extras: [],
       tipoTapete: [],
+      tabelaPreco: 'balcao',
+      tipoClienteId: '',
       quantidade: 1,
       descontoManual: 0,
       sinal: 0,
@@ -95,6 +99,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
   })
 
   const material       = watch('material')
+  const tabelaPreco    = watch('tabelaPreco')
   const tipoTapete     = watch('tipoTapete')
   const extras         = watch('extras')
   const tipoClienteId  = watch('tipoClienteId')
@@ -103,12 +108,13 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
   const sinal          = watch('sinal')
 
   const inputPreco: InputPreco = {
+    tabelaPreco:        tabelaPreco     || 'balcao',
     campo1Valor:       material        || '',
     campo2Valor:       tipoTapete?.[0] || '',
     campo2Valores:     tipoTapete      || [],
     extras:            extras          || [],
     extrasQuantidades,
-    tipoClienteId:     tipoClienteId   || 'NORMAL',
+    tipoClienteId:     tipoClienteId   || '',
     quantidade:        Number(quantidade)     || 1,
     descontoManual:    Number(descontoManual) || 0,
     sinal:             Number(sinal)          || 0,
@@ -186,6 +192,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             maisInfo:    data.maisInfo,
           },
           material:          data.material,
+          tabelaPreco:       data.tabelaPreco,
           tipoTapete:        data.tipoTapete,
           extras:            data.extras,
           extrasQuantidades,
@@ -350,6 +357,23 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
       {/* Material */}
       <div>
+        <label className={labelCls}>Tabela de preço</label>
+        <Controller
+          name="tabelaPreco"
+          control={control}
+          render={({ field }) => (
+            <CampoSelect
+              value={field.value}
+              onChange={field.onChange}
+              opcoes={TABELAS_PRECO.map(t => t.id)}
+              labels={Object.fromEntries(TABELAS_PRECO.map(t => [t.id, t.label]))}
+            />
+          )}
+        />
+      </div>
+
+      {/* Material */}
+      <div>
         <label className={labelCls}>
           Material <span className="text-red-500">*</span>
         </label>
@@ -418,24 +442,24 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
 
       {/* Tipo Cliente */}
       <div>
-        <label className={labelCls}>
-          Tipo Cliente <span className="text-red-500">*</span>
-        </label>
+        <label className={labelCls}>Tag/desconto do pedido</label>
         <Controller
           name="tipoClienteId"
           control={control}
           render={({ field }) => (
             <CampoSelect
-              value={field.value}
+              value={field.value ?? ''}
               onChange={field.onChange}
-              opcoes={config.tiposCliente.map((t) => t.id)}
+              opcoes={['', ...config.tiposCliente.map((t) => t.id)]}
               labels={Object.fromEntries(
-                config.tiposCliente.map((t) => [
-                  t.id,
-                  `${t.nome}${t.descontoPct > 0 ? ` (−${t.descontoPct}%)` : ''}`,
-                ])
+                [
+                  ['', 'Sem tag/desconto'],
+                  ...config.tiposCliente.map((t) => [
+                    t.id,
+                    `${t.nome}${t.descontoPct > 0 ? ` (−${t.descontoPct}%)` : ''}`,
+                  ]),
+                ]
               )}
-              placeholder="Selecciona o tipo"
             />
           )}
         />

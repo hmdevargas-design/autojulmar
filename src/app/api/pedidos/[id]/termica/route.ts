@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
+import { labelTabelaPreco } from '@/core/pricing/tabelas'
 
 type DadosPedido = Record<string, string | string[] | number | null | undefined>
 
@@ -83,7 +84,7 @@ export async function GET(
   const descontoValorTipo = Number(pedido.subtotal) * (descontoPct / 100)
   const descontoManual = Number(pedido.desconto_manual)
   const valorEmFalta = Math.max(0, valorFinal - sinal)
-  const tipoCliente = cliente?.tipos_cliente?.nome ?? ''
+  const tipoCliente = String(dados.tipo_cliente_pedido_nome ?? cliente?.tipos_cliente?.nome ?? '')
   const tipoTapete = textoArray(dados.tipo_tapete) || textoArray(dados.tipoTapete)
   const extras = textoArray(dados.extras)
 
@@ -164,6 +165,7 @@ export async function GET(
   <div class="sep"></div>
   <div class="titulo">SERVICO</div>
   ${linha('Material', dados.material || '-')}
+  ${linha('Tabela', labelTabelaPreco(String(dados.tabela_preco ?? 'balcao')))}
   ${linha('Tipo', tipoTapete || '-')}
   ${bloco('Extras', extras)}
   ${linha('Quantidade', dados.quantidade)}

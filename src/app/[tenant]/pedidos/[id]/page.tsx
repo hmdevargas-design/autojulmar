@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import SeletorEstado from '@/components/pedidos/SeletorEstado'
 import BotaoImprimir from '@/components/pedidos/BotaoImprimir'
+import { labelTabelaPreco } from '@/core/pricing/tabelas'
 
 interface Props {
   params: Promise<{ tenant: string; id: string }>
@@ -69,6 +70,8 @@ export default async function PaginaDetalhe({ params }: Props) {
     : null
 
   const material   = typeof dados.material  === 'string' ? dados.material  : null
+  const tabelaPreco = typeof dados.tabela_preco === 'string' ? dados.tabela_preco : 'balcao'
+  const tipoPedido = typeof dados.tipo_cliente_pedido_nome === 'string' ? dados.tipo_cliente_pedido_nome : cliente?.tipos_cliente?.nome ?? null
   const viatura    = typeof dados.viatura   === 'string' ? dados.viatura   : null
   const ano        = typeof dados.ano       === 'string' ? dados.ano       : null
   const maisInfo   = typeof dados.maisInfo  === 'string' ? dados.maisInfo  : null
@@ -101,7 +104,7 @@ export default async function PaginaDetalhe({ params }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Nome"     valor={cliente?.nome ?? null} />
             <Campo label="Contacto" valor={cliente?.contacto ?? null} />
-            <Campo label="Tipo"     valor={cliente?.tipos_cliente?.nome ?? null} />
+            <Campo label="Tipo"     valor={tipoPedido} />
             {cliente?.email != null ? <Campo label="Email" valor={cliente.email} /> : null}
             {cliente?.nif   != null ? <Campo label="NIF"   valor={cliente.nif}   /> : null}
           </div>
@@ -124,6 +127,7 @@ export default async function PaginaDetalhe({ params }: Props) {
           <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Produto</h2>
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Material"    valor={material ?? '—'} />
+            <Campo label="Tabela preço" valor={labelTabelaPreco(tabelaPreco)} />
             <Campo label="Tipo tapete" valor={tipoTapetes || '—'} />
             {extras != null   ? <Campo label="Extras"    valor={extras} />                            : null}
             {quantidade > 1   ? <Campo label="Quantidade" valor={String(quantidade)} />              : null}

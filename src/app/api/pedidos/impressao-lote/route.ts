@@ -77,7 +77,7 @@ function recibo(pedido: PedidoLote, index: number, total: number) {
   const descontoValorTipo = Number(pedido.subtotal) * (descontoPct / 100)
   const descontoManual = Number(pedido.desconto_manual)
   const valorEmFalta = Math.max(0, valorFinal - sinal)
-  const tipoCliente = cliente?.tipos_cliente?.nome ?? ''
+  const tipoCliente = String(dados.tipo_cliente_pedido_nome ?? cliente?.tipos_cliente?.nome ?? '')
   const tipoTapete = textoArray(dados.tipo_tapete) || textoArray(dados.tipoTapete)
   const extras = textoArray(dados.extras)
 
@@ -108,8 +108,9 @@ function recibo(pedido: PedidoLote, index: number, total: number) {
 
       <div class="sep"></div>
       <div class="titulo">SERVICO</div>
-      ${linha('Material', dados.material || '-')}
-      ${linha('Tipo', tipoTapete || '-')}
+  ${linha('Material', dados.material || '-')}
+  ${linha('Tabela', String(dados.tabela_preco ?? 'balcao').replace('_', ' '))}
+  ${linha('Tipo', tipoTapete || '-')}
       ${bloco('Extras', extras)}
       ${linha('Quantidade', dados.quantidade)}
       ${bloco('Notas', dados.maisInfo || dados.mais_info)}
