@@ -7,9 +7,12 @@ import SeletorEstado from '@/components/pedidos/SeletorEstado'
 import BotaoImprimirLote from '@/components/pedidos/BotaoImprimirLote'
 import FiltrosPedidos from './FiltrosPedidos'
 
+const PAGE_SIZE = 100
+const MAX_SEARCH_IDS = 5000
+
 interface Props {
   params: Promise<{ tenant: string }>
-  searchParams: Promise<{ q?: string; estado?: string; de?: string; ate?: string }>
+  searchParams: Promise<{ q?: string; estado?: string; de?: string; ate?: string; pagina?: string }>
 }
 
 const CAMPOS_PEDIDO = `
@@ -36,9 +39,18 @@ const COR_PRODUCAO: Record<string, string> = {
   entregue:   '#888780',
 }
 
+interface PedidoBusca {
+  id: string
+  criado_em: string
+}
+
 export default async function PaginaPedidos({ params, searchParams }: Props) {
   const { tenant: slug } = await params
-  const { q, estado: estadoFiltroId, de, ate } = await searchParams
+  const { q, estado: estadoFiltroId, de, ate, pagina: paginaParam } = await searchParams
+
+  const paginaPedida = Number.parseInt(paginaParam ?? '1', 10)
+  const paginaAtual = Number.isFinite(paginaPedida) && paginaPedida > 0 ? paginaPedida : 1
+  const offset = (paginaAtual - 1) * PAGE_SIZE
 
   const tenant = await resolverTenant(slug)
   if (!tenant) notFound()
@@ -54,56 +66,116 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
   const estados = (estadosRes.data ?? []).map(e => ({ id: e.id, nome: e.nome, cor: e.cor }))
 
   const termo = q?.trim() ?? ''
+  const termoLike = `%${termo}%`
+  const digitsTermo = termo.replace(/\D/g, '')
   const ateISO = ate ? new Date(ate + 'T23:59:59').toISOString() : null
   const deISO  = de  ? new Date(de  + 'T00:00:00').toISOString() : null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function comDatas(q: any) {
-    if (deISO)  q = q.gte('criado_em', deISO)
-    if (ateISO) q = q.lte('criado_em', ateISO)
-    return q
+  function aplicarFiltrosPedido(query: any) {
+    if (estadoFiltroId) query = query.eq('estado_id', estadoFiltroId)
+    if (deISO)  query = query.gte('criado_em', deISO)
+    if (ateISO) query = query.lte('criado_em', ateISO)
+    return query
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pedidos: any[] = []
+  let totalResultados = 0
 
-  if (!termo && !estadoFiltroId && !deISO && !ateISO) {
-    const res = await comDatas(
-      supabase.from('pedidos').select(CAMPOS_PEDIDO).eq('tenant_id', tenant.id)
-    ).order('criado_em', { ascending: false }).limit(100)
-    pedidos = res.data ?? []
+  if (termo) {
+    const clienteQueries = [
+      supabase.from('clientes').select('id').eq('tenant_id', tenant.id).ilike('nome', termoLike).limit(1000),
+      supabase.from('clientes').select('id').eq('tenant_id', tenant.id).ilike('codigo', termoLike).limit(1000),
+      supabase.from('clientes').select('id').eq('tenant_id', tenant.id).ilike('contacto', `%${digitsTermo || termo}%`).limit(1000),
+    ]
 
-  } else if (termo) {
-    const [porCliente, porMatricula] = await Promise.all([
-      comDatas(
-        supabase.from('pedidos').select(CAMPOS_PEDIDO).eq('tenant_id', tenant.id)
-          .or(`nome.ilike.%${termo}%,contacto.ilike.%${termo}%`, { referencedTable: 'clientes' })
-      ).order('criado_em', { ascending: false }).limit(100),
-      comDatas(
-        supabase.from('pedidos').select(CAMPOS_PEDIDO).eq('tenant_id', tenant.id)
-          .filter('dados->>matricula', 'ilike', `%${termo}%`)
-      ).order('criado_em', { ascending: false }).limit(100),
-    ])
+    const clientesRes = await Promise.all(clienteQueries)
+    const clienteIds = Array.from(new Set(
+      clientesRes.flatMap(res => (res.data ?? []).map(cliente => cliente.id as string))
+    ))
 
-    const vistos = new Set<string>()
-    for (const p of [...(porCliente.data ?? []), ...(porMatricula.data ?? [])]) {
-      if (!vistos.has(p.id)) { vistos.add(p.id); pedidos.push(p) }
+    const numeroPedido = Number.parseInt(termo.replace(/^#/, ''), 10)
+    const buscaNumeroPedido = Number.isFinite(numeroPedido) && /^\#?\d+$/.test(termo)
+
+    const pedidoIdQueries = [
+      clienteIds.length > 0
+        ? aplicarFiltrosPedido(
+            supabase.from('pedidos').select('id, criado_em').eq('tenant_id', tenant.id).in('cliente_id', clienteIds)
+          ).order('criado_em', { ascending: false }).limit(MAX_SEARCH_IDS)
+        : Promise.resolve({ data: [] }),
+      aplicarFiltrosPedido(
+        supabase.from('pedidos').select('id, criado_em').eq('tenant_id', tenant.id).filter('dados->>matricula', 'ilike', termoLike)
+      ).order('criado_em', { ascending: false }).limit(MAX_SEARCH_IDS),
+      aplicarFiltrosPedido(
+        supabase.from('pedidos').select('id, criado_em').eq('tenant_id', tenant.id).filter('dados->>viatura', 'ilike', termoLike)
+      ).order('criado_em', { ascending: false }).limit(MAX_SEARCH_IDS),
+      aplicarFiltrosPedido(
+        supabase.from('pedidos').select('id, criado_em').eq('tenant_id', tenant.id).filter('dados->>material', 'ilike', termoLike)
+      ).order('criado_em', { ascending: false }).limit(MAX_SEARCH_IDS),
+      buscaNumeroPedido
+        ? aplicarFiltrosPedido(
+            supabase.from('pedidos').select('id, criado_em').eq('tenant_id', tenant.id).eq('numero_pedido', numeroPedido)
+          ).order('criado_em', { ascending: false }).limit(MAX_SEARCH_IDS)
+        : Promise.resolve({ data: [] }),
+    ]
+
+    const pedidoIdRes = await Promise.all(pedidoIdQueries)
+    const mapaIds = new Map<string, string>()
+    for (const res of pedidoIdRes) {
+      for (const pedido of ((res.data ?? []) as PedidoBusca[])) {
+        const dataActual = mapaIds.get(pedido.id)
+        if (!dataActual || new Date(pedido.criado_em).getTime() > new Date(dataActual).getTime()) {
+          mapaIds.set(pedido.id, pedido.criado_em)
+        }
+      }
     }
 
-    if (estadoFiltroId) {
-      pedidos = pedidos.filter(p => {
-        const e = p.estados_fluxo as unknown as { id: string } | null
-        return e?.id === estadoFiltroId
-      })
+    const idsOrdenados = Array.from(mapaIds.entries())
+      .sort((a, b) => new Date(b[1]).getTime() - new Date(a[1]).getTime())
+      .map(([id]) => id)
+
+    totalResultados = idsOrdenados.length
+    const idsPagina = idsOrdenados.slice(offset, offset + PAGE_SIZE)
+
+    if (idsPagina.length > 0) {
+      const pedidosRes = await supabase
+        .from('pedidos')
+        .select(CAMPOS_PEDIDO)
+        .eq('tenant_id', tenant.id)
+        .in('id', idsPagina)
+
+      const porId = new Map((pedidosRes.data ?? []).map(pedido => [pedido.id, pedido]))
+      pedidos = idsPagina.map(id => porId.get(id)).filter(Boolean)
     }
-
-    pedidos.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
-
   } else {
-    let query = supabase.from('pedidos').select(CAMPOS_PEDIDO).eq('tenant_id', tenant.id)
-    if (estadoFiltroId) query = query.eq('estado_id', estadoFiltroId)
-    const res = await comDatas(query).order('criado_em', { ascending: false }).limit(100)
+    let query = supabase
+      .from('pedidos')
+      .select(CAMPOS_PEDIDO, { count: 'exact' })
+      .eq('tenant_id', tenant.id)
+
+    query = aplicarFiltrosPedido(query)
+
+    const res = await query
+      .order('criado_em', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1)
+
     pedidos = res.data ?? []
+    totalResultados = res.count ?? 0
+  }
+
+  const totalPaginas = Math.ceil(totalResultados / PAGE_SIZE)
+  const temFiltros = Boolean(termo || estadoFiltroId || de || ate)
+
+  function buildUrl(pagina: number) {
+    const params = new URLSearchParams()
+    if (termo) params.set('q', termo)
+    if (estadoFiltroId) params.set('estado', estadoFiltroId)
+    if (de) params.set('de', de)
+    if (ate) params.set('ate', ate)
+    if (pagina > 1) params.set('pagina', pagina.toString())
+    const qs = params.toString()
+    return `/${slug}/pedidos${qs ? `?${qs}` : ''}`
   }
 
   return (
@@ -111,9 +183,10 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Pedidos</h1>
-          {(termo || estadoFiltroId || de || ate) && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{pedidos.length} resultado(s)</p>
-          )}
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {totalResultados} {totalResultados === 1 ? 'resultado' : 'resultados'}
+            {totalPaginas > 1 && ` · página ${paginaAtual} de ${totalPaginas}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <BotaoImprimirLote
@@ -177,7 +250,7 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
 
         {pedidos.length === 0 && (
           <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
-            {termo || estadoFiltroId || de || ate
+            {temFiltros
               ? 'Nenhum pedido encontrado para os filtros aplicados.'
               : <><span>Nenhum pedido encontrado. </span><Link href={`/${slug}/pedidos/novo`} className="text-gold hover:underline">Criar primeiro pedido</Link></>
             }
@@ -263,13 +336,39 @@ export default async function PaginaPedidos({ params, searchParams }: Props) {
 
         {pedidos.length === 0 && (
           <div className="text-center py-12 text-slate-400 dark:text-slate-500">
-            {termo || estadoFiltroId || de || ate
+            {temFiltros
               ? 'Nenhum pedido encontrado para os filtros aplicados.'
               : <><span>Nenhum pedido encontrado. </span><Link href={`/${slug}/pedidos/novo`} className="text-gold hover:underline">Criar primeiro pedido</Link></>
             }
           </div>
         )}
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between pt-3">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            {offset + 1}–{Math.min(offset + PAGE_SIZE, totalResultados)} de {totalResultados}
+          </span>
+          <div className="flex gap-2">
+            {paginaAtual > 1 && (
+              <Link
+                href={buildUrl(paginaAtual - 1)}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+              >
+                ← Anterior
+              </Link>
+            )}
+            {paginaAtual < totalPaginas && (
+              <Link
+                href={buildUrl(paginaAtual + 1)}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+              >
+                Próxima →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
