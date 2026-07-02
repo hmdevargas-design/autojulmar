@@ -16,6 +16,10 @@ import {
 } from './conversation-memory'
 import { resolverTenant }                                from '@/lib/tenant/resolver'
 import { criarClienteAdmin }                             from '@/lib/supabase/admin'
+import {
+  decodificarCampo1TabelaPreco,
+  labelTabelaPreco,
+} from '@/core/pricing/tabelas'
 
 export const AGENTE_JULMAR_NOME = 'Agente Julmar'
 
@@ -367,17 +371,24 @@ async function carregarTabelaPrecos(tenantId: string): Promise<string> {
 
   if (base.length === 0) return ''
 
-  const porMaterial = new Map<string, { tipo: string; preco: number }[]>()
+  const porTabela = new Map<string, Map<string, { tipo: string; preco: number }[]>>()
   for (const row of base) {
-    if (!porMaterial.has(row.campo1_valor)) porMaterial.set(row.campo1_valor, [])
-    porMaterial.get(row.campo1_valor)!.push({ tipo: row.campo2_valor, preco: Number(row.preco) })
+    const campo1 = decodificarCampo1TabelaPreco(row.campo1_valor)
+    const tabelaPreco = labelTabelaPreco(campo1.tabelaPreco)
+    if (!porTabela.has(tabelaPreco)) porTabela.set(tabelaPreco, new Map())
+    const porMaterial = porTabela.get(tabelaPreco)!
+    if (!porMaterial.has(campo1.campo1Valor)) porMaterial.set(campo1.campo1Valor, [])
+    porMaterial.get(campo1.campo1Valor)!.push({ tipo: row.campo2_valor, preco: Number(row.preco) })
   }
 
-  let tabela = 'TABELA DE PRECOS EXACTOS (euros, sem desconto de cliente):\n'
-  for (const [material, tipos_] of porMaterial) {
-    tabela += `\n${material}:\n`
-    for (const { tipo, preco } of tipos_) {
-      tabela += `  ${tipo}: ${preco.toFixed(2)}€\n`
+  let tabela = 'TABELAS DE PRECOS EXACTOS (euros, sem desconto/tag de cliente):\n'
+  for (const [tabelaPreco, porMaterial] of porTabela) {
+    tabela += `\n${tabelaPreco.toUpperCase()}:\n`
+    for (const [material, tipos_] of porMaterial) {
+      tabela += `  ${material}:\n`
+      for (const { tipo, preco } of tipos_) {
+        tabela += `    ${tipo}: ${preco.toFixed(2)}€\n`
+      }
     }
   }
 
@@ -396,10 +407,12 @@ async function carregarTabelaPrecos(tenantId: string): Promise<string> {
   }
 
   tabela += '\nREGRAS DE CALCULO:\n'
-  tabela += '  preco_base = tabela[material][tipo_tapete]\n'
+  tabela += '  preco_base = tabela[tabela_preco][material][tipo_tapete]\n'
   tabela += '  subtotal   = (preco_base + soma_extras) × quantidade\n'
   tabela += '  valor_final = subtotal - (subtotal × desconto_pct / 100)\n'
-  tabela += '  Apresenta SEMPRE o valor_final (com desconto do tipo de cliente se conhecido).\n'
+  tabela += '  Se o cliente nao indicar condicao especial, usa a tabela Balcao.\n'
+  tabela += '  Usa Revenda ou Frota / TVDE apenas quando isso estiver claro no cliente ou no pedido.\n'
+  tabela += '  Apresenta SEMPRE o valor_final (com desconto/tag do pedido se conhecido).\n'
   tabela += '  Se o cliente nao estiver na BD, usa desconto 0%.\n'
 
   return tabela

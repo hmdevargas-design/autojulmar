@@ -64,6 +64,7 @@ interface Props {
   viatura: string
   ano: string
   combustivel: string
+  tabelaPreco: string
   material: string
   tipoTapete: string[]
   extras: string[]
@@ -131,6 +132,7 @@ export default function DocumentoPedidoTermica(props: Props) {
         <Text style={s.tracejado}>{SEP}</Text>
         <Text style={s.secaoTitulo}>SERVIÇO</Text>
         <Linha l="Material" v={props.material || '—'} />
+        <Linha l="Tabela"  v={props.tabelaPreco || 'Balcão'} />
         <Linha l="Tipo"     v={props.tipoTapete.join(' + ') || '—'} />
         {temExtras && (
           <View style={s.extrasBloco}>

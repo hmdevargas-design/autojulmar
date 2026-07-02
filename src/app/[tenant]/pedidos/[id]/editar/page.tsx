@@ -46,6 +46,7 @@ export default async function PaginaEditarPedido({ params }: Props) {
     viatura:        typeof dados.viatura     === 'string' ? dados.viatura     : '',
     ano:            typeof dados.ano         === 'string' ? dados.ano         : '',
     combustivel:    typeof dados.combustivel === 'string' ? dados.combustivel : '',
+    tabelaPreco:    typeof dados.tabela_preco === 'string' ? dados.tabela_preco : 'balcao',
     maisInfo:       typeof dados.maisInfo    === 'string' ? dados.maisInfo    : '',
     material:       typeof dados.material    === 'string' ? dados.material    : '',
     tipoTapete:     Array.isArray(dados.tipo_tapete) ? (dados.tipo_tapete as string[]) : [],
@@ -55,7 +56,7 @@ export default async function PaginaEditarPedido({ params }: Props) {
         ? (dados.extras_quantidades as Record<string, number>)
         : {},
     quantidade:     typeof dados.quantidade === 'number' ? (dados.quantidade as number) : 1,
-    tipoClienteId:  cliente?.tipo_cliente_id ?? '',
+    tipoClienteId:  typeof dados.tipo_cliente_pedido_id === 'string' ? dados.tipo_cliente_pedido_id : cliente?.tipo_cliente_id ?? '',
     descontoManual: Number(p.desconto_manual) || 0,
     valor:          Number(p.valor_final)     || 0,
     sinal:          Number(p.sinal)           || 0,

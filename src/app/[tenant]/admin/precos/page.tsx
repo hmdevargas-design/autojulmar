@@ -3,9 +3,17 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import TabelaPrecosEditor from '@/components/admin/TabelaPrecosEditor'
 import TabelaExtrasEditor from '@/components/admin/TabelaExtrasEditor'
+import { decodificarCampo1TabelaPreco, TABELAS_PRECO } from '@/core/pricing/tabelas'
 
 interface Props {
   params: Promise<{ tenant: string }>
+}
+
+interface CampoOpcao {
+  valor: string
+  label: string
+  ordem: number
+  activo: boolean
 }
 
 export default async function PaginaPrecos({ params }: Props) {
@@ -37,14 +45,23 @@ export default async function PaginaPrecos({ params }: Props) {
   const campoCampo1 = camposRes.data?.find(c => c.papel_preco === 'base_campo1')
   const campoCampo2 = camposRes.data?.find(c => c.papel_preco === 'base_campo2')
 
-  const opcoesCampo1: string[] = (campoCampo1?.opcoes ?? []).map((o: { valor: string }) => o.valor)
-  const opcoesCampo2: string[] = (campoCampo2?.opcoes ?? []).map((o: { valor: string }) => o.valor)
+  const opcoesCampo1: string[] = (campoCampo1?.opcoes ?? [])
+    .filter((o: CampoOpcao) => o.activo !== false)
+    .map((o: CampoOpcao) => o.valor)
+  const opcoesCampo2Detalhe = (campoCampo2?.opcoes ?? []) as CampoOpcao[]
+  const opcoesCampo2: string[] = opcoesCampo2Detalhe
+    .filter(o => o.activo !== false)
+    .map(o => o.valor)
 
-  const tabelaBase = (baseRes.data ?? []).map(r => ({
-    campo1Valor: r.campo1_valor,
-    campo2Valor: r.campo2_valor,
-    preco: Number(r.preco),
-  }))
+  const tabelaBase = (baseRes.data ?? []).map(r => {
+    const decoded = decodificarCampo1TabelaPreco(r.campo1_valor)
+    return {
+      tabelaPreco: decoded.tabelaPreco,
+      campo1Valor: decoded.campo1Valor,
+      campo2Valor: r.campo2_valor,
+      preco: Number(r.preco),
+    }
+  })
 
   const extras = (extrasRes.data ?? []).map(r => ({
     campoNome: r.campo_nome,
@@ -65,6 +82,9 @@ export default async function PaginaPrecos({ params }: Props) {
         tenantId={tenant.id}
         opcoesCampo1={opcoesCampo1}
         opcoesCampo2={opcoesCampo2}
+        opcoesCampo2Detalhe={opcoesCampo2Detalhe}
+        nomeCampo2={campoCampo2?.nome ?? 'tipo_tapete'}
+        tabelasPreco={TABELAS_PRECO}
         labelCampo1={campoCampo1?.label ?? 'Material'}
         labelCampo2={campoCampo2?.label ?? 'Tipo'}
         tabelaInicial={tabelaBase}

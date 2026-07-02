@@ -10,13 +10,14 @@ const schemaEditar = z.object({
   viatura:           z.string().optional(),
   ano:               z.string().optional(),
   combustivel:       z.string().optional(),
+  tabelaPreco:       z.string().optional().default('balcao'),
   material:          z.string(),
   tipoTapete:        z.array(z.string()),
   extras:            z.array(z.string()).default([]),
   extrasQuantidades: z.record(z.string(), z.number()).optional(),
   quantidade:        z.coerce.number().min(1).default(1),
   maisInfo:          z.string().optional(),
-  tipoClienteId:     z.string(),
+  tipoClienteId:     z.string().optional().default(''),
   descontoManual:    z.coerce.number().min(0).default(0),
   valor:             z.coerce.number().min(0),
   sinal:             z.coerce.number().min(0).default(0),
@@ -46,12 +47,14 @@ export async function PATCH(
     }
 
     // Tipo cliente para desconto
-    const { data: tipoClienteInfo } = await supabase
-      .from('tipos_cliente')
-      .select('id, desconto_pct')
-      .eq('tenant_id', input.tenantId)
-      .eq('id', input.tipoClienteId)
-      .single()
+    const { data: tipoClienteInfo } = input.tipoClienteId
+      ? await supabase
+          .from('tipos_cliente')
+          .select('id, nome, desconto_pct')
+          .eq('tenant_id', input.tenantId)
+          .eq('id', input.tipoClienteId)
+          .single()
+      : { data: null }
 
     // Recalcula preço
     let precoBase = 0, somaExtras = 0, subtotal = 0, descontoPct = 0
@@ -59,11 +62,13 @@ export async function PATCH(
     if (configPreco) {
       const resultado = calcularPreco(
         {
+          tabelaPreco:       input.tabelaPreco,
           campo1Valor:       input.material,
           campo2Valor:       input.tipoTapete[0] ?? '',
+          campo2Valores:     input.tipoTapete,
           extras:            input.extras,
           extrasQuantidades: input.extrasQuantidades,
-          tipoClienteId:     tipoClienteInfo?.id ?? input.tipoClienteId,
+          tipoClienteId:     tipoClienteInfo?.id ?? '',
           quantidade:        input.quantidade,
           descontoManual:    input.descontoManual,
           sinal:             input.sinal,
@@ -85,6 +90,9 @@ export async function PATCH(
       ano:                input.ano,
       combustivel:        input.combustivel,
       maisInfo:           input.maisInfo,
+      tabela_preco:       input.tabelaPreco,
+      tipo_cliente_pedido_id: tipoClienteInfo?.id ?? null,
+      tipo_cliente_pedido_nome: tipoClienteInfo?.nome ?? null,
       material:           input.material,
       tipo_tapete:        input.tipoTapete,
       extras:             input.extras,

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
-import { labelTabelaPreco } from '@/core/pricing/tabelas'
+import {
+  formatarNumeroOrcamento,
+  labelCategoriaOrcamento,
+  labelEstadoOrcamento,
+  labelProdutoOrcamento,
+} from '@/lib/orcamentos/config'
 
-type DadosPedido = Record<string, string | string[] | number | null | undefined>
+type DadosOrcamento = Record<string, string | number | null | undefined>
 
 function esc(valor: unknown) {
   return String(valor ?? '')
@@ -15,10 +20,6 @@ function esc(valor: unknown) {
 
 function dinheiro(valor: unknown) {
   return `${Number(valor || 0).toFixed(2)} EUR`
-}
-
-function textoArray(valor: unknown) {
-  return Array.isArray(valor) ? valor.filter(Boolean).join(' + ') : ''
 }
 
 function linha(label: string, valor: unknown, destaque = false) {
@@ -52,48 +53,40 @@ export async function GET(
   const { id } = await params
   const supabase = criarClienteAdmin()
 
-  const { data: pedido, error } = await supabase
-    .from('pedidos')
+  const { data: orcamento, error } = await supabase
+    .from('orcamentos')
     .select(`
-      id, numero_pedido, valor_final, soma_extras, preco_base,
-      subtotal, desconto_tipo_pct, desconto_manual, sinal,
-      forma_pagamento, criado_em, dados,
-      clientes ( nome, contacto, tipos_cliente ( nome, desconto_pct ) ),
-      estados_fluxo ( nome, cor ),
+      id, numero_orcamento, estado, categoria, produto, descricao, dados,
+      valor_estimado, validade_em, criado_em,
+      clientes ( nome, contacto ),
       tenants ( nome )
     `)
     .eq('id', id)
     .single()
 
-  if (error || !pedido) {
-    return NextResponse.json({ erro: 'Pedido nao encontrado' }, { status: 404 })
+  if (error || !orcamento) {
+    return NextResponse.json({ erro: 'Orcamento nao encontrado' }, { status: 404 })
   }
 
-  const cliente = pedido.clientes as unknown as {
-    nome: string
-    contacto: string
-    tipos_cliente: { nome: string; desconto_pct: number } | null
-  } | null
-  const estado = pedido.estados_fluxo as unknown as { nome: string; cor: string } | null
-  const tenant = pedido.tenants as unknown as { nome: string } | null
-  const dados = (pedido.dados ?? {}) as DadosPedido
+  const cliente = orcamento.clientes as unknown as { nome: string; contacto: string } | null
+  const tenant = orcamento.tenants as unknown as { nome: string } | null
+  const dados = (orcamento.dados ?? {}) as DadosOrcamento
+  const numero = formatarNumeroOrcamento(orcamento.numero_orcamento)
+  const criadoEm = new Date(orcamento.criado_em).toLocaleDateString('pt-PT')
+  const validade = orcamento.validade_em
+    ? new Date(orcamento.validade_em).toLocaleDateString('pt-PT')
+    : ''
 
-  const valorFinal = Number(pedido.valor_final)
-  const sinal = Number(pedido.sinal)
-  const descontoPct = Number(pedido.desconto_tipo_pct)
-  const descontoValorTipo = Number(pedido.subtotal) * (descontoPct / 100)
-  const descontoManual = Number(pedido.desconto_manual)
-  const valorEmFalta = Math.max(0, valorFinal - sinal)
-  const tipoCliente = String(dados.tipo_cliente_pedido_nome ?? cliente?.tipos_cliente?.nome ?? '')
-  const tipoTapete = textoArray(dados.tipo_tapete) || textoArray(dados.tipoTapete)
-  const extras = textoArray(dados.extras)
+  const categoria = labelCategoriaOrcamento(orcamento.categoria)
+  const produto = labelProdutoOrcamento(orcamento.categoria, orcamento.produto)
+  const estado = labelEstadoOrcamento(orcamento.estado)
 
   const html = `<!doctype html>
 <html lang="pt-PT">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pedido #${esc(pedido.numero_pedido)}</title>
+  <title>${esc(numero)}</title>
   <style>
     @page { size: 72mm auto; margin: 0; }
     * { box-sizing: border-box; }
@@ -141,57 +134,43 @@ export async function GET(
 </head>
 <body>
   <div class="empresa">${esc(tenant?.nome ?? 'Plataforma')}</div>
-  <div class="subtitulo">GUIA DE SERVICO</div>
+  <div class="subtitulo">ORCAMENTO</div>
 
   <div class="sep"></div>
   <div class="topo">
-    <div class="pedido">PEDIDO #${esc(pedido.numero_pedido)}</div>
-    <div class="data">${esc(new Date(pedido.criado_em).toLocaleDateString('pt-PT'))}</div>
+    <div class="pedido">${esc(numero)}</div>
+    <div class="data">${esc(criadoEm)}</div>
   </div>
 
   <div class="sep"></div>
   <div class="titulo">CLIENTE</div>
   ${linha('Nome', cliente?.nome ?? '-')}
   ${linha('Tel', cliente?.contacto ?? '-')}
-  ${linha('Tipo', tipoCliente)}
 
   <div class="sep"></div>
   <div class="titulo">VIATURA</div>
   ${linha('Matricula', dados.matricula || '-')}
   ${linha('Viatura', dados.viatura)}
   ${linha('Ano', dados.ano)}
-  ${linha('Combustivel', dados.combustivel)}
 
   <div class="sep"></div>
   <div class="titulo">SERVICO</div>
-  ${linha('Material', dados.material || '-')}
-  ${linha('Tabela', labelTabelaPreco(String(dados.tabela_preco ?? 'balcao')))}
-  ${linha('Tipo', tipoTapete || '-')}
-  ${bloco('Extras', extras)}
-  ${linha('Quantidade', dados.quantidade)}
-  ${bloco('Notas', dados.maisInfo || dados.mais_info)}
+  ${linha('Categoria', categoria || '-')}
+  ${linha('Produto', produto || '-')}
+  ${bloco('Descricao', orcamento.descricao)}
 
   <div class="sep"></div>
-  <div class="titulo">VALORES</div>
-  ${linha('Base', dinheiro(pedido.preco_base))}
-  ${Number(pedido.soma_extras) > 0 ? linha('Extras', `+${dinheiro(pedido.soma_extras)}`) : ''}
-  ${descontoValorTipo > 0 ? linha(`Desc. ${tipoCliente} -${descontoPct}%`, `-${dinheiro(descontoValorTipo)}`) : ''}
-  ${descontoManual > 0 ? linha('Desc. manual', `-${dinheiro(descontoManual)}`) : ''}
+  <div class="titulo">ACOMPANHAMENTO</div>
+  ${linha('Estado', estado || '-')}
+  ${linha('Validade', validade)}
 
   <div class="total">
-    <span>TOTAL</span>
-    <span>${esc(dinheiro(valorFinal))}</span>
+    <span>VALOR</span>
+    <span>${esc(dinheiro(orcamento.valor_estimado))}</span>
   </div>
 
-  ${sinal > 0 ? linha('Sinal pago', `-${dinheiro(sinal)}`) : ''}
-  ${sinal > 0 ? linha('EM FALTA', dinheiro(valorEmFalta), true) : ''}
-
   <div class="sep"></div>
-  ${linha('Pagamento', String(pedido.forma_pagamento ?? '').replace(/_/g, ' '), true)}
-  ${linha('Estado', estado?.nome ?? '-')}
-
-  <div class="sep"></div>
-  <div class="rodape">${esc(tenant?.nome ?? 'Plataforma')} - OBRIGADO</div>
+  <div class="rodape">${esc(tenant?.nome ?? 'Plataforma')} - ORCAMENTO VALIDO MEDIANTE CONFIRMACAO</div>
 </body>
 </html>`
 

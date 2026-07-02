@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ConfigTenant } from '@/core/entities'
 import { calcularPreco } from '@/core/pricing/engine'
+import { TABELAS_PRECO } from '@/core/pricing/tabelas'
 import type { InputPreco, ConfigPreco } from '@/core/pricing/types'
 import ResumoPreco from './ResumoPreco'
 import CampoMatricula from './fields/CampoMatricula'
@@ -18,10 +19,11 @@ const schema = z.object({
   viatura:        z.string().optional(),
   ano:            z.string().optional(),
   combustivel:    z.string().optional(),
+  tabelaPreco:    z.string(),
   material:       z.string().min(1, 'Material obrigatório'),
   tipoTapete:     z.array(z.string()).min(1, 'Tipo de tapete obrigatório'),
   extras:         z.array(z.string()),
-  tipoClienteId:  z.string().min(1, 'Tipo de cliente obrigatório'),
+  tipoClienteId:  z.string(),
   quantidade:     z.number().min(1),
   maisInfo:       z.string().optional(),
   descontoManual: z.number().min(0),
@@ -37,6 +39,7 @@ export interface DefaultValuesEditar {
   viatura?: string
   ano?: string
   combustivel?: string
+  tabelaPreco?: string
   material?: string
   tipoTapete?: string[]
   extras?: string[]
@@ -97,6 +100,7 @@ export default function FormularioEditarPedido({
       viatura:        dv.viatura        ?? '',
       ano:            dv.ano            ?? '',
       combustivel:    dv.combustivel    ?? '',
+      tabelaPreco:    dv.tabelaPreco    ?? 'balcao',
       material:       dv.material       ?? '',
       tipoTapete:     dv.tipoTapete     ?? [],
       extras:         dv.extras         ?? [],
@@ -111,6 +115,7 @@ export default function FormularioEditarPedido({
   })
 
   const material       = watch('material')
+  const tabelaPreco    = watch('tabelaPreco')
   const tipoTapete     = watch('tipoTapete')
   const extras         = watch('extras')
   const tipoClienteId  = watch('tipoClienteId')
@@ -119,11 +124,13 @@ export default function FormularioEditarPedido({
   const sinal          = watch('sinal')
 
   const inputPreco: InputPreco = {
+    tabelaPreco:        tabelaPreco     || 'balcao',
     campo1Valor:       material        || '',
     campo2Valor:       tipoTapete?.[0] || '',
+    campo2Valores:     tipoTapete      || [],
     extras:            extras          || [],
     extrasQuantidades,
-    tipoClienteId:     tipoClienteId   || 'NORMAL',
+    tipoClienteId:     tipoClienteId   || '',
     quantidade:        Number(quantidade)     || 1,
     descontoManual:    Number(descontoManual) || 0,
     sinal:             Number(sinal)          || 0,
@@ -147,6 +154,7 @@ export default function FormularioEditarPedido({
           ano:               data.ano,
           combustivel:       data.combustivel,
           material:          data.material,
+          tabelaPreco:       data.tabelaPreco,
           tipoTapete:        data.tipoTapete,
           extras:            data.extras,
           extrasQuantidades,
@@ -217,6 +225,23 @@ export default function FormularioEditarPedido({
         </div>
       </div>
 
+      {/* Tabela de preço */}
+      <div>
+        <label className={labelCls}>Tabela de preço</label>
+        <Controller
+          name="tabelaPreco"
+          control={control}
+          render={({ field }) => (
+            <CampoSelect
+              value={field.value}
+              onChange={field.onChange}
+              opcoes={TABELAS_PRECO.map(t => t.id)}
+              labels={Object.fromEntries(TABELAS_PRECO.map(t => [t.id, t.label]))}
+            />
+          )}
+        />
+      </div>
+
       {/* Material */}
       <div>
         <label className={labelCls}>Material <span className="text-red-500">*</span></label>
@@ -250,6 +275,9 @@ export default function FormularioEditarPedido({
             />
           )}
         />
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Pode selecionar várias partes; o preço base soma cada parte configurada.
+        </p>
         {errors.tipoTapete && <p className="mt-1 text-xs text-red-400">{errors.tipoTapete.message}</p>}
       </div>
 
@@ -276,22 +304,24 @@ export default function FormularioEditarPedido({
 
       {/* Tipo Cliente */}
       <div>
-        <label className={labelCls}>Tipo Cliente <span className="text-red-500">*</span></label>
+        <label className={labelCls}>Tag/desconto do pedido</label>
         <Controller
           name="tipoClienteId"
           control={control}
           render={({ field }) => (
             <CampoSelect
-              value={field.value}
+              value={field.value ?? ''}
               onChange={field.onChange}
-              opcoes={config.tiposCliente.map(t => t.id)}
+              opcoes={['', ...config.tiposCliente.map(t => t.id)]}
               labels={Object.fromEntries(
-                config.tiposCliente.map(t => [
-                  t.id,
-                  `${t.nome}${t.descontoPct > 0 ? ` (−${t.descontoPct}%)` : ''}`,
-                ])
+                [
+                  ['', 'Sem tag/desconto'],
+                  ...config.tiposCliente.map(t => [
+                    t.id,
+                    `${t.nome}${t.descontoPct > 0 ? ` (−${t.descontoPct}%)` : ''}`,
+                  ]),
+                ]
               )}
-              placeholder="Selecciona o tipo"
             />
           )}
         />

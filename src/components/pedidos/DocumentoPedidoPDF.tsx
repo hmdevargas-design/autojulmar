@@ -45,6 +45,7 @@ interface Props {
   viatura: string
   ano: string
   combustivel: string
+  tabelaPreco: string
   material: string
   tipoTapete: string[]
   extras: string[]
@@ -128,6 +129,10 @@ export default function DocumentoPedidoPDF(props: Props) {
             <View style={styles.campo}>
               <Text style={styles.campoLabel}>Material</Text>
               <Text style={styles.campoValor}>{props.material || '—'}</Text>
+            </View>
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>Tabela</Text>
+              <Text style={styles.campoValor}>{props.tabelaPreco || 'Balcão'}</Text>
             </View>
             <View style={[styles.campo, { flex: 2 }]}>
               <Text style={styles.campoLabel}>Tipo Tapete</Text>

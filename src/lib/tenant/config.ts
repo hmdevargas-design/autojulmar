@@ -2,6 +2,7 @@
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import type { ConfigTenant, CampoDefinicao, TipoCliente, EstadoFluxo } from '@/core/entities'
 import type { ConfigPreco } from '@/core/pricing/types'
+import { decodificarCampo1TabelaPreco } from '@/core/pricing/tabelas'
 
 const cacheConfig = new Map<string, ConfigTenant>()
 
@@ -111,11 +112,15 @@ export async function carregarConfigPreco(tenantId: string): Promise<ConfigPreco
   ])
 
   const config: ConfigPreco = {
-    tabelaBase: (baseRes.data ?? []).map((r) => ({
-      campo1Valor: r.campo1_valor,
-      campo2Valor: r.campo2_valor,
-      preco:       Number(r.preco),
-    })),
+    tabelaBase: (baseRes.data ?? []).map((r) => {
+      const decoded = decodificarCampo1TabelaPreco(r.campo1_valor)
+      return {
+        tabelaPreco: decoded.tabelaPreco,
+        campo1Valor: decoded.campo1Valor,
+        campo2Valor: r.campo2_valor,
+        preco:       Number(r.preco),
+      }
+    }),
     tabelaExtras: (extraRes.data ?? []).map((r) => ({
       campoNome:       r.campo_nome,
       opcaoValor:      r.opcao_valor,

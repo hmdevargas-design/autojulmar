@@ -3,6 +3,7 @@ import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import SeletorEstadoOrcamento from '@/components/orcamentos/SeletorEstadoOrcamento'
+import BotaoImprimirOrcamento from '@/components/orcamentos/BotaoImprimirOrcamento'
 import { formatarNumeroOrcamento, labelCategoriaOrcamento, labelProdutoOrcamento } from '@/lib/orcamentos/config'
 
 interface Props {
@@ -93,13 +94,18 @@ export default async function PaginaDetalheOrcamento({ params }: Props) {
         </section>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap gap-3">
+        <BotaoImprimirOrcamento
+          orcamentoId={orcamento.id}
+          label="Imprimir talao"
+          className="inline-flex px-4 py-2 bg-gold text-slate-900 text-sm font-medium rounded-xl hover:bg-gold-dark transition-colors shadow-sm disabled:opacity-50"
+        />
         <a
           href={`/api/orcamentos/${orcamento.id}/pdf`}
           target="_blank"
-          className="inline-flex px-4 py-2 bg-gold text-slate-900 text-sm font-medium rounded-xl hover:bg-gold-dark transition-colors shadow-sm"
+          className="inline-flex px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
         >
-          Abrir PDF
+          Abrir PDF A4
         </a>
       </div>
     </div>

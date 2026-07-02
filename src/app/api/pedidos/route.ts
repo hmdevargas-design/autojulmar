@@ -10,9 +10,10 @@ const schemaCriarPedido = z.object({
   tenantId:          z.string().min(1),
   clienteNome:       z.string().min(1),
   clienteContacto:   z.string().min(9),
-  tipoClienteId:     z.string(),
+  tipoClienteId:     z.string().optional().default(''),
   estadoId:          z.string(),
   dados:             z.record(z.string(), z.unknown()),
+  tabelaPreco:       z.string().optional().default('balcao'),
   material:          z.string(),
   tipoTapete:        z.array(z.string()),
   extras:            z.array(z.string()).default([]),
@@ -78,22 +79,13 @@ export async function POST(request: NextRequest) {
       clienteId = clienteExistente.id
       tipoNomeCliente = (clienteExistente.tipos_cliente as unknown as { nome: string } | null)?.nome ?? ''
     } else {
-      const { data: tipoCliente } = await supabaseAdmin
-        .from('tipos_cliente')
-        .select('id, nome')
-        .eq('tenant_id', input.tenantId)
-        .eq('id', input.tipoClienteId)
-        .single()
-
-      tipoNomeCliente = tipoCliente?.nome ?? ''
-
       const { data: novoCliente, error: erroCliente } = await supabaseAdmin
         .from('clientes')
         .insert({
           tenant_id:       input.tenantId,
           nome:            input.clienteNome,
           contacto:        input.clienteContacto,
-          tipo_cliente_id: tipoCliente?.id ?? null,
+          tipo_cliente_id: null,
         })
         .select('id')
         .single()
@@ -121,25 +113,30 @@ export async function POST(request: NextRequest) {
     // 3. Calcula preço
     const configPreco = await carregarConfigPreco(input.tenantId)
 
-    const { data: tipoClienteInfo } = await supabaseAdmin
-      .from('tipos_cliente')
-      .select('id, desconto_pct')
-      .eq('tenant_id', input.tenantId)
-      .eq('id', input.tipoClienteId)
-      .single()
+    const { data: tipoClienteInfo } = input.tipoClienteId
+      ? await supabaseAdmin
+          .from('tipos_cliente')
+          .select('id, nome, desconto_pct')
+          .eq('tenant_id', input.tenantId)
+          .eq('id', input.tipoClienteId)
+          .single()
+      : { data: null }
 
     const descontoPct = tipoClienteInfo ? Number(tipoClienteInfo.desconto_pct) : 0
+    tipoNomeCliente = tipoClienteInfo?.nome ?? tipoNomeCliente
 
     let precoBase = 0, somaExtras = 0, subtotal = 0, valorFinal = 0
 
     if (configPreco) {
       const resultado = calcularPreco(
         {
+          tabelaPreco:       input.tabelaPreco,
           campo1Valor:       input.material,
           campo2Valor:       input.tipoTapete[0] ?? '',
+          campo2Valores:     input.tipoTapete,
           extras:            input.extras,
           extrasQuantidades: input.extrasQuantidades,
-          tipoClienteId:     tipoClienteInfo?.id ?? input.tipoClienteId,
+          tipoClienteId:     tipoClienteInfo?.id ?? '',
           quantidade:        input.quantidade,
           descontoManual:    input.descontoManual,
           sinal:             input.sinal,
@@ -167,6 +164,9 @@ export async function POST(request: NextRequest) {
     // 5. Guardar dados completos no JSONB (inclui material/tipo_tapete para o dashboard)
     const dadosCompletos = {
       ...input.dados,
+      tabela_preco:       input.tabelaPreco,
+      tipo_cliente_pedido_id: tipoClienteInfo?.id ?? null,
+      tipo_cliente_pedido_nome: tipoClienteInfo?.nome ?? null,
       material:          input.material,
       tipo_tapete:       input.tipoTapete,
       extras:            input.extras,

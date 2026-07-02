@@ -32,6 +32,7 @@ export default function FiltrosPedidos({ q, estadoId, de, ate, estados }: Props)
 
   function construirParams(novoQ: string, novoEstadoId: string, novoDE: string, novoATE: string) {
     const params = new URLSearchParams(searchParams.toString())
+    params.delete('pagina')
 
     const qTrimmed = novoQ.trim()
     if (qTrimmed) params.set('q', qTrimmed)

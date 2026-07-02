@@ -2,13 +2,14 @@
 // Partilhado entre interface web (tempo real) e WhatsApp (servidor)
 
 import type { InputPreco, ConfigPreco, ResultadoPreco } from './types'
+import { normalizarTabelaPreco, TABELA_PRECO_PADRAO } from './tabelas'
 
 /**
  * Calcula o preço final com base nos inputs e configuração do tenant.
  * Função pura: mesmos inputs → mesmo output, sem side effects.
  *
  * Fórmula:
- *   1. precoBase     = tabelaBase[campo1][campo2]
+ *   1. precoBase     = soma da tabelaBase[campo1][campo2] para cada parte selecionada
  *   2. somaExtras    = soma de cada extra seleccionado
  *   3. precoUnitario = precoBase + somaExtras
  *   4. subtotal      = precoUnitario × quantidade
@@ -20,13 +21,31 @@ export function calcularPreco(
   input: InputPreco,
   config: ConfigPreco
 ): ResultadoPreco {
-  // 1. Preço base
-  const entradaBase = config.tabelaBase.find(
-    (t) =>
-      t.campo1Valor === input.campo1Valor &&
-      t.campo2Valor === input.campo2Valor
-  )
-  const precoBase = entradaBase?.preco ?? 0
+  const tabelaPreco = normalizarTabelaPreco(input.tabelaPreco)
+
+  // 1. Preço base (suporta produto composto por varias partes)
+  const campo2Valores = (input.campo2Valores?.length ? input.campo2Valores : [input.campo2Valor])
+    .filter(Boolean)
+
+  const parcelasBase = campo2Valores.map((campo2Valor) => {
+    const entradaBase = config.tabelaBase.find(
+      (t) =>
+        t.tabelaPreco === tabelaPreco &&
+        t.campo1Valor === input.campo1Valor &&
+        t.campo2Valor === campo2Valor
+    ) ?? (tabelaPreco !== TABELA_PRECO_PADRAO
+      ? config.tabelaBase.find(
+          (t) =>
+            t.tabelaPreco === TABELA_PRECO_PADRAO &&
+            t.campo1Valor === input.campo1Valor &&
+            t.campo2Valor === campo2Valor
+        )
+      : undefined
+    )
+    return { campo2Valor, preco: entradaBase?.preco ?? 0 }
+  })
+
+  const precoBase = parcelasBase.reduce((acc, parcela) => acc + parcela.preco, 0)
 
   // 2. Extras (suporta quantidade por extra, ex: velcro × 3)
   const somaExtras = input.extras.reduce((acc, extra) => {
@@ -59,7 +78,9 @@ export function calcularPreco(
   const valorEmFalta = arredondar(valorFinal - sinal)
 
   return {
+    tabelaPreco,
     precoBase,
+    parcelasBase,
     somaExtras,
     precoUnitario,
     subtotal,
@@ -81,7 +102,10 @@ export function temEntradaBase(
   config: ConfigPreco
 ): boolean {
   return config.tabelaBase.some(
-    (t) => t.campo1Valor === campo1Valor && t.campo2Valor === campo2Valor
+    (t) =>
+      t.tabelaPreco === TABELA_PRECO_PADRAO &&
+      t.campo1Valor === campo1Valor &&
+      t.campo2Valor === campo2Valor
   )
 }
 
