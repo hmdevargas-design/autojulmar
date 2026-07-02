@@ -170,7 +170,9 @@ export async function POST(request: NextRequest) {
         'humano',
         { messageId: msg.messageid ?? msg.messageId, type: msg.type },
       )
-      await pausarPorTakeoverHumano(clienteTel)
+      if (!modoObservadorAtivo()) {
+        await pausarPorTakeoverHumano(clienteTel)
+      }
       return NextResponse.json({ ok: true })
     }
 

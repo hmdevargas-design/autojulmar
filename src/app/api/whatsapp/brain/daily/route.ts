@@ -93,6 +93,10 @@ function isAgente(log: ConversationLogRow): boolean {
   return actor === 'agente' || (log.direction === 'outbound' && actor !== 'humano')
 }
 
+function contarTelefonesUnicos(logs: ConversationLogRow[]): number {
+  return new Set(logs.map(l => l.telefone)).size
+}
+
 function detectarRedundancia(logs: ConversationLogRow[]): Array<{ telefone: string; motivo: string }> {
   const porTelefone = new Map<string, ConversationLogRow[]>()
   for (const log of logs) {
@@ -117,8 +121,15 @@ function detectarRedundancia(logs: ConversationLogRow[]): Array<{ telefone: stri
   return achados.slice(0, 10)
 }
 
+function conteudoUtilParaAprendizagem(content: string): boolean {
+  const texto = content.replace(/\s+/g, ' ').trim()
+  if (texto.length < 8) return false
+  if (/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+$/u.test(texto)) return false
+  return true
+}
+
 function exemplosAtendimentoHumano(logs: ConversationLogRow[]): Array<{ telefone: string; cliente: string; humano: string }> {
-  const exemplos: Array<{ telefone: string; cliente: string; humano: string }> = []
+  const candidatos: Array<{ telefone: string; cliente: string; humano: string; score: number }> = []
   const porTelefone = new Map<string, ConversationLogRow[]>()
 
   for (const log of logs) {
@@ -130,22 +141,28 @@ function exemplosAtendimentoHumano(logs: ConversationLogRow[]): Array<{ telefone
     for (let i = 0; i < linhas.length; i += 1) {
       const atual = linhas[i]
       if (!atual.content || !isHumano(atual)) continue
+      if (!conteudoUtilParaAprendizagem(atual.content)) continue
 
       const clienteAnterior = linhas
-        .slice(Math.max(0, i - 4), i)
+        .slice(0, i)
         .reverse()
         .find(l => l.direction === 'inbound' && l.content)
 
-      exemplos.push({
+      const cliente = clienteAnterior?.content ?? ''
+      candidatos.push({
         telefone,
-        cliente: clienteAnterior?.content ?? '',
+        cliente,
         humano: atual.content,
+        score: (cliente ? 10 : 0) + Math.min(5, Math.floor(atual.content.length / 80)),
       })
       break
     }
   }
 
-  return exemplos.slice(0, 8)
+  return candidatos
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(({ telefone, cliente, humano }) => ({ telefone, cliente, humano }))
 }
 
 function oportunidadesAprendizagem(logs: ConversationLogRow[]): string[] {
@@ -180,7 +197,7 @@ function sugestoes(
 ): string[] {
   const saidas: string[] = []
   const redundancias = detectarRedundancia(logs)
-  const takeover = logs.filter(l => l.event_type === 'human_takeover').length
+  const takeover = contarTelefonesUnicos(logs.filter(l => l.event_type === 'human_takeover'))
   const falhas = outbox.filter(o => o.status === 'failed').length
   const pendentes = outbox.filter(o => o.status === 'pending' || o.status === 'locked').length
   const memoriasTakeover = memorias.filter(m => m.state === 'takeover').length
@@ -252,6 +269,7 @@ export async function GET(request: NextRequest) {
   const outboxRows = (outbox ?? []) as OutboxRow[]
   const memoryRows = (memorias ?? []) as MemoryRow[]
   const redundancias = detectarRedundancia(logRows)
+  const takeoverRows = logRows.filter(l => l.event_type === 'human_takeover')
 
   return NextResponse.json({
     ok: true,
@@ -264,8 +282,10 @@ export async function GET(request: NextRequest) {
       humanOutbound: logRows.filter(l => l.direction === 'outbound' && isHumano(l)).length,
       agentOutbound: logRows.filter(l => l.direction === 'outbound' && isAgente(l)).length,
       system: logRows.filter(l => l.direction === 'system').length,
-      conversations: new Set(logRows.map(l => l.telefone)).size,
-      takeover: logRows.filter(l => l.event_type === 'human_takeover').length,
+      conversations: contarTelefonesUnicos(logRows),
+      takeover: contarTelefonesUnicos(takeoverRows),
+      takeoverConversations: contarTelefonesUnicos(takeoverRows),
+      takeoverEvents: takeoverRows.length,
       outboxSent: outboxRows.filter(o => o.status === 'sent').length,
       outboxFailed: outboxRows.filter(o => o.status === 'failed').length,
       outboxPending: outboxRows.filter(o => o.status === 'pending' || o.status === 'locked').length,
@@ -290,6 +310,7 @@ export async function GET(request: NextRequest) {
       messageCount: m.message_count,
       lastUserMessage: m.last_user_message,
       lastAssistantMessage: m.last_assistant_message,
+      lastObservedOutbound: m.last_assistant_message,
       lastInteractionAt: m.last_interaction_at,
     })),
     suggestions: sugestoes(logRows, outboxRows, memoryRows),
