@@ -50,6 +50,7 @@ const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 m
 export default function FormularioPedido({ config, configPreco, tenantId, tenantSlug }: Props) {
   const [submetido, setSubmetido] = useState(false)
   const [numeroPedido, setNumeroPedido] = useState<number | null>(null)
+  const [valorCriado, setValorCriado] = useState<number | null>(null)
   const [extrasQuantidades, setExtrasQuantidades] = useState<Record<string, number>>({})
   const [clienteAutoPreenchido, setClienteAutoPreenchido] = useState(false)
   const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; contacto: string; tipo_cliente_id: string }[]>([])
@@ -213,6 +214,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
       }
 
       setNumeroPedido(resultadoAPI.numeroPedido)
+      setValorCriado(Number(resultadoAPI.valorFinal ?? data.valor))
       setSubmetido(true)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Erro ao criar pedido')
@@ -225,7 +227,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
         <div className="text-3xl mb-2">✅</div>
         <h2 className="text-xl font-bold text-green-600 dark:text-green-400">Pedido #{numeroPedido} criado</h2>
         <p className="text-slate-600 dark:text-slate-300 mt-1">
-          Valor final: <strong>{resultado.valorFinal.toFixed(2)}€</strong>
+          Valor final: <strong>{Number(valorCriado ?? resultado.valorFinal).toFixed(2)}€</strong>
         </p>
         <div className="mt-4 flex gap-3 justify-center">
           <a
@@ -235,7 +237,7 @@ export default function FormularioPedido({ config, configPreco, tenantId, tenant
             Ver listagem
           </a>
           <button
-            onClick={() => { setSubmetido(false); setNumeroPedido(null) }}
+            onClick={() => { setSubmetido(false); setNumeroPedido(null); setValorCriado(null) }}
             className="px-4 py-2 bg-gold text-slate-900 rounded-lg text-sm hover:bg-gold-dark"
           >
             Novo pedido

@@ -146,11 +146,14 @@ export async function POST(request: NextRequest) {
       precoBase  = resultado.precoBase
       somaExtras = resultado.somaExtras
       subtotal   = resultado.subtotal
-      // valorOverride permite ao operador definir o preço manualmente
-      // (usado quando não há entrada na tabela base, ex: malas sem preço fixo)
-      valorFinal = (input.valorOverride != null && input.valorOverride > 0 && resultado.valorFinal === 0)
-        ? input.valorOverride
-        : resultado.valorFinal
+      valorFinal = resultado.valorFinal
+    }
+
+    // Permite ao operador ajustar o valor final logo na criação.
+    // O formulário envia este campo já preenchido com o cálculo automático;
+    // se o operador editar, gravamos exactamente o valor submetido.
+    if (input.valorOverride != null) {
+      valorFinal = input.valorOverride
     }
 
     // 4. Próximo número de pedido
