@@ -23,7 +23,7 @@ select
   '[{"valor":"corpo","label":"Olá {primeiroNome}! O seu pedido *#{numeroPedido}*{tipoTapete} está pronto para levantamento. Obrigado — {lojaNome} 🎉","ordem":1,"activo":true}]'::jsonb,
   false,
   900,
-  true,
+  false,
   false,
   null
 from alvo
@@ -37,6 +37,6 @@ set
   end,
   obrigatorio = false,
   ordem = 900,
-  activo = true,
+  activo = false,
   e_variavel_preco = false,
   papel_preco = null;

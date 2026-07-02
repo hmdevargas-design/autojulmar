@@ -72,7 +72,7 @@ export async function guardarMensagemPedidoPronto(tenantId: string, corpo: strin
       ],
       obrigatorio: false,
       ordem: 900,
-      activo: true,
+      activo: false,
       e_variavel_preco: false,
       papel_preco: null,
     }, { onConflict: 'tenant_id,nome' })
