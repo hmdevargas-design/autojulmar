@@ -77,15 +77,21 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, onClose, on
   const extras   = dados.extras?.join(', ') || '—'
   const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
   const msgWhatsApp = `Olá ${primeiroNome}! O seu pedido *#${pedido.numero_pedido}*${dados.tipoTapete?.[0] ? ` (${dados.tipoTapete[0]})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
+  const [mensagemWhatsapp, setMensagemWhatsapp] = useState(msgWhatsApp)
 
-  async function mudarEstado(novoEstado: EstadoProducao, enviarWhatsapp = false) {
+  async function mudarEstado(novoEstado: EstadoProducao, enviarWhatsapp = false, mensagem?: string) {
     setErro('')
     setLoading(true)
     try {
       const res = await fetch(`/api/pedidos/${pedido.id}/estado-producao`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estadoProducao: novoEstado, tenantId, enviarWhatsapp }),
+        body: JSON.stringify({
+          estadoProducao: novoEstado,
+          tenantId,
+          enviarWhatsapp,
+          mensagemWhatsapp: enviarWhatsapp ? mensagem : undefined,
+        }),
       })
       if (!res.ok) {
         const json = await res.json()
@@ -165,20 +171,30 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, onClose, on
           {showConfirmWhatsApp ? (
             <div className="space-y-2">
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Mensagem a enviar:</p>
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                {msgWhatsApp}
-              </div>
-              <div className="flex gap-2 pt-1">
+              <textarea
+                value={mensagemWhatsapp}
+                onChange={e => setMensagemWhatsapp(e.target.value)}
+                rows={5}
+                className="w-full bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   onClick={() => setShowConfirmWhatsApp(false)}
-                  className="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs"
+                  className="py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => mudarEstado('avisado', true)}
+                  onClick={() => mudarEstado('avisado', false)}
                   disabled={loading}
-                  className="flex-1 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors text-xs font-medium"
+                  className="py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors text-xs"
+                >
+                  {loading ? '…' : 'Marcar sem envio'}
+                </button>
+                <button
+                  onClick={() => mudarEstado('avisado', true, mensagemWhatsapp)}
+                  disabled={loading || mensagemWhatsapp.trim().length === 0}
+                  className="col-span-2 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors text-xs font-medium"
                 >
                   {loading ? '…' : 'Confirmar envio WhatsApp'}
                 </button>

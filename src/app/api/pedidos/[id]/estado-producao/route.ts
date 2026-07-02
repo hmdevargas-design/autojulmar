@@ -6,9 +6,10 @@ import { z } from 'zod'
 const ORDEM_ESTADOS = ['corte', 'acabamento', 'separacao', 'avisar', 'avisado', 'entregue'] as const
 
 const schema = z.object({
-  estadoProducao: z.enum(ORDEM_ESTADOS),
-  tenantId:       z.string().min(1),
-  enviarWhatsapp: z.boolean().optional().default(false),
+  estadoProducao:    z.enum(ORDEM_ESTADOS),
+  tenantId:          z.string().min(1),
+  enviarWhatsapp:    z.boolean().optional().default(false),
+  mensagemWhatsapp:  z.string().max(1000).optional(),
 })
 
 export async function PATCH(
@@ -64,8 +65,14 @@ export async function PATCH(
         const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
         const tipoTapete   = Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[])[0] : ''
         const lojaNome     = process.env.WHATSAPP_LOJA_NOME ?? 'Autojulmar'
-        const msg = `Olá ${primeiroNome}! O seu pedido *#${actual.numero_pedido}*${tipoTapete ? ` (${tipoTapete})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
-        enviarMensagem(telefone, msg).catch(err =>
+        const msgPadrao = `Olá ${primeiroNome}! O seu pedido *#${actual.numero_pedido}*${tipoTapete ? ` (${tipoTapete})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
+        const msg = input.mensagemWhatsapp?.trim() || msgPadrao
+        enviarMensagem(telefone, msg, {
+          tenantId: input.tenantId,
+          source: 'producao',
+          conversationKey: telefone,
+          idempotencyKey: `producao:${id}:avisado`,
+        }).catch(err =>
           console.error('[Producao] Erro ao notificar cliente:', String(err))
         )
       }
