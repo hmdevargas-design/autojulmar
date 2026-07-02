@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { enviarMensagem } from '@/lib/whatsapp/sender'
+import { carregarMensagemPedidoPronto } from '@/lib/tenant/mensagens'
+import { renderMensagemPedidoPronto } from '@/core/messages/templates'
 import { z } from 'zod'
 
 const ORDEM_ESTADOS = ['corte', 'acabamento', 'separacao', 'avisar', 'avisado', 'entregue'] as const
@@ -65,7 +67,13 @@ export async function PATCH(
         const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
         const tipoTapete   = Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[])[0] : ''
         const lojaNome     = process.env.WHATSAPP_LOJA_NOME ?? 'Autojulmar'
-        const msgPadrao = `Olá ${primeiroNome}! O seu pedido *#${actual.numero_pedido}*${tipoTapete ? ` (${tipoTapete})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
+        const template     = await carregarMensagemPedidoPronto(input.tenantId)
+        const msgPadrao = renderMensagemPedidoPronto(template.corpo, {
+          primeiroNome,
+          numeroPedido: actual.numero_pedido,
+          tipoTapete,
+          lojaNome,
+        })
         const msg = input.mensagemWhatsapp?.trim() || msgPadrao
         enviarMensagem(telefone, msg, {
           tenantId: input.tenantId,

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { resolverTenant } from '@/lib/tenant/resolver'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
+import MensagensEditor from '@/components/admin/MensagensEditor'
+import { carregarMensagemPedidoPronto } from '@/lib/tenant/mensagens'
 
 interface Props {
   params: Promise<{ tenant: string }>
@@ -47,7 +49,7 @@ export default async function PaginaConfiguracoes({ params }: Props) {
   if (!tenant) notFound()
 
   const supabase = criarClienteAdmin()
-  const [camposRes, precosRes, extrasRes, tiposRes] = await Promise.all([
+  const [camposRes, precosRes, extrasRes, tiposRes, mensagemPedidoPronto] = await Promise.all([
     supabase
       .from('campos_definicao')
       .select('nome, label, opcoes, papel_preco')
@@ -66,6 +68,7 @@ export default async function PaginaConfiguracoes({ params }: Props) {
       .from('tipos_cliente')
       .select('id')
       .eq('tenant_id', tenant.id),
+    carregarMensagemPedidoPronto(tenant.id),
   ])
 
   const campos = camposRes.data ?? []
@@ -144,20 +147,7 @@ export default async function PaginaConfiguracoes({ params }: Props) {
             </div>
             <Badge activo />
           </div>
-          <div className="mt-4 space-y-3 text-sm">
-            <div>
-              <p className="font-medium text-slate-900 dark:text-slate-100">Pedido pronto</p>
-              <p className="text-slate-500 dark:text-slate-400">
-                Editável no quadro de produção antes do envio por WhatsApp.
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-slate-900 dark:text-slate-100">Grupo interno</p>
-              <p className="text-slate-500 dark:text-slate-400">
-                Pedido novo é enviado para o grupo configurado quando disponível.
-              </p>
-            </div>
-          </div>
+          <MensagensEditor tenantId={tenant.id} corpoInicial={mensagemPedidoPronto.corpo} />
           <div className="mt-4">
             <Acao href={`/${slug}/producao`}>Abrir produção</Acao>
           </div>

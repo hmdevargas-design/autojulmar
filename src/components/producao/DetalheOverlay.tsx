@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { EstadoProducao } from '@/core/entities/pedido'
+import { renderMensagemPedidoPronto } from '@/core/messages/templates'
 
 export interface PedidoBoard {
   id: string
@@ -57,11 +58,12 @@ interface Props {
   pedido: PedidoBoard
   tenantId: string
   lojaNome: string
+  mensagemPedidoProntoTemplate: string
   onClose: () => void
   onEstadoAlterado: () => void
 }
 
-export default function DetalheOverlay({ pedido, tenantId, lojaNome, onClose, onEstadoAlterado }: Props) {
+export default function DetalheOverlay({ pedido, tenantId, lojaNome, mensagemPedidoProntoTemplate, onClose, onEstadoAlterado }: Props) {
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [showConfirmWhatsApp, setShowConfirmWhatsApp] = useState(false)
@@ -76,7 +78,12 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, onClose, on
   const tipoTapete = dados.tipoTapete?.join(', ') ?? '—'
   const extras   = dados.extras?.join(', ') || '—'
   const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
-  const msgWhatsApp = `Olá ${primeiroNome}! O seu pedido *#${pedido.numero_pedido}*${dados.tipoTapete?.[0] ? ` (${dados.tipoTapete[0]})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
+  const msgWhatsApp = renderMensagemPedidoPronto(mensagemPedidoProntoTemplate, {
+    primeiroNome,
+    numeroPedido: pedido.numero_pedido,
+    tipoTapete: dados.tipoTapete?.[0],
+    lojaNome,
+  })
   const [mensagemWhatsapp, setMensagemWhatsapp] = useState(msgWhatsApp)
 
   async function mudarEstado(novoEstado: EstadoProducao, enviarWhatsapp = false, mensagem?: string) {

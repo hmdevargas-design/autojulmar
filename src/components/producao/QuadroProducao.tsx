@@ -18,6 +18,7 @@ interface Props {
   tenantSlug: string
   tenantNome: string
   tiposVip: string[]
+  mensagemPedidoProntoTemplate: string
 }
 
 function chaveOcultos(tenantId: string) {
@@ -39,7 +40,7 @@ function guardarOcultos(tenantId: string, ids: Set<string>) {
   } catch { /* silencioso */ }
 }
 
-export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props) {
+export default function QuadroProducao({ tenantId, tenantNome, tiposVip, mensagemPedidoProntoTemplate }: Props) {
   const [pedidos, setPedidos] = useState<PedidoBoard[]>([])
   const [tabActiva, setTabActiva] = useState<EstadoProducao>('corte')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoBoard | null>(null)
@@ -211,6 +212,7 @@ export default function QuadroProducao({ tenantId, tenantNome, tiposVip }: Props
           pedido={pedidoSeleccionado}
           tenantId={tenantId}
           lojaNome={tenantNome}
+          mensagemPedidoProntoTemplate={mensagemPedidoProntoTemplate}
           onClose={() => setPedidoSeleccionado(null)}
           onEstadoAlterado={() => {
             setPedidoSeleccionado(null)
