@@ -67,6 +67,7 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, mensagemPed
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [showConfirmWhatsApp, setShowConfirmWhatsApp] = useState(false)
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoProducao>(pedido.estado_producao)
 
   const idxActual   = ORDEM_ESTADOS.indexOf(pedido.estado_producao)
   const estadoAntes = idxActual > 0 ? ORDEM_ESTADOS[idxActual - 1] : null
@@ -116,12 +117,16 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, mensagemPed
 
   function handleAvancar() {
     if (!estadoDepois) return
-    // Avançar de AVISAR requer confirmação WhatsApp
-    if (pedido.estado_producao === 'avisar' && estadoDepois === 'avisado') {
+    solicitarMudancaEstado(estadoDepois)
+  }
+
+  function solicitarMudancaEstado(novoEstado: EstadoProducao) {
+    if (novoEstado === pedido.estado_producao) return
+    if (novoEstado === 'avisado') {
       setShowConfirmWhatsApp(true)
       return
     }
-    mudarEstado(estadoDepois)
+    mudarEstado(novoEstado)
   }
 
   return (
@@ -208,22 +213,51 @@ export default function DetalheOverlay({ pedido, tenantId, lojaNome, mensagemPed
               </div>
             </div>
           ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={() => estadoAntes && mudarEstado(estadoAntes)}
-                disabled={!estadoAntes || loading}
-                className="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs"
-              >
-                ← {estadoAntes ? LABEL_ESTADO[estadoAntes] : '—'}
-              </button>
-              <button
-                onClick={handleAvancar}
-                disabled={!estadoDepois || loading}
-                className="flex-1 py-2 rounded-xl text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
-                style={{ backgroundColor: estadoDepois ? COR_ESTADO[estadoDepois] : '#ccc' }}
-              >
-                {loading ? '…' : estadoDepois ? `${LABEL_ESTADO[estadoDepois]} →` : 'Concluído'}
-              </button>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label htmlFor="estado-producao-selector" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Mover para etapa
+                </label>
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <select
+                    id="estado-producao-selector"
+                    value={estadoSeleccionado}
+                    onChange={e => setEstadoSeleccionado(e.target.value as EstadoProducao)}
+                    disabled={loading}
+                    className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-slate-500 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200"
+                  >
+                    {ORDEM_ESTADOS.map(estado => (
+                      <option key={estado} value={estado}>{LABEL_ESTADO[estado]}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => solicitarMudancaEstado(estadoSeleccionado)}
+                    disabled={loading || estadoSeleccionado === pedido.estado_producao}
+                    className="px-3 py-2 rounded-xl text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    style={{ backgroundColor: estadoSeleccionado !== pedido.estado_producao ? COR_ESTADO[estadoSeleccionado] : '#ccc' }}
+                  >
+                    {loading ? '…' : 'Mover'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => estadoAntes && mudarEstado(estadoAntes)}
+                  disabled={!estadoAntes || loading}
+                  className="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  ← {estadoAntes ? LABEL_ESTADO[estadoAntes] : '—'}
+                </button>
+                <button
+                  onClick={handleAvancar}
+                  disabled={!estadoDepois || loading}
+                  className="flex-1 py-2 rounded-xl text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                  style={{ backgroundColor: estadoDepois ? COR_ESTADO[estadoDepois] : '#ccc' }}
+                >
+                  {loading ? '…' : estadoDepois ? `${LABEL_ESTADO[estadoDepois]} →` : 'Concluído'}
+                </button>
+              </div>
             </div>
           )}
         </div>

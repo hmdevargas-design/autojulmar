@@ -37,17 +37,18 @@ export async function PATCH(
     }
 
     const idxActual = ORDEM_ESTADOS.indexOf(actual.estado_producao as typeof ORDEM_ESTADOS[number])
-    const idxNovo   = ORDEM_ESTADOS.indexOf(input.estadoProducao)
 
-    if (Math.abs(idxNovo - idxActual) !== 1) {
-      return NextResponse.json(
-        { erro: 'Transição inválida — apenas um estado de cada vez' },
-        { status: 400 }
-      )
+    if (actual.estado_producao === input.estadoProducao) {
+      return NextResponse.json({ ok: true })
     }
 
     const historico = Array.isArray(actual.historico_producao) ? [...actual.historico_producao] : []
-    historico.push({ estado: input.estadoProducao, timestamp: new Date().toISOString() })
+    historico.push({
+      de: actual.estado_producao,
+      estado: input.estadoProducao,
+      salto: idxActual >= 0 && Math.abs(ORDEM_ESTADOS.indexOf(input.estadoProducao) - idxActual) > 1,
+      timestamp: new Date().toISOString(),
+    })
 
     const { error } = await supabase
       .from('pedidos')
