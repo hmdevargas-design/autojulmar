@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { enviarMensagem } from '@/lib/whatsapp/sender'
+import { carregarMensagemPedidoPronto } from '@/lib/tenant/mensagens'
+import { renderMensagemPedidoPronto } from '@/core/messages/templates'
 import { z } from 'zod'
 
 const ORDEM_ESTADOS = ['corte', 'acabamento', 'separacao', 'avisar', 'avisado', 'entregue'] as const
 
 const schema = z.object({
-  estadoProducao: z.enum(ORDEM_ESTADOS),
-  tenantId:       z.string().min(1),
-  enviarWhatsapp: z.boolean().optional().default(false),
+  estadoProducao:    z.enum(ORDEM_ESTADOS),
+  tenantId:          z.string().min(1),
+  enviarWhatsapp:    z.boolean().optional().default(false),
+  mensagemWhatsapp:  z.string().max(1000).optional(),
 })
 
 export async function PATCH(
@@ -34,17 +37,18 @@ export async function PATCH(
     }
 
     const idxActual = ORDEM_ESTADOS.indexOf(actual.estado_producao as typeof ORDEM_ESTADOS[number])
-    const idxNovo   = ORDEM_ESTADOS.indexOf(input.estadoProducao)
 
-    if (Math.abs(idxNovo - idxActual) !== 1) {
-      return NextResponse.json(
-        { erro: 'Transição inválida — apenas um estado de cada vez' },
-        { status: 400 }
-      )
+    if (actual.estado_producao === input.estadoProducao) {
+      return NextResponse.json({ ok: true })
     }
 
     const historico = Array.isArray(actual.historico_producao) ? [...actual.historico_producao] : []
-    historico.push({ estado: input.estadoProducao, timestamp: new Date().toISOString() })
+    historico.push({
+      de: actual.estado_producao,
+      estado: input.estadoProducao,
+      salto: idxActual >= 0 && Math.abs(ORDEM_ESTADOS.indexOf(input.estadoProducao) - idxActual) > 1,
+      timestamp: new Date().toISOString(),
+    })
 
     const { error } = await supabase
       .from('pedidos')
@@ -64,8 +68,20 @@ export async function PATCH(
         const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
         const tipoTapete   = Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[])[0] : ''
         const lojaNome     = process.env.WHATSAPP_LOJA_NOME ?? 'Autojulmar'
-        const msg = `Olá ${primeiroNome}! O seu pedido *#${actual.numero_pedido}*${tipoTapete ? ` (${tipoTapete})` : ''} está pronto para levantamento. Obrigado — ${lojaNome} 🎉`
-        enviarMensagem(telefone, msg).catch(err =>
+        const template     = await carregarMensagemPedidoPronto(input.tenantId)
+        const msgPadrao = renderMensagemPedidoPronto(template.corpo, {
+          primeiroNome,
+          numeroPedido: actual.numero_pedido,
+          tipoTapete,
+          lojaNome,
+        })
+        const msg = input.mensagemWhatsapp?.trim() || msgPadrao
+        enviarMensagem(telefone, msg, {
+          tenantId: input.tenantId,
+          source: 'producao',
+          conversationKey: telefone,
+          idempotencyKey: `producao:${id}:avisado`,
+        }).catch(err =>
           console.error('[Producao] Erro ao notificar cliente:', String(err))
         )
       }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 import { enviarMensagem } from '@/lib/whatsapp/sender'
+import { carregarMensagemPedidoPronto } from '@/lib/tenant/mensagens'
+import { renderMensagemPedidoPronto } from '@/core/messages/templates'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -39,14 +41,25 @@ export async function PUT(
       // Busca número do pedido e contacto do cliente
       const { data: pedido } = await supabase
         .from('pedidos')
-        .select('numero_pedido, clientes ( contacto )')
+        .select('numero_pedido, dados, clientes ( nome, contacto )')
         .eq('id', id)
         .single()
 
-      const contacto = (pedido?.clientes as unknown as { contacto?: string } | null)?.contacto
+      const cliente = pedido?.clientes as unknown as { nome?: string; contacto?: string } | null
+      const dados = pedido?.dados as Record<string, unknown> | undefined
+      const contacto = cliente?.contacto
       if (contacto) {
         const telefone = contacto.replace(/\D/g, '')
-        const msgPadrao = `✅ O seu pedido *#${pedido?.numero_pedido}* está pronto para levantamento!\n\n🏪 *Autojulmar* — obrigado pela preferência.`
+        const primeiroNome = (cliente?.nome ?? '').split(' ')[0]
+        const tipoTapete = Array.isArray(dados?.tipoTapete) ? (dados.tipoTapete as string[])[0] : ''
+        const lojaNome = process.env.WHATSAPP_LOJA_NOME ?? 'Autojulmar'
+        const template = await carregarMensagemPedidoPronto(input.tenantId)
+        const msgPadrao = renderMensagemPedidoPronto(template.corpo, {
+          primeiroNome,
+          numeroPedido: pedido?.numero_pedido ?? '',
+          tipoTapete,
+          lojaNome,
+        })
         const msg = input.mensagemCustom?.trim() || msgPadrao
         enviarMensagem(telefone, msg).catch(err =>
           console.error('[WhatsApp] Erro ao notificar cliente:', String(err))

@@ -9,5 +9,5 @@ export default async function PaginaAdmin({ params }: Props) {
   const { tenant: slug } = await params
   const tenant = await resolverTenant(slug)
   if (!tenant) notFound()
-  redirect(`/${slug}/admin/precos`)
+  redirect(`/${slug}/admin/configuracoes`)
 }

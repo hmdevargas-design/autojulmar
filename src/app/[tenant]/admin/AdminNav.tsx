@@ -10,6 +10,7 @@ interface Props {
 }
 
 const links = (slug: string) => [
+  { href: `/${slug}/admin/configuracoes`, label: 'Configurações' },
   { href: `/${slug}/admin/precos`,        label: 'Tabela de Preços' },
   { href: `/${slug}/admin/tipos-cliente`, label: 'Tipos de Cliente' },
   { href: `/${slug}/admin/estados`,       label: 'Estados' },
