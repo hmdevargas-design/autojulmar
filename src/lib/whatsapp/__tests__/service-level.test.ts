@@ -39,6 +39,20 @@ describe('Agente Julmar service level', () => {
       .toContain('confirmar dados')
   })
 
+  it('turns an inferred seat count into a confirmation question', () => {
+    const resposta = 'A Renault Grand Scenic e uma carrinha de 7 lugares. Pretende o jogo completo?'
+    expect(aplicarPoliticaRespostaPrimaria(
+      'primary',
+      resposta,
+      'Quero tapetes para Renault Grand Scenic 2018.',
+    )).toBe('A sua viatura tem 7 lugares? Pretende os tapetes para todos os lugares?')
+    expect(aplicarPoliticaRespostaPrimaria(
+      'primary',
+      resposta,
+      'Tenho uma Renault Grand Scenic 2018 de 7 lugares.',
+    )).toBe(resposta)
+  })
+
   it('keeps full mode unchanged', () => {
     const resposta = 'O jogo fica por 72 EUR.'
     expect(aplicarPoliticaRespostaPrimaria('full', resposta)).toBe(resposta)

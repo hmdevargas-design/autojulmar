@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as {
     telefone?: string
     mensagem?: string
+    freshConversation?: boolean
   } | null
   const telefone = (body?.telefone ?? '').replace(/\D/g, '')
   const mensagem = (body?.mensagem ?? '').trim()
@@ -54,11 +55,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const simulacao = await simularRespostaAgenteJulmar(telefone, mensagem)
+    const freshConversation = body?.freshConversation === true
+    const simulacao = await simularRespostaAgenteJulmar(
+      telefone,
+      mensagem,
+      { freshConversation },
+    )
     return NextResponse.json({
       ok: true,
       dryRun: true,
       forcedRole: 'cliente',
+      freshConversation,
       sendsMessages: false,
       writesSession: false,
       ...simulacao,

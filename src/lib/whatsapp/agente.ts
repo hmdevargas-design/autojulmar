@@ -965,6 +965,7 @@ export interface SimulacaoRespostaAgenteJulmar {
 export async function simularRespostaAgenteJulmar(
   telefone: string,
   mensagem: string,
+  options: { freshConversation?: boolean } = {},
 ): Promise<SimulacaoRespostaAgenteJulmar> {
   const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
   const nomeOwner = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'
@@ -977,7 +978,9 @@ export async function simularRespostaAgenteJulmar(
     carregarInstrucoes(tenant.id),
     carregarTabelaPrecos(tenant.id),
     carregarPerfilCliente(tenant.id, telefone),
-    obterMemoriaConversa(tenant.id, telefone),
+    options.freshConversation
+      ? Promise.resolve(null)
+      : obterMemoriaConversa(tenant.id, telefone),
   ])
   const memoriaCompacta = memoriaParaPrompt(memoriaConversa)
   const primeiraMensagemCliente = deveUsarSaudacaoAtiva(memoriaConversa)
@@ -998,7 +1001,11 @@ export async function simularRespostaAgenteJulmar(
     systemPrompt,
     [{ role: 'user', content: mensagem }],
   )
-  const respostaFinal = aplicarPoliticaRespostaPrimaria(nivelServico, respostaOriginal)
+  const respostaFinal = aplicarPoliticaRespostaPrimaria(
+    nivelServico,
+    respostaOriginal,
+    mensagem,
+  )
 
   return {
     nivelServico,
@@ -1172,6 +1179,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     resposta = aplicarPoliticaRespostaPrimaria(
       obterNivelServicoAgenteJulmar(),
       resposta,
+      mensagem,
     )
   }
 

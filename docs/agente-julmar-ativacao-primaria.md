@@ -49,6 +49,7 @@ Uma barreira aplicada depois da resposta do modelo converte qualquer tentativa d
 2. Definir `WHATSAPP_OUTBOX_DRY_RUN=true` e `WHATSAPP_SEND_ENABLED=false`.
 3. Manter `WHATSAPP_OBSERVER_MODE=true` e `WHATSAPP_AGENT_ENABLED=false`.
 4. Chamar o endpoint protegido `POST /api/whatsapp/agent/dry-run` com telefone e mensagem.
+   Para simular um primeiro contacto sem memoria anterior, incluir `freshConversation=true`.
 5. Simular cenarios de saudacao, material, varias viaturas, 7 lugares, preco, prazo, stock, desconto e estado de pedido.
 6. Confirmar que os cenarios sensiveis resultam em escalamento e que a resposta declara `sendsMessages=false` e `writesSession=false`.
 
