@@ -53,6 +53,12 @@ describe('Agente Julmar service level', () => {
     )).toBe(resposta)
   })
 
+  it('removes customer-facing text before an escalation marker', () => {
+    const resposta = 'Vou confirmar disponibilidade e valor.\n\n[ESCALAR] Orcamento completo para a equipa.'
+    expect(aplicarPoliticaRespostaPrimaria('primary', resposta, 'Qual e o valor?'))
+      .toBe('[ESCALAR] Orcamento completo para a equipa.')
+  })
+
   it('keeps full mode unchanged', () => {
     const resposta = 'O jogo fica por 72 EUR.'
     expect(aplicarPoliticaRespostaPrimaria('full', resposta)).toBe(resposta)

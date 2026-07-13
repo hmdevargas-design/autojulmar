@@ -40,15 +40,16 @@ export function aplicarPoliticaRespostaPrimaria(
   resposta: string,
   mensagemCliente = '',
 ): string {
-  if (nivel !== 'primary' || resposta.startsWith('[ESCALAR]')) return resposta
+  if (nivel !== 'primary') return resposta
+
+  const indiceEscalamento = resposta.indexOf('[ESCALAR]')
+  if (indiceEscalamento >= 0) return resposta.slice(indiceEscalamento).trim()
 
   if (resposta.startsWith('[PEDIDO_PENDENTE]')) {
     return '[ESCALAR] Cliente pretende avancar com o pedido; confirmar dados, preco e condicoes antes de criar.'
   }
 
-  const lugaresMencionados = resposta.match(
-    /\b(?:e|é|tem|possui|configuracao|configura[çc][aã]o)\b.{0,40}\b([789])\s+lugares\b/i,
-  )
+  const lugaresMencionados = resposta.match(/\b([789])\s+lugares\b/i)
   if (
     lugaresMencionados
     && !new RegExp(`\\b${lugaresMencionados[1]}\\s+lugares\\b`, 'i').test(mensagemCliente)
