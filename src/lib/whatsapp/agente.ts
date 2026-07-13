@@ -952,6 +952,70 @@ async function tratarConfirmacao(
 
 // ─── Entrada principal ────────────────────────────────────────────────────────
 
+export interface SimulacaoRespostaAgenteJulmar {
+  nivelServico: 'primary' | 'full'
+  modelo: string
+  respostaOriginal: string
+  respostaFinal: string
+  safetyAdjusted: boolean
+  action: 'reply' | 'escalate' | 'blocked-order'
+  usedCompactMemory: boolean
+}
+
+export async function simularRespostaAgenteJulmar(
+  telefone: string,
+  mensagem: string,
+): Promise<SimulacaoRespostaAgenteJulmar> {
+  const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
+  const nomeOwner = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'
+  if (!tenantSlug) throw new Error('WHATSAPP_TENANT_SLUG nao configurado')
+  if (eAdmin(telefone)) throw new Error('dry-run aceita apenas perfil de cliente')
+
+  const tenant = await resolverTenant(tenantSlug)
+  if (!tenant) throw new Error(`Tenant nao encontrado: ${tenantSlug}`)
+
+  const [instrucoes, tabelaPrecos, perfilCliente, memoriaConversa] = await Promise.all([
+    carregarInstrucoes(tenant.id),
+    carregarTabelaPrecos(tenant.id),
+    carregarPerfilCliente(tenant.id, telefone),
+    obterMemoriaConversa(tenant.id, telefone),
+  ])
+  const memoriaCompacta = memoriaParaPrompt(memoriaConversa)
+  const primeiraMensagemCliente = deveUsarSaudacaoAtiva(memoriaConversa)
+  const nivelServico = obterNivelServicoAgenteJulmar()
+  const modelo = 'claude-sonnet-4-6'
+  const systemPrompt = buildSystemPrompt(
+    instrucoes,
+    'cliente',
+    nomeOwner,
+    tabelaPrecos,
+    perfilCliente,
+    0,
+    primeiraMensagemCliente,
+    memoriaCompacta,
+  )
+  const respostaOriginal = await chamarClaude(
+    modelo,
+    systemPrompt,
+    [{ role: 'user', content: mensagem }],
+  )
+  const respostaFinal = aplicarPoliticaRespostaPrimaria(nivelServico, respostaOriginal)
+
+  return {
+    nivelServico,
+    modelo,
+    respostaOriginal,
+    respostaFinal,
+    safetyAdjusted: respostaFinal !== respostaOriginal,
+    action: respostaFinal.startsWith('[ESCALAR]')
+      ? 'escalate'
+      : respostaFinal.startsWith('[PEDIDO_PENDENTE]')
+        ? 'blocked-order'
+        : 'reply',
+    usedCompactMemory: memoriaCompacta.length > 0,
+  }
+}
+
 export async function processarComAgente(telefone: string, mensagem: string): Promise<void> {
   const tenantSlug   = process.env.WHATSAPP_TENANT_SLUG
   const nomeOwner    = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'

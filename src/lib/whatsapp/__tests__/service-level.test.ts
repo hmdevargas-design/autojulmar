@@ -3,6 +3,7 @@ import {
   aplicarPoliticaRespostaPrimaria,
   instrucaoNivelPrimario,
   obterNivelServicoAgenteJulmar,
+  validarAmbienteDryRunPrimario,
 } from '../service-level'
 
 describe('Agente Julmar service level', () => {
@@ -41,5 +42,23 @@ describe('Agente Julmar service level', () => {
   it('keeps full mode unchanged', () => {
     const resposta = 'O jogo fica por 72 EUR.'
     expect(aplicarPoliticaRespostaPrimaria('full', resposta)).toBe(resposta)
+  })
+
+  it('requires every dry-run safety flag and an authorized number', () => {
+    const env = {
+      WHATSAPP_AGENT_ENABLED: 'false',
+      WHATSAPP_SEND_ENABLED: 'false',
+      WHATSAPP_OUTBOX_DRY_RUN: 'true',
+      WHATSAPP_OBSERVER_MODE: 'true',
+      WHATSAPP_DRY_RUN_NUMEROS: '351916958780',
+    }
+
+    expect(validarAmbienteDryRunPrimario(env, '351916958780')).toBeNull()
+    expect(validarAmbienteDryRunPrimario(
+      { ...env, WHATSAPP_SEND_ENABLED: 'true' },
+      '351916958780',
+    )).toContain('WHATSAPP_SEND_ENABLED')
+    expect(validarAmbienteDryRunPrimario(env, '351999000222'))
+      .toContain('fora de WHATSAPP_DRY_RUN_NUMEROS')
   })
 })

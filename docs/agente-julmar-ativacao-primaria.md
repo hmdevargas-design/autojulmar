@@ -31,7 +31,8 @@ Uma barreira aplicada depois da resposta do modelo converte qualquer tentativa d
 - `WHATSAPP_AGENT_SERVICE_LEVEL=primary`: limita capacidades e ativa a barreira de saida.
 - `WHATSAPP_OBSERVER_MODE=true`: recebe e regista conversas, mas o agente nao responde.
 - `WHATSAPP_AGENT_ENABLED=false`: mantem o processamento automatico desligado.
-- `WHATSAPP_NUMEROS_TESTE=351916958780`: quando o agente for testado, limita o webhook ao numero autorizado.
+- `WHATSAPP_DRY_RUN_NUMEROS=351916958780`: limita a rota de simulacao sem interromper a observacao dos restantes clientes.
+- `WHATSAPP_NUMEROS_TESTE=351916958780`: usar apenas na fase de envio real controlado, quando o webhook deve responder somente ao numero autorizado.
 - `WHATSAPP_OUTBOX_DRY_RUN=true`: valida a fila sem enviar pela UAZAPI.
 - `WHATSAPP_SEND_ENABLED=false`: segunda barreira contra envio real.
 - `WHATSAPP_TAKEOVER_TTL=86400`: uma mensagem manual humana pausa o agente por 24 horas.
@@ -44,11 +45,12 @@ Uma barreira aplicada depois da resposta do modelo converte qualquer tentativa d
 
 ## Fase 2 - dry-run no numero autorizado
 
-1. Definir `WHATSAPP_NUMEROS_TESTE=351916958780`.
+1. Definir `WHATSAPP_DRY_RUN_NUMEROS=351916958780`, sem alterar `WHATSAPP_NUMEROS_TESTE`.
 2. Definir `WHATSAPP_OUTBOX_DRY_RUN=true` e `WHATSAPP_SEND_ENABLED=false`.
-3. Desativar o modo observador e ativar o agente somente depois de confirmar todas as flags.
-4. Enviar cenarios de saudacao, material, varias viaturas, 7 lugares, preco, prazo, stock, desconto e estado de pedido.
-5. Confirmar que os cenarios sensiveis resultam em escalamento e que nenhuma mensagem real saiu.
+3. Manter `WHATSAPP_OBSERVER_MODE=true` e `WHATSAPP_AGENT_ENABLED=false`.
+4. Chamar o endpoint protegido `POST /api/whatsapp/agent/dry-run` com telefone e mensagem.
+5. Simular cenarios de saudacao, material, varias viaturas, 7 lugares, preco, prazo, stock, desconto e estado de pedido.
+6. Confirmar que os cenarios sensiveis resultam em escalamento e que a resposta declara `sendsMessages=false` e `writesSession=false`.
 
 ## Fase 3 - teste real no numero autorizado
 

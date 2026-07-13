@@ -51,3 +51,42 @@ export function aplicarPoliticaRespostaPrimaria(
 
   return resposta
 }
+
+interface AmbienteDryRun {
+  [key: string]: string | undefined
+  WHATSAPP_AGENT_ENABLED?: string
+  WHATSAPP_SEND_ENABLED?: string
+  WHATSAPP_OUTBOX_DRY_RUN?: string
+  WHATSAPP_OBSERVER_MODE?: string
+  WHATSAPP_DRY_RUN_NUMEROS?: string
+}
+
+export function validarAmbienteDryRunPrimario(
+  env: AmbienteDryRun,
+  telefone: string,
+): string | null {
+  if (env.WHATSAPP_AGENT_ENABLED !== 'false') {
+    return 'WHATSAPP_AGENT_ENABLED deve estar explicitamente false'
+  }
+  if (env.WHATSAPP_SEND_ENABLED !== 'false') {
+    return 'WHATSAPP_SEND_ENABLED deve estar explicitamente false'
+  }
+  if (env.WHATSAPP_OUTBOX_DRY_RUN !== 'true') {
+    return 'WHATSAPP_OUTBOX_DRY_RUN deve estar explicitamente true'
+  }
+  if (env.WHATSAPP_OBSERVER_MODE !== 'true') {
+    return 'WHATSAPP_OBSERVER_MODE deve permanecer true'
+  }
+
+  const numero = telefone.replace(/\D/g, '')
+  const autorizados = (env.WHATSAPP_DRY_RUN_NUMEROS ?? '')
+    .split(',')
+    .map(item => item.replace(/\D/g, ''))
+    .filter(Boolean)
+
+  if (autorizados.length === 0 || !autorizados.some(item => numero.endsWith(item))) {
+    return 'telefone fora de WHATSAPP_DRY_RUN_NUMEROS'
+  }
+
+  return null
+}

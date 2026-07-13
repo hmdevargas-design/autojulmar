@@ -5,4 +5,5 @@ export {
   AGENTE_JULMAR_NOME,
   pausarBot as pausarAgenteJulmar,
   processarComAgente as processarComAgenteJulmar,
+  simularRespostaAgenteJulmar,
 } from './agente'
