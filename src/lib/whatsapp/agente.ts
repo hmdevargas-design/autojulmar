@@ -969,7 +969,6 @@ export async function simularRespostaAgenteJulmar(
   const tenantSlug = process.env.WHATSAPP_TENANT_SLUG
   const nomeOwner = process.env.WHATSAPP_OWNER_NOME ?? 'Matheus'
   if (!tenantSlug) throw new Error('WHATSAPP_TENANT_SLUG nao configurado')
-  if (eAdmin(telefone)) throw new Error('dry-run aceita apenas perfil de cliente')
 
   const tenant = await resolverTenant(tenantSlug)
   if (!tenant) throw new Error(`Tenant nao encontrado: ${tenantSlug}`)
