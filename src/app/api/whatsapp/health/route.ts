@@ -28,7 +28,7 @@ function listaDe(value: unknown): unknown[] {
   if (Array.isArray(value)) return value
   const record = asRecord(value)
   if (!record) return []
-  for (const key of ['data', 'errors', 'items', 'webhooks']) {
+  for (const key of ['data', 'errors', 'items', 'webhooks', 'messages']) {
     if (Array.isArray(record[key])) return record[key]
   }
   return []
@@ -44,7 +44,10 @@ function textoSeguro(value: unknown, max = 300): string | null {
     .slice(0, max)
 }
 
-async function consultarUazapi(path: string): Promise<{
+async function consultarUazapi(
+  path: string,
+  options: { method?: 'GET' | 'POST'; body?: JsonRecord } = {},
+): Promise<{
   ok: boolean
   status: number
   body: unknown
@@ -54,9 +57,15 @@ async function consultarUazapi(path: string): Promise<{
   if (!baseUrl || !token) throw new Error('UAZAPI_URL/UAZAPI_TOKEN nao configurados')
 
   const response = await fetch(`${baseUrl}${path}`, {
-    method: 'GET',
-    headers: { token, convert: 'true' },
+    method: options.method ?? 'GET',
+    headers: {
+      token,
+      convert: 'true',
+      ...(options.body ? { 'content-type': 'application/json' } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
     cache: 'no-store',
+    signal: AbortSignal.timeout(10_000),
   })
   const raw = await response.text()
   let body: unknown = raw
@@ -66,6 +75,29 @@ async function consultarUazapi(path: string): Promise<{
     body = textoSeguro(raw, 1000)
   }
   return { ok: response.ok, status: response.status, body }
+}
+
+function resumirMensagens(body: unknown): JsonRecord {
+  const root = asRecord(body)
+  const entradas = listaDe(body)
+  return {
+    topLevelKeys: root ? Object.keys(root).slice(0, 30) : [],
+    count: entradas.length,
+    recent: entradas.slice(0, 10).map(item => {
+      const row = asRecord(item) ?? {}
+      const message = asRecord(row.message) ?? row
+      return {
+        id: textoSeguro(message.messageid ?? message.messageId ?? message.id),
+        timestamp: textoSeguro(
+          message.messageTimestamp ?? message.timestamp ?? message.createdAt ?? message.created_at,
+        ),
+        fromMe: message.fromMe ?? null,
+        wasSentByApi: message.wasSentByApi ?? null,
+        type: textoSeguro(message.type),
+        preview: textoSeguro(message.text ?? message.content ?? message.caption, 160),
+      }
+    }),
+  }
 }
 
 function resumirInstancia(body: unknown): JsonRecord {
@@ -130,6 +162,7 @@ async function testarWebhookPublico(url: unknown): Promise<JsonRecord> {
     method: 'GET',
     cache: 'no-store',
     redirect: 'manual',
+    signal: AbortSignal.timeout(10_000),
   })
   return {
     ok: response.ok,
@@ -144,10 +177,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [statusResult, webhookResult, errorsResult] = await Promise.all([
+    const numeroTeste = (process.env.WHATSAPP_NUMEROS_TESTE ?? '')
+      .split(/[\s,;]+/)
+      .map(numero => numero.replace(/\D/g, ''))
+      .find(Boolean)
+
+    const [statusResult, webhookResult, errorsResult, messageResult] = await Promise.all([
       consultarUazapi('/instance/status'),
       consultarUazapi('/webhook'),
       consultarUazapi('/errors'),
+      numeroTeste
+        ? consultarUazapi('/message/find', {
+            method: 'POST',
+            body: { chatid: `${numeroTeste}@s.whatsapp.net`, limit: 10 },
+          })
+        : Promise.resolve({ ok: false, status: 0, body: null }),
     ])
     const webhook = resumirWebhook(webhookResult.body)
     const publicTarget = await testarWebhookPublico(webhook.url)
@@ -162,6 +206,8 @@ export async function GET(request: NextRequest) {
         webhook,
         errorsRequest: { ok: errorsResult.ok, status: errorsResult.status },
         errors: resumirErros(errorsResult.body),
+        messageLookupRequest: { ok: messageResult.ok, status: messageResult.status },
+        messagesForTestNumber: resumirMensagens(messageResult.body),
       },
       publicTarget,
       safety: {
