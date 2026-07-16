@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  agendarSequenciaOutbox,
   cooldownGlobalSegundos,
   delayInicialSegundos,
   envioRealPermitidoParaNumero,
@@ -40,6 +41,26 @@ describe('whatsapp outbox config', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
 
     expect(delayInicialSegundos()).toBe(25)
+  })
+
+  it('schedules a batch in order using one initial delay and the worker cooldown', () => {
+    vi.stubEnv('WHATSAPP_SEND_MIN_DELAY_SECONDS', '25')
+    vi.stubEnv('WHATSAPP_SEND_MAX_DELAY_SECONDS', '60')
+    vi.stubEnv('WHATSAPP_SEND_GLOBAL_COOLDOWN_SECONDS', '45')
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const agora = new Date('2026-07-16T14:00:00.000Z')
+    const agenda = agendarSequenciaOutbox(3, agora)
+
+    expect(agenda.map(data => data.toISOString())).toEqual([
+      '2026-07-16T14:00:25.000Z',
+      '2026-07-16T14:01:15.000Z',
+      '2026-07-16T14:02:05.000Z',
+    ])
+  })
+
+  it('returns no dates for an empty batch', () => {
+    expect(agendarSequenciaOutbox(0)).toEqual([])
   })
 
   it('adds jitter to exponential retry backoff', () => {

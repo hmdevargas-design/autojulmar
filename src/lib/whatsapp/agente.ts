@@ -25,6 +25,10 @@ import {
   instrucaoNivelPrimario,
   obterNivelServicoAgenteJulmar,
 } from './service-level'
+import {
+  agendarSequenciaOutbox,
+  type WhatsappOutboxOptions,
+} from './outbox'
 
 export const AGENTE_JULMAR_NOME = 'Agente Julmar'
 
@@ -51,12 +55,21 @@ interface DadosPedidoPendente {
   formaPagamento?: string
 }
 
-async function enviarMensagem(para: string, texto: string): Promise<void> {
-  await enviarMensagemWhatsapp(para, texto, { source: AGENTE_JULMAR_SOURCE })
+async function enviarMensagem(
+  para: string,
+  texto: string,
+  options: WhatsappOutboxOptions = {},
+): Promise<void> {
+  await enviarMensagemWhatsapp(para, texto, { ...options, source: AGENTE_JULMAR_SOURCE })
 }
 
-async function enviarImagem(para: string, imageUrl: string, caption?: string): Promise<void> {
-  await enviarImagemWhatsapp(para, imageUrl, caption, { source: AGENTE_JULMAR_SOURCE })
+async function enviarImagem(
+  para: string,
+  imageUrl: string,
+  caption?: string,
+  options: WhatsappOutboxOptions = {},
+): Promise<void> {
+  await enviarImagemWhatsapp(para, imageUrl, caption, { ...options, source: AGENTE_JULMAR_SOURCE })
 }
 
 async function registarTurnoAgenteJulmar(
@@ -202,21 +215,46 @@ const TODOS_MATERIAIS = [
   { nome: 'MALAS 3D',     arquivo: 'malas-3d'     },
 ]
 
+function filtrarMateriais(filtro?: string): typeof TODOS_MATERIAIS {
+  if (!filtro || filtro.toUpperCase() === 'TODOS') return TODOS_MATERIAIS
+
+  const pedidos = filtro.split(',').map(s => s.trim().toUpperCase())
+  const lista = TODOS_MATERIAIS.filter(m => pedidos.some(
+    p => m.nome.toUpperCase().includes(p) || p.includes(m.nome.toUpperCase()),
+  ))
+
+  return lista.length > 0 ? lista : TODOS_MATERIAIS
+}
+
 // filtro: lista separada por vírgulas, ex: "GTI PRETO,GTI CINZA" ou "todos"
-async function enviarFotosMaterial(telefone: string, filtro?: string): Promise<void> {
+async function enviarFotosMaterial(
+  telefone: string,
+  filtro?: string,
+  availableAt?: Date[],
+): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ''
+  const lista = filtrarMateriais(filtro)
 
-  let lista = TODOS_MATERIAIS
-  if (filtro && filtro.toUpperCase() !== 'TODOS') {
-    const pedidos = filtro.split(',').map(s => s.trim().toUpperCase())
-    lista = TODOS_MATERIAIS.filter(m => pedidos.some(p => m.nome.toUpperCase().includes(p) || p.includes(m.nome.toUpperCase())))
-    if (lista.length === 0) lista = TODOS_MATERIAIS // fallback se filtro não bater em nada
+  for (const [indice, mat] of lista.entries()) {
+    await enviarImagem(
+      telefone,
+      `${baseUrl}/materiais/${mat.arquivo}.jpg`,
+      mat.nome,
+      { availableAt: availableAt?.[indice] },
+    )
   }
+}
 
-  for (const mat of lista) {
-    await enviarImagem(telefone, `${baseUrl}/materiais/${mat.arquivo}.jpg`, mat.nome)
-    await new Promise(r => setTimeout(r, 600))
-  }
+async function enviarRespostaComFotosOrdenadas(
+  telefone: string,
+  texto: string,
+  filtro?: string,
+): Promise<void> {
+  const materiais = filtrarMateriais(filtro)
+  const agenda = agendarSequenciaOutbox(1 + materiais.length)
+
+  await enviarMensagem(telefone, texto, { availableAt: agenda[0] })
+  await enviarFotosMaterial(telefone, filtro, agenda.slice(1))
 }
 
 // ─── Takeover (pausa/retoma o bot para um numero) ────────────────────────────
@@ -1218,12 +1256,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     const dadosSessaoFotos = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
     await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessaoFotos })
 
-    if (isOwner || isAdmin) {
-      await enviarMensagem(telefone, textoLimpo)
-    } else {
-      await enviarComDelay(telefone, textoLimpo)
-    }
-    await enviarFotosMaterial(telefone, filtro)
+    await enviarRespostaComFotosOrdenadas(telefone, textoLimpo, filtro)
     await registarTurnoAgenteJulmar(
       tenant.id,
       telefone,

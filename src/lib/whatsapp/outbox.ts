@@ -89,6 +89,21 @@ export function delayInicialSegundos(): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
+export function agendarSequenciaOutbox(
+  quantidade: number,
+  agora = new Date(),
+): Date[] {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) return []
+
+  const primeiroEnvio = agora.getTime() + delayInicialSegundos() * 1000
+  const intervaloSegundos = Math.max(5, cooldownGlobalSegundos() + 5)
+
+  return Array.from(
+    { length: Math.floor(quantidade) },
+    (_, indice) => new Date(primeiroEnvio + indice * intervaloSegundos * 1000),
+  )
+}
+
 export function retryBackoffSegundos(attempts: number): number {
   const base = Math.min(3600, 60 * 2 ** Math.max(0, attempts - 1))
   const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(base * 0.25)))
