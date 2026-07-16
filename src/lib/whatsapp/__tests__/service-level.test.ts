@@ -59,6 +59,21 @@ describe('Agente Julmar service level', () => {
       .toBe('[ESCALAR] Orcamento completo para a equipa.')
   })
 
+  it('removes unsupported availability wording and unsolicited emoji', () => {
+    const resposta = 'Ola! \u{1F44B} Temos tapetes para o Peugeot 308. Prefere **borracha** ou **alcatifa**?'
+    expect(aplicarPoliticaRespostaPrimaria(
+      'primary',
+      resposta,
+      'Ola, gostaria de tapetes para um Peugeot 308.',
+    )).toBe('Ola! Posso ajudar a confirmar tapetes para o Peugeot 308. Prefere *borracha* ou *alcatifa*?')
+  })
+
+  it('keeps emoji when the customer used emoji first', () => {
+    const resposta = 'Ola! \u{1F44B} Como posso ajudar?'
+    expect(aplicarPoliticaRespostaPrimaria('primary', resposta, 'Ola \u{1F44B}'))
+      .toBe(resposta)
+  })
+
   it('keeps full mode unchanged', () => {
     const resposta = 'O jogo fica por 72 EUR.'
     expect(aplicarPoliticaRespostaPrimaria('full', resposta)).toBe(resposta)

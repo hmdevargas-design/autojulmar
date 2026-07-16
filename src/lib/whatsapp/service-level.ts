@@ -42,14 +42,30 @@ export function aplicarPoliticaRespostaPrimaria(
 ): string {
   if (nivel !== 'primary') return resposta
 
-  const indiceEscalamento = resposta.indexOf('[ESCALAR]')
-  if (indiceEscalamento >= 0) return resposta.slice(indiceEscalamento).trim()
+  let respostaSegura = resposta
+    .replace(/\*\*([^*]+)\*\*/g, '*$1*')
+    .replace(
+      /\bTemos tapetes para (?=(?:o|a|um|uma)\s)/gi,
+      'Posso ajudar a confirmar tapetes para ',
+    )
 
-  if (resposta.startsWith('[PEDIDO_PENDENTE]')) {
+  if (!/\p{Extended_Pictographic}/u.test(mensagemCliente)) {
+    respostaSegura = respostaSegura
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .replace(/\uFE0F/g, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/ {2,}/g, ' ')
+      .trim()
+  }
+
+  const indiceEscalamento = respostaSegura.indexOf('[ESCALAR]')
+  if (indiceEscalamento >= 0) return respostaSegura.slice(indiceEscalamento).trim()
+
+  if (respostaSegura.startsWith('[PEDIDO_PENDENTE]')) {
     return '[ESCALAR] Cliente pretende avancar com o pedido; confirmar dados, preco e condicoes antes de criar.'
   }
 
-  const lugaresMencionados = resposta.match(/\b([789])\s+lugares\b/i)
+  const lugaresMencionados = respostaSegura.match(/\b([789])\s+lugares\b/i)
   if (
     lugaresMencionados
     && !new RegExp(`\\b${lugaresMencionados[1]}\\s+lugares\\b`, 'i').test(mensagemCliente)
@@ -57,11 +73,11 @@ export function aplicarPoliticaRespostaPrimaria(
     return `A sua viatura tem ${lugaresMencionados[1]} lugares? Pretende os tapetes para todos os lugares?`
   }
 
-  if (PADROES_RESPOSTA_SENSIVEL.some(padrao => padrao.test(resposta))) {
+  if (PADROES_RESPOSTA_SENSIVEL.some(padrao => padrao.test(respostaSegura))) {
     return '[ESCALAR] Atendimento primario detectou preco, prazo, disponibilidade ou estado que exige confirmacao humana.'
   }
 
-  return resposta
+  return respostaSegura
 }
 
 interface AmbienteDryRun {
