@@ -35,6 +35,7 @@ function Save-State {
 function New-State {
     return [pscustomobject]@{
         cursor = (Get-Date).ToUniversalTime().ToString('o')
+        sobreposicao_ativa = $false
         pendentes = @()
         concluidos = @()
     }
@@ -50,6 +51,9 @@ function Load-State {
     try {
         $loaded = Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
         if (-not $loaded.cursor) { throw 'Estado sem cursor.' }
+        if ($null -eq $loaded.PSObject.Properties['sobreposicao_ativa']) {
+            $loaded | Add-Member -NotePropertyName sobreposicao_ativa -NotePropertyValue $true
+        }
         if ($null -eq $loaded.pendentes) { $loaded | Add-Member -NotePropertyName pendentes -NotePropertyValue @() -Force }
         if ($null -eq $loaded.concluidos) { $loaded | Add-Member -NotePropertyName concluidos -NotePropertyValue @() -Force }
         return $loaded
@@ -186,7 +190,12 @@ try {
     while ($true) {
         try {
             $pollUntil = (Get-Date).ToUniversalTime()
-            $pollFrom = ([DateTime]::Parse([string]$state.cursor)).ToUniversalTime().AddMinutes(-$overlapMinutes)
+            $cursorDate = ([DateTime]::Parse([string]$state.cursor)).ToUniversalTime()
+            $pollFrom = if ([bool]$state.sobreposicao_ativa) {
+                $cursorDate.AddMinutes(-$overlapMinutes)
+            } else {
+                $cursorDate
+            }
             $recentUrl = "$appUrl/api/pedidos/recentes?tenantId=$([Uri]::EscapeDataString($tenantId))&desde=$([Uri]::EscapeDataString($pollFrom.ToString('o')))&ate=$([Uri]::EscapeDataString($pollUntil.ToString('o')))"
             $newOrders = @(Invoke-RestMethod -Uri $recentUrl -Headers $headers -Method GET)
 
@@ -209,6 +218,7 @@ try {
             }
 
             $state.cursor = $pollUntil.ToString('o')
+            $state.sobreposicao_ativa = $true
             $retentionLimit = (Get-Date).ToUniversalTime().AddDays(-7)
             $state.concluidos = @($state.concluidos | Where-Object {
                 ([DateTime]::Parse([string]$_.concluido_em)).ToUniversalTime() -ge $retentionLimit
