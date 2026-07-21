@@ -7,6 +7,7 @@ $sourceAgent = Join-Path $PSScriptRoot 'imprimir-auto.ps1'
 $installDir = Join-Path $env:LOCALAPPDATA 'Autojulmar\Impressao'
 $installedAgent = Join-Path $installDir 'imprimir-auto.ps1'
 $configPath = Join-Path $installDir 'impressao-config.json'
+$bundledKeyPath = Join-Path $PSScriptRoot 'chave-impressao-autojulmar.txt'
 $taskName = 'Autojulmar - Impressao Automatica'
 
 if (-not (Test-Path -LiteralPath $sourceAgent)) {
@@ -37,7 +38,13 @@ $printer = if ($printerInput.Trim()) { $printerInput.Trim() } else { $defaultPri
 $sumatra = if ($sumatraInput.Trim()) { $sumatraInput.Trim() } else { $defaultSumatra }
 
 $printKey = ''
-if ($existing -and $existing.print_key) {
+if (Test-Path -LiteralPath $bundledKeyPath) {
+    $printKey = [System.IO.File]::ReadAllText($bundledKeyPath).Trim()
+    if ($printKey) {
+        Write-Host 'Chave de impressão carregada automaticamente.' -ForegroundColor Green
+    }
+}
+if (-not $printKey -and $existing -and $existing.print_key) {
     $keepKey = Read-Host 'Manter a chave de impressão já configurada? [S/n]'
     if (-not $keepKey.Trim() -or $keepKey.Trim().ToUpperInvariant() -eq 'S') {
         $printKey = [string]$existing.print_key
@@ -62,6 +69,10 @@ if (-not $printKey.Trim()) { throw 'A chave de impressão é obrigatória.' }
     impressora = $printer
     sumatra = $sumatra
 } | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
+
+if (Test-Path -LiteralPath $bundledKeyPath) {
+    Remove-Item -LiteralPath $bundledKeyPath -Force
+}
 
 $powerShellPath = Join-Path $PSHOME 'powershell.exe'
 $actionArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installedAgent`""

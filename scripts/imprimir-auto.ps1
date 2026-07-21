@@ -199,6 +199,17 @@ try {
             $recentUrl = "$appUrl/api/pedidos/recentes?tenantId=$([Uri]::EscapeDataString($tenantId))&desde=$([Uri]::EscapeDataString($pollFrom.ToString('o')))&ate=$([Uri]::EscapeDataString($pollUntil.ToString('o')))"
             $newOrders = @(Invoke-RestMethod -Uri $recentUrl -Headers $headers -Method GET)
 
+            foreach ($order in $newOrders) {
+                $propertyNames = @($order.PSObject.Properties.Name)
+                if (
+                    $propertyNames -notcontains 'id' -or
+                    $propertyNames -notcontains 'numero_pedido' -or
+                    $propertyNames -notcontains 'criado_em'
+                ) {
+                    throw 'A API devolveu uma resposta inválida. Confirme a chave de impressão e o endereço do sistema.'
+                }
+            }
+
             $knownIds = @{}
             foreach ($item in @($state.pendentes)) { $knownIds[[string]$item.id] = $true }
             foreach ($item in @($state.concluidos)) { $knownIds[[string]$item.id] = $true }

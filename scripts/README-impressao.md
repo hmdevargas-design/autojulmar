@@ -5,8 +5,8 @@ A página web usa o diálogo de impressão do navegador e, por segurança, o Chr
 ## Instalação no PC da loja
 
 1. Instale o SumatraPDF.
-2. Mantenha `imprimir-auto.ps1` e `instalar-impressao-auto.ps1` na mesma pasta.
-3. Execute `instalar-impressao-auto.ps1` com PowerShell.
+2. Mantenha `INSTALAR.cmd`, `imprimir-auto.ps1` e `instalar-impressao-auto.ps1` na mesma pasta.
+3. Abra `INSTALAR.cmd` com duplo clique.
 4. Informe a `IMPRESSAO_API_KEY` configurada na Vercel quando o instalador pedir.
 
 O instalador deteta automaticamente uma impressora BIXOLON, cria uma tarefa no Arranque do Windows e inicia o agente imediatamente.
