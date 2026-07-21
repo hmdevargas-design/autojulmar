@@ -68,6 +68,19 @@ if (-not $printKey) {
 
 if (-not $printKey.Trim()) { throw 'A chave de impressão é obrigatória.' }
 
+$probeUntil = (Get-Date).ToUniversalTime()
+$probeFrom = $probeUntil.AddSeconds(-5)
+$probeUrl = "$($appUrl.TrimEnd('/'))/api/pedidos/recentes?tenantId=$([Uri]::EscapeDataString($tenantId))&desde=$([Uri]::EscapeDataString($probeFrom.ToString('o')))&ate=$([Uri]::EscapeDataString($probeUntil.ToString('o')))"
+$probeResponse = Invoke-WebRequest -Uri $probeUrl -Headers @{ 'x-print-key' = $printKey } -UseBasicParsing
+$probeContentType = [string]$probeResponse.Headers['Content-Type']
+if (
+    -not $probeContentType.StartsWith('application/json') -or
+    -not $probeResponse.Content.TrimStart().StartsWith('[')
+) {
+    throw 'A chave de impressão foi recusada pelo servidor. A instalação foi interrompida.'
+}
+Write-Host 'Ligação à API de impressão validada.' -ForegroundColor Green
+
 [pscustomobject]@{
     app_url = $appUrl.TrimEnd('/')
     tenant_id = $tenantId
