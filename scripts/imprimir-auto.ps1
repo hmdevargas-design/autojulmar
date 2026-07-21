@@ -197,7 +197,8 @@ try {
                 $cursorDate
             }
             $recentUrl = "$appUrl/api/pedidos/recentes?tenantId=$([Uri]::EscapeDataString($tenantId))&desde=$([Uri]::EscapeDataString($pollFrom.ToString('o')))&ate=$([Uri]::EscapeDataString($pollUntil.ToString('o')))"
-            $newOrders = @(Invoke-RestMethod -Uri $recentUrl -Headers $headers -Method GET)
+            $apiResponse = Invoke-RestMethod -Uri $recentUrl -Headers $headers -Method GET
+            $newOrders = @($apiResponse | ForEach-Object { $_ })
 
             foreach ($order in $newOrders) {
                 $propertyNames = @($order.PSObject.Properties.Name)
