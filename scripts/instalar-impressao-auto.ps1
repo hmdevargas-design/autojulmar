@@ -14,6 +14,12 @@ if (-not (Test-Path -LiteralPath $sourceAgent)) {
     throw "Agente não encontrado em $sourceAgent."
 }
 
+$existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+if ($existingTask) {
+    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+}
+
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 Copy-Item -LiteralPath $sourceAgent -Destination $installedAgent -Force
 
