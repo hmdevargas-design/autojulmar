@@ -29,6 +29,8 @@ import {
   agendarSequenciaOutbox,
   type WhatsappOutboxOptions,
 } from './outbox'
+import { selecionarFotosMaterial } from './material-photos'
+import { instrucoesHorarioAutojulmar } from './business-rules'
 
 export const AGENTE_JULMAR_NOME = 'Agente Julmar'
 
@@ -202,43 +204,20 @@ async function enviarComDelay(para: string, texto: string): Promise<void> {
 
 // ─── Fotos de material ─────────────────────────────────────────────────────────
 
-const TODOS_MATERIAIS = [
-  { nome: 'ECO PRETO',    arquivo: 'eco-preto'    },
-  { nome: 'GTI PRETO',    arquivo: 'gti-preto'    },
-  { nome: 'GTI CINZA',    arquivo: 'gti-cinza'    },
-  { nome: 'VELUDO PRETO', arquivo: 'veludo-preto' },
-  { nome: 'VELUDO CINZA', arquivo: 'veludo-cinza' },
-  { nome: 'BORRACHA',     arquivo: 'borracha'     },
-  { nome: 'CANELADO',     arquivo: 'canelado'     },
-  { nome: 'CINZA CABRIO', arquivo: 'cinza-cabrio' },
-  { nome: 'TAPETES 3D',   arquivo: 'tapetes-3d'   },
-  { nome: 'MALAS 3D',     arquivo: 'malas-3d'     },
-]
-
-function filtrarMateriais(filtro?: string): typeof TODOS_MATERIAIS {
-  if (!filtro || filtro.toUpperCase() === 'TODOS') return TODOS_MATERIAIS
-
-  const pedidos = filtro.split(',').map(s => s.trim().toUpperCase())
-  const lista = TODOS_MATERIAIS.filter(m => pedidos.some(
-    p => m.nome.toUpperCase().includes(p) || p.includes(m.nome.toUpperCase()),
-  ))
-
-  return lista.length > 0 ? lista : TODOS_MATERIAIS
-}
-
-// filtro: lista separada por vírgulas, ex: "GTI PRETO,GTI CINZA" ou "todos"
+// filtro: lista separada por virgulas, validada contra a allowlist aprovada.
 async function enviarFotosMaterial(
   telefone: string,
   filtro?: string,
+  mensagemCliente = '',
   availableAt?: Date[],
 ): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ''
-  const lista = filtrarMateriais(filtro)
+  const lista = selecionarFotosMaterial(filtro, mensagemCliente)
 
   for (const [indice, mat] of lista.entries()) {
     await enviarImagem(
       telefone,
-      `${baseUrl}/materiais/${mat.arquivo}.jpg`,
+      `${baseUrl}${mat.caminho}`,
       mat.nome,
       { availableAt: availableAt?.[indice] },
     )
@@ -249,12 +228,13 @@ async function enviarRespostaComFotosOrdenadas(
   telefone: string,
   texto: string,
   filtro?: string,
+  mensagemCliente = '',
 ): Promise<void> {
-  const materiais = filtrarMateriais(filtro)
+  const materiais = selecionarFotosMaterial(filtro, mensagemCliente)
   const agenda = agendarSequenciaOutbox(1 + materiais.length)
 
   await enviarMensagem(telefone, texto, { availableAt: agenda[0] })
-  await enviarFotosMaterial(telefone, filtro, agenda.slice(1))
+  await enviarFotosMaterial(telefone, filtro, mensagemCliente, agenda.slice(1))
 }
 
 // ─── Takeover (pausa/retoma o bot para um numero) ────────────────────────────
@@ -491,6 +471,7 @@ function buildSystemPrompt(
   const morada   = process.env.WHATSAPP_LOJA_MORADA  ?? 'R. Camara de Lobos 7 Loja C, 2670-489 Loures'
   const horario  = process.env.WHATSAPP_LOJA_HORARIO ?? 'segunda a sexta, 9h30-13h e 15h-18h'
   const mbway    = process.env.WHATSAPP_MBWAY         ?? ''
+  const regrasHorario = instrucoesHorarioAutojulmar()
 
   const secaoUtilizador = tipoUtilizador === 'owner'
     ? `ATENCAO: O utilizador que te envia esta mensagem chama-se ${nomeOwner} e e o dono da ${nomeLoja}. Sabes quem ele e. Trata-o de forma directa e informal, tutea-o. Confirma sempre que o reconheces quando ele perguntar. Ele tem acesso total.\n\n`
@@ -542,7 +523,7 @@ SOBRE A LOJA:
 - Nao prometer fabrico, disponibilidade ou levantamento no proprio dia sem confirmacao operacional.
 - Morada: ${morada}
 - Horario: ${horario}${mbway ? `\n- MBWay: ${mbway}` : ''}
-- Nao abrimos aos sabados (excepto ocasionalmente de manha)
+${regrasHorario}
 
 ${tabelaPrecos || 'PRECOS: consultar na loja (tabela nao configurada)'}
 
@@ -557,10 +538,11 @@ FLUXO PARA CLIENTES (fora de loja):
 5. SE o cliente nao especificou preferencia de material, pergunta NATURALMENTE se prefere tapetes em borracha ou alcatifa (tecido) antes de apresentar opcoes
    Exemplo: "Prefere os tapetes em borracha ou em alcatifa (tecido)?"
 6. Apresenta os materiais disponiveis dentro da categoria escolhida e INCLUI SEMPRE o marcador com os materiais exactos
-   Se borracha: "Temos Borracha standard e Tapetes 3D. Seguem fotos!\n\n[ENVIAR_FOTOS_MATERIAL:BORRACHA,TAPETES 3D,MALAS 3D]"
-   Se alcatifa: "Temos os seguintes materiais. Veja as fotos:\n\n[ENVIAR_FOTOS_MATERIAL:ECO PRETO,GTI PRETO,GTI CINZA,VELUDO PRETO,VELUDO CINZA,CANELADO,CINZA CABRIO]"
+   Se borracha: "Temos Borracha Pit e Tapetes 3D. Seguem fotos!\n\n[ENVIAR_FOTOS_MATERIAL:BORRACHA PIT,TAPETES 3D]"
+   Se alcatifa: apresenta no maximo duas destas opcoes: ECO PRETO, GTI PRETO, CANELADO ou VELUDO PRETO
    Se cliente pediu material especifico (ex: "GTI preto"): envia so esse — [ENVIAR_FOTOS_MATERIAL:GTI PRETO]
-   Se nao sabe: [ENVIAR_FOTOS_MATERIAL:todos]
+   Se o cliente pedir tapete para a mala: [ENVIAR_FOTOS_MATERIAL:MALAS 3D]
+   Se nao sabes que foto corresponde ao pedido, nao envies marcador e pede esclarecimento
    IMPORTANTE: especifica SEMPRE os materiais no marcador, nunca uses o marcador sem parametros
 7. Cliente escolhe material → apresenta os tipos de tapete; so apresenta preco quando a tabela exacta estiver carregada e o nivel de servico o permitir
 8. Cliente escolhe tipo → confirma os dados; so confirma preco total quando o nivel de servico o permitir
@@ -646,8 +628,10 @@ Apresentar SEMPRE 2 opcoes no maximo, as mais adequadas ao perfil.
 
 INFORMACAO APROVADA:
 - As categorias iniciais sao borracha e alcatifa.
-- Em borracha, as opcoes configuradas sao Borracha Standard e Tapetes 3D.
-- Em alcatifa, existem Eco, GTI, Veludo, Canelado e Cinza Cabrio.
+- Em borracha, as opcoes aprovadas para fotografia sao Borracha Pit e Tapetes 3D.
+- Em alcatifa, as fotografias aprovadas sao Eco Preto, GTI Preto, Canelado e Veludo Preto.
+- Malas 3D so podem ser apresentadas e enviadas quando o cliente pedir tapete para mala, bagageira ou porta-bagagens.
+- Nunca envies fotografias de GTI Cinza, Veludo Cinza, Cinza Cabrio ou Borracha Standard.
 - Ha fotografias aprovadas no sistema para ajudar o cliente a comparar.
 - Nao inventar espessura, durabilidade, impermeabilidade, cobertura, rebordo, encaixe ou equivalencia ao material original.
 - Nao afirmar que existe molde para a viatura sem fonte confirmada.
@@ -659,7 +643,7 @@ Depois de sugerir, o core envia as fotos via [ENVIAR_FOTOS_MATERIAL:material1,ma
 Mencionar que se preferir outro material tambem e possivel.
 
 Se o cliente escolher borracha:
-"Em borracha temos a Standard e os Tapetes 3D. Posso enviar fotografias das duas opcoes para comparar. [ENVIAR_FOTOS_MATERIAL:TAPETES 3D,BORRACHA]"
+"Em borracha temos a Borracha Pit e os Tapetes 3D. Posso enviar fotografias das duas opcoes para comparar. [ENVIAR_FOTOS_MATERIAL:BORRACHA PIT,TAPETES 3D]"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGRA ABSOLUTA DE PRECOS
@@ -696,7 +680,7 @@ Tu: "Temos sim! Por exemplo o Canelado ou o Veludo Preto — seguem fotos. Se pr
 
 [NORMAL — cliente escolhe borracha]
 Cliente: "Quero em borracha."
-Tu: "Em borracha temos a Standard ou os Tapetes 3D — muito mais completos. Seguem fotos, diz qual preferes!"
+Tu: "Em borracha temos a Borracha Pit ou os Tapetes 3D. Seguem fotos, diz qual preferes!"
 
 [STD — pedido completo]
 Cliente: "Tapetes frente Seat Leon 2018, 3 portas, fixadores, GTI preto, sem reforco"
@@ -1250,13 +1234,18 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   // ── Envio de fotos de material ───────────────────────────────────────────
   const markerMatch = resposta.match(/\[ENVIAR_FOTOS_MATERIAL(?::([^\]]*))?\]/)
   if (markerMatch) {
-    const filtro     = markerMatch[1]?.trim() // ex: "GTI PRETO,GTI CINZA" ou undefined
+    const filtro     = markerMatch[1]?.trim()
     const textoLimpo = resposta.replace(markerMatch[0], '').trim()
     historico.push({ role: 'assistant', content: textoLimpo })
     const dadosSessaoFotos = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
     await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessaoFotos })
 
-    await enviarRespostaComFotosOrdenadas(telefone, textoLimpo, filtro)
+    const contextoFotos = historico
+      .filter(item => item.role === 'user')
+      .slice(-4)
+      .map(item => item.content)
+      .join('\n')
+    await enviarRespostaComFotosOrdenadas(telefone, textoLimpo, filtro, contextoFotos)
     await registarTurnoAgenteJulmar(
       tenant.id,
       telefone,
