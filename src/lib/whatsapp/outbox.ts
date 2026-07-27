@@ -34,6 +34,11 @@ export interface WhatsappOutboxItem {
   sent_at: string | null
 }
 
+export interface WhatsappRecentTextOptions {
+  source?: string
+  withinSeconds?: number
+}
+
 const DEFAULT_MAX_ATTEMPTS = 5
 const DEFAULT_PRIORITY = 100
 
@@ -114,6 +119,16 @@ function normalizarNumero(para: string): string {
   return para.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '')
 }
 
+function normalizarTextoComparacao(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?;,:\s]+$/g, '')
+    .trim()
+}
+
 function truncarErro(erro: unknown): string {
   const texto = erro instanceof Error ? erro.message : String(erro)
   return texto.replace(/\s+/g, ' ').trim().slice(0, 1000)
@@ -176,6 +191,36 @@ export async function enfileirarMensagemTexto(
   options?: WhatsappOutboxOptions,
 ): Promise<WhatsappOutboxItem | null> {
   return enfileirar(para, 'text', { text: texto }, options)
+}
+
+export async function mensagemTextoRecenteExiste(
+  para: string,
+  texto: string,
+  options: WhatsappRecentTextOptions = {},
+): Promise<boolean> {
+  const supabase = criarClienteAdmin()
+  const withinSeconds = Math.max(60, options.withinSeconds ?? 6 * 60 * 60)
+  const since = new Date(Date.now() - withinSeconds * 1000).toISOString()
+
+  let query = supabase
+    .from('whatsapp_outbox')
+    .select('payload')
+    .eq('to_number', normalizarNumero(para))
+    .eq('message_type', 'text')
+    .in('status', ['pending', 'locked', 'sent'])
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (options.source) query = query.eq('source', options.source)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const alvo = normalizarTextoComparacao(texto)
+  return (data ?? []).some(row =>
+    normalizarTextoComparacao(String(row.payload?.text ?? '')) === alvo
+  )
 }
 
 export async function enfileirarImagem(

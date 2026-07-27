@@ -3,11 +3,21 @@
 
 import { criarClienteAdmin } from '@/lib/supabase/admin'
 
-const TTL = Number(process.env.WHATSAPP_SESSION_TTL ?? 86400) // segundos (default 24h)
+const DEFAULT_TTL = 86400
 
 export interface EstadoSessao {
   step: string          // campo que estamos a aguardar (ex: 'aguarda_tipo_tapete')
   dados: Record<string, unknown>  // campos já recolhidos
+}
+
+export interface GuardarSessaoOptions {
+  ttlSeconds?: number
+}
+
+export function ttlSessaoSegundos(options: GuardarSessaoOptions = {}): number {
+  const configurado = options.ttlSeconds
+    ?? Number(process.env.WHATSAPP_SESSION_TTL ?? DEFAULT_TTL)
+  return Number.isFinite(configurado) ? Math.max(60, configurado) : DEFAULT_TTL
 }
 
 export async function obterSessao(tenantId: string, telefone: string): Promise<EstadoSessao | null> {
@@ -30,9 +40,16 @@ export async function obterSessao(tenantId: string, telefone: string): Promise<E
   return data.estado_conversa as EstadoSessao
 }
 
-export async function guardarSessao(tenantId: string, telefone: string, estado: EstadoSessao): Promise<void> {
+export async function guardarSessao(
+  tenantId: string,
+  telefone: string,
+  estado: EstadoSessao,
+  options: GuardarSessaoOptions = {},
+): Promise<void> {
   const supabase  = criarClienteAdmin()
-  const expira_em = new Date(Date.now() + TTL * 1000).toISOString()
+  const expira_em = new Date(
+    Date.now() + ttlSessaoSegundos(options) * 1000,
+  ).toISOString()
 
   await supabase
     .from('sessoes_whatsapp')

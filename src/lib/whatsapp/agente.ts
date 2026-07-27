@@ -7,7 +7,12 @@ import {
   enviarMensagem as enviarMensagemWhatsapp,
   enviarImagem as enviarImagemWhatsapp,
 } from './sender'
-import { obterSessao, guardarSessao, eliminarSessao }    from './session'
+import {
+  obterSessao,
+  guardarSessao,
+  eliminarSessao,
+  type EstadoSessao,
+} from './session'
 import {
   deveUsarSaudacaoAtiva,
   memoriaParaPrompt,
@@ -27,10 +32,16 @@ import {
 } from './service-level'
 import {
   agendarSequenciaOutbox,
+  mensagemTextoRecenteExiste,
   type WhatsappOutboxOptions,
 } from './outbox'
 import { selecionarFotosMaterial } from './material-photos'
 import { instrucoesHorarioAutojulmar } from './business-rules'
+import {
+  chaveIdempotenciaResposta,
+  mensagemEhCortesia,
+  respostaExisteNoHistorico,
+} from './response-dedupe'
 
 export const AGENTE_JULMAR_NOME = 'Agente Julmar'
 
@@ -40,6 +51,9 @@ const AGENTE_JULMAR_SOURCE = 'agente-julmar'
 // Mantem a chave antiga para nao perder instrucoes ja guardadas antes da renomeacao interna.
 const TELEFONE_INSTRUCOES = '__instrucoes_agente__'
 const RATE_LIMIT_ALERT_COOLDOWN_MS = 10 * 60 * 1000
+const DEFAULT_RESPONSE_DEDUPE_SECONDS = 6 * 60 * 60
+const DEFAULT_ESCALATION_TTL_SECONDS = 2 * 60 * 60
+const DEFAULT_TAKEOVER_TTL_SECONDS = 24 * 60 * 60
 
 let ultimoAlertaRateLimit = 0
 
@@ -65,6 +79,82 @@ async function enviarMensagem(
   await enviarMensagemWhatsapp(para, texto, { ...options, source: AGENTE_JULMAR_SOURCE })
 }
 
+function segundosEnv(nome: string, fallback: number): number {
+  const valor = Number(process.env[nome])
+  return Number.isFinite(valor) ? Math.max(60, valor) : fallback
+}
+
+function dedupeRespostaSegundos(): number {
+  return segundosEnv(
+    'WHATSAPP_RESPONSE_DEDUPE_SECONDS',
+    DEFAULT_RESPONSE_DEDUPE_SECONDS,
+  )
+}
+
+function ttlEscalamentoSegundos(): number {
+  return segundosEnv(
+    'WHATSAPP_ESCALATION_TTL',
+    DEFAULT_ESCALATION_TTL_SECONDS,
+  )
+}
+
+function ttlTakeoverSegundos(): number {
+  return segundosEnv(
+    'WHATSAPP_TAKEOVER_TTL',
+    DEFAULT_TAKEOVER_TTL_SECONDS,
+  )
+}
+
+async function enviarRespostaSemRepetir(
+  para: string,
+  texto: string,
+  historico: Msg[] = [],
+  options: WhatsappOutboxOptions = {},
+): Promise<boolean> {
+  const janelaSegundos = dedupeRespostaSegundos()
+  if (respostaExisteNoHistorico(texto, historico)) {
+    console.log('[Agente Julmar] Resposta repetida no historico, suprimida:', para)
+    return false
+  }
+
+  try {
+    const existeNaOutbox = await mensagemTextoRecenteExiste(para, texto, {
+      source: AGENTE_JULMAR_SOURCE,
+      withinSeconds: janelaSegundos,
+    })
+    if (existeNaOutbox) {
+      console.log('[Agente Julmar] Resposta repetida na outbox, suprimida:', para)
+      return false
+    }
+  } catch (error) {
+    console.warn(
+      '[Agente Julmar] Falha ao consultar deduplicacao; usando idempotencia:',
+      erroParaTexto(error),
+    )
+  }
+
+  await enviarMensagem(para, texto, {
+    ...options,
+    conversationKey: options.conversationKey ?? para.replace(/\D/g, ''),
+    idempotencyKey: options.idempotencyKey ?? chaveIdempotenciaResposta(
+      para,
+      texto,
+      AGENTE_JULMAR_SOURCE,
+      janelaSegundos,
+    ),
+  })
+  return true
+}
+
+async function enviarRespostaComDelaySemRepetir(
+  para: string,
+  texto: string,
+  historico: Msg[] = [],
+): Promise<boolean> {
+  await delayHumano()
+  return enviarRespostaSemRepetir(para, texto, historico)
+}
+
 async function enviarImagem(
   para: string,
   imageUrl: string,
@@ -78,7 +168,7 @@ async function registarTurnoAgenteJulmar(
   tenantId: string,
   telefone: string,
   userMessage: string,
-  assistantMessage: string,
+  assistantMessage: string | undefined,
   state: string,
 ): Promise<void> {
   await registrarTurnoConversa({
@@ -124,13 +214,16 @@ function eAdmin(telefone: string): boolean {
 }
 
 // Envia mensagem para o owner E para todos os admins parciais
-async function notificarTodosAdmins(mensagem: string): Promise<void> {
+async function notificarTodosAdmins(mensagem: string): Promise<number> {
   const owner  = obterNumeroHumano()
   const admins = (process.env.WHATSAPP_ADMIN_NUMEROS ?? '')
     .split(',').map(n => n.trim().replace(/\D/g, '')).filter(Boolean)
 
   const destinos = [...new Set([owner, ...admins].filter(Boolean))]
-  await Promise.all(destinos.map(n => enviarMensagem(n, mensagem)))
+  const resultados = await Promise.all(
+    destinos.map(n => enviarRespostaSemRepetir(n, mensagem)),
+  )
+  return resultados.filter(Boolean).length
 }
 
 function erroParaTexto(err: unknown): string {
@@ -247,6 +340,8 @@ export async function pausarBot(tenantId: string, telefone: string): Promise<voi
       takeoverTs: Date.now(),
       motivo: 'human_takeover',
     },
+  }, {
+    ttlSeconds: ttlTakeoverSegundos(),
   })
 }
 
@@ -254,6 +349,67 @@ async function retomarBot(tenantId: string, telefone: string): Promise<void> {
   const sessao    = await obterSessao(tenantId, telefone)
   const historico = (sessao?.dados?.historico as Msg[] | undefined) ?? []
   await guardarSessao(tenantId, telefone, { step: 'conversando', dados: { historico } })
+}
+
+async function tratarContinuacaoEscalada(
+  tenantId: string,
+  telefone: string,
+  mensagem: string,
+  sessao: EstadoSessao,
+): Promise<void> {
+  const historico = [
+    ...((sessao.dados?.historico as Msg[] | undefined) ?? []),
+  ]
+  const cortesia = mensagemEhCortesia(mensagem)
+  const detalhesAnteriores = (
+    sessao.dados?.detalhesEscalados as string[] | undefined
+  ) ?? []
+  const detalhesEscalados = cortesia
+    ? detalhesAnteriores
+    : [...detalhesAnteriores, mensagem].slice(-12)
+
+  historico.push({ role: 'user', content: mensagem })
+  if (historico.length > MAX_HISTORICO) {
+    historico.splice(0, historico.length - MAX_HISTORICO)
+  }
+
+  if (!cortesia) {
+    await notificarTodosAdmins([
+      'ATUALIZACAO DE ATENDIMENTO ESCALADO',
+      `Cliente: ${telefone}`,
+      `Novo detalhe: ${mensagem.slice(0, 500)}`,
+    ].join('\n'))
+  }
+
+  const resposta = cortesia
+    ? 'Combinado. O seu pedido ja esta com a equipa.'
+    : 'Obrigado, acrescentei esta informacao ao pedido que ja esta com a equipa.'
+  const enviada = await enviarRespostaComDelaySemRepetir(
+    telefone,
+    resposta,
+    historico,
+  )
+
+  if (enviada) historico.push({ role: 'assistant', content: resposta })
+
+  await guardarSessao(tenantId, telefone, {
+    step: 'escalado',
+    dados: {
+      ...sessao.dados,
+      historico,
+      detalhesEscalados,
+      ultimaAtualizacaoEscaladaEm: new Date().toISOString(),
+    },
+  }, {
+    ttlSeconds: ttlEscalamentoSegundos(),
+  })
+  await registarTurnoAgenteJulmar(
+    tenantId,
+    telefone,
+    mensagem,
+    enviada ? resposta : undefined,
+    'escalado',
+  )
 }
 
 // ─── Instrucoes persistentes ──────────────────────────────────────────────────
@@ -1113,7 +1269,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
 
   // ── Takeover activo — verifica se expirou, senão fica em silêncio ────────
   if (sessao?.step === 'takeover') {
-    const takeoverTtl = Number(process.env.WHATSAPP_TAKEOVER_TTL ?? 7200) * 1000
+    const takeoverTtl = ttlTakeoverSegundos() * 1000
     const takeoverTs  = (sessao.dados?.takeoverTs as number | undefined) ?? 0
     if (takeoverTs && Date.now() - takeoverTs > takeoverTtl) {
       console.log('[Agente Julmar] Takeover expirado — a retomar bot para:', telefone)
@@ -1131,6 +1287,12 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       await tratarConfirmacao(tenant.id, telefone, mensagem, pendente)
       return
     }
+  }
+
+  // ── Atendimento ja escalado: acrescenta contexto sem repetir escalamento ─
+  if (sessao?.step === 'escalado' && !isOwner && !isAdmin) {
+    await tratarContinuacaoEscalada(tenant.id, telefone, mensagem, sessao)
+    return
   }
 
   // ── Carrega historico, instrucoes e tabela de preços ────────────────────
@@ -1261,22 +1423,65 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     const motivo = resposta.replace('[ESCALAR]', '').trim()
     await notificarTodosAdmins(`ORCAMENTO/ESCALAMENTO\nCliente: ${telefone}\n${motivo}`)
     const msgEscalar = 'Vou passar o seu pedido a nossa equipa, que entra em contacto para confirmar o orcamento.'
-    await enviarComDelay(telefone, msgEscalar)
-    historico.push({ role: 'assistant', content: resposta })
-    await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
-    await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgEscalar, 'escalado')
+    const historicoDedupe = memoriaConversa?.lastAssistantMessage
+      ? [
+          ...historico,
+          { role: 'assistant' as const, content: memoriaConversa.lastAssistantMessage },
+        ]
+      : historico
+    const enviada = await enviarRespostaComDelaySemRepetir(
+      telefone,
+      msgEscalar,
+      historicoDedupe,
+    )
+    if (enviada) historico.push({ role: 'assistant', content: msgEscalar })
+    await guardarSessao(tenant.id, telefone, {
+      step: 'escalado',
+      dados: {
+        historico,
+        motivoEscalamento: motivo,
+        escaladoEm: new Date().toISOString(),
+      },
+    }, {
+      ttlSeconds: ttlEscalamentoSegundos(),
+    })
+    await registarTurnoAgenteJulmar(
+      tenant.id,
+      telefone,
+      mensagem,
+      enviada ? msgEscalar : undefined,
+      'escalado',
+    )
     return
   }
 
   // ── Resposta normal ──────────────────────────────────────────────────────
-  historico.push({ role: 'assistant', content: resposta })
+  const historicoDedupe = memoriaConversa?.lastAssistantMessage
+    ? [
+        ...historico,
+        { role: 'assistant' as const, content: memoriaConversa.lastAssistantMessage },
+      ]
+    : historico
+  let enviada: boolean
+  if (isOwner || isAdmin) {
+    await enviarMensagem(telefone, resposta)
+    enviada = true
+  } else {
+    enviada = await enviarRespostaComDelaySemRepetir(
+      telefone,
+      resposta,
+      historicoDedupe,
+    )
+  }
+  if (enviada) historico.push({ role: 'assistant', content: resposta })
   const dadosSessao = descontoCupao > 0 ? { historico, descontoCupao } : { historico }
   await guardarSessao(tenant.id, telefone, { step: 'conversando', dados: dadosSessao })
 
-  if (isOwner || isAdmin) {
-    await enviarMensagem(telefone, resposta)
-  } else {
-    await enviarComDelay(telefone, resposta)
-  }
-  await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, resposta, 'conversando')
+  await registarTurnoAgenteJulmar(
+    tenant.id,
+    telefone,
+    mensagem,
+    enviada ? resposta : undefined,
+    'conversando',
+  )
 }
