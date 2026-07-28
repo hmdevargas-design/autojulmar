@@ -83,6 +83,16 @@ function mensagemManualHumana(msg: MensagemUazapi): boolean {
   return msg.wasSentByApi !== true
 }
 
+async function eventoWebhookDuplicado(chave: string): Promise<boolean> {
+  const supabase = criarClienteAdmin()
+  const { error } = await supabase.from('msg_dedup').insert({ hash: chave })
+  if (error?.code === '23505') return true
+  if (error) {
+    console.warn('[WhatsApp] Dedup de evento falhou (continuando):', error.message)
+  }
+  return false
+}
+
 async function pausarPorTakeoverHumano(clienteTel: string): Promise<void> {
   if (!clienteTel || eAdmin(clienteTel)) return
 
@@ -163,12 +173,21 @@ export async function POST(request: NextRequest) {
 
     if (mensagemManualHumana(msg)) {
       const clienteTel = telefoneClienteFromMe(msg)
+      const content = msg.text?.trim() || msg.caption?.trim() || '[mensagem humana sem texto]'
+      const messageId = msg.messageid ?? msg.messageId
+      const dedupKey = messageId
+        ? `human:${messageId}`
+        : `human:${clienteTel}:${content}:${Math.floor(Date.now() / 60_000)}`
+      if (await eventoWebhookDuplicado(dedupKey)) {
+        console.log('[WhatsApp] Mensagem humana duplicada ignorada:', clienteTel)
+        return NextResponse.json({ ok: true, duplicate: true })
+      }
       await registrarMensagemObservada(
         clienteTel,
         'outbound',
-        msg.text?.trim() || msg.caption?.trim() || '[mensagem humana sem texto]',
+        content,
         'humano',
-        { messageId: msg.messageid ?? msg.messageId, type: msg.type },
+        { messageId, type: msg.type },
       )
       if (!modoObservadorAtivo()) {
         await pausarPorTakeoverHumano(clienteTel)
@@ -306,7 +325,7 @@ export async function POST(request: NextRequest) {
 
     supabase.from('msg_dedup')
       .delete()
-      .lt('criado_em', new Date(Date.now() - 60_000).toISOString())
+      .lt('criado_em', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .then(() => { /* fire-and-forget */ })
 
     console.log('[WhatsApp] A processar:', telefone, '|', msg.text.trim())

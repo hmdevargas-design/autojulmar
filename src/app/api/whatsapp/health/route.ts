@@ -219,6 +219,13 @@ export async function GET(request: NextRequest) {
         observerMode: process.env.WHATSAPP_OBSERVER_MODE === 'true',
         testNumbersConfigured: Boolean(process.env.WHATSAPP_NUMEROS_TESTE?.trim()),
       },
+      models: {
+        primaryProvider: 'anthropic',
+        primaryModel: process.env.WHATSAPP_ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        openaiFallbackConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+        openaiFallbackModel:
+          process.env.WHATSAPP_OPENAI_FALLBACK_MODEL ?? 'gpt-5.6-luna',
+      },
     })
   } catch (error) {
     return NextResponse.json({

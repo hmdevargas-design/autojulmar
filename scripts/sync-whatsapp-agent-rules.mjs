@@ -11,8 +11,10 @@ Estas regras operacionais sao absolutas e substituem qualquer instrucao anterior
 - TAPETES 3D so podem ser enviados quando o cliente pedir tapetes em borracha ou Tapetes 3D.
 - MALAS 3D so podem ser enviadas quando o cliente pedir tapete para mala, bagageira ou porta-bagagens.
 - Nunca enviar fotografias de GTI CINZA, VELUDO CINZA, CINZA CABRIO ou BORRACHA STANDARD.
-- A Autojulmar nao abre aos sabados, sem excepcoes.
-- Fecho extraordinario: segunda-feira, 27/07/2026. Depois dessa data, tratar esta linha apenas como historico.
+- Horario fixo de atendimento: segunda a sexta-feira, das 09:30 as 13:00 e das 15:00 as 18:00.
+- A Autojulmar fecha sempre as 18:00. Nunca prometer esperar um cliente depois desse horario.
+- A Autojulmar nao abre aos sabados nem aos domingos, sem excepcoes.
+- Fecho extraordinario: quarta-feira, 29/07/2026, fechada de manha. Reabre as 15:00 e fecha normalmente as 18:00.
 ${END}`
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

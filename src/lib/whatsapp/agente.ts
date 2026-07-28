@@ -36,7 +36,16 @@ import {
   type WhatsappOutboxOptions,
 } from './outbox'
 import { selecionarFotosMaterial } from './material-photos'
-import { instrucoesHorarioAutojulmar } from './business-rules'
+import {
+  aplicarGuardrailHorarioAutojulmar,
+  instrucoesHorarioAutojulmar,
+  respostaDeterministicaHorarioAutojulmar,
+} from './business-rules'
+import {
+  chamarOpenAIFallback,
+  erroDisponibilidadeProvedor,
+  type ModelCallResult,
+} from './model-provider'
 import {
   chaveIdempotenciaResposta,
   mensagemEhCortesia,
@@ -50,12 +59,12 @@ const MAX_HISTORICO       = 14
 const AGENTE_JULMAR_SOURCE = 'agente-julmar'
 // Mantem a chave antiga para nao perder instrucoes ja guardadas antes da renomeacao interna.
 const TELEFONE_INSTRUCOES = '__instrucoes_agente__'
-const RATE_LIMIT_ALERT_COOLDOWN_MS = 10 * 60 * 1000
+const PROVIDER_ALERT_COOLDOWN_MS = 30 * 60 * 1000
 const DEFAULT_RESPONSE_DEDUPE_SECONDS = 6 * 60 * 60
 const DEFAULT_ESCALATION_TTL_SECONDS = 2 * 60 * 60
 const DEFAULT_TAKEOVER_TTL_SECONDS = 24 * 60 * 60
 
-let ultimoAlertaRateLimit = 0
+let ultimoAlertaProvedor = 0
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -170,6 +179,7 @@ async function registarTurnoAgenteJulmar(
   userMessage: string,
   assistantMessage: string | undefined,
   state: string,
+  metadata: Record<string, unknown> = {},
 ): Promise<void> {
   await registrarTurnoConversa({
     tenantId,
@@ -177,7 +187,7 @@ async function registarTurnoAgenteJulmar(
     userMessage,
     assistantMessage,
     state,
-    metadata: { source: AGENTE_JULMAR_SOURCE },
+    metadata: { source: AGENTE_JULMAR_SOURCE, ...metadata },
   })
 }
 
@@ -243,7 +253,10 @@ function resumirErroTecnico(err: unknown): string {
     .trim()
 
   if (isRateLimitError(err)) {
-    return 'Rate limit do Claude atingido. O agente vai responder em modo fallback e tentar novamente nas proximas mensagens.'
+    return 'Rate limit do provedor principal atingido. O fallback automatico tambem nao conseguiu responder.'
+  }
+  if (texto.toLowerCase().includes('credit balance')) {
+    return 'Saldo Anthropic insuficiente e fallback automatico indisponivel.'
   }
 
   return texto.slice(0, 500)
@@ -253,10 +266,10 @@ async function notificarErroAgente(telefone: string, mensagem: string, err: unkn
   const numeroHumano = obterNumeroHumano()
   if (!numeroHumano) return
 
-  if (isRateLimitError(err)) {
+  if (erroDisponibilidadeProvedor(err)) {
     const agora = Date.now()
-    if (agora - ultimoAlertaRateLimit < RATE_LIMIT_ALERT_COOLDOWN_MS) return
-    ultimoAlertaRateLimit = agora
+    if (agora - ultimoAlertaProvedor < PROVIDER_ALERT_COOLDOWN_MS) return
+    ultimoAlertaProvedor = agora
   }
 
   await enviarMensagem(numeroHumano, [
@@ -271,14 +284,72 @@ async function chamarClaude(
   model: string,
   system: string,
   messages: Msg[],
-): Promise<string> {
+  fallbackUsed = false,
+): Promise<ModelCallResult> {
   const res = await claude.messages.create({
     model,
     max_tokens: 500,
     system,
     messages,
   })
-  return (res.content[0] as { type: string; text: string }).text.trim()
+  const text = res.content
+    .filter(item => item.type === 'text')
+    .map(item => item.text)
+    .join('\n')
+    .trim()
+  if (!text) throw new Error(`Claude ${model} retornou resposta sem texto`)
+
+  return {
+    text,
+    provider: 'anthropic',
+    model,
+    fallbackUsed,
+    usage: {
+      inputTokens: res.usage.input_tokens,
+      outputTokens: res.usage.output_tokens,
+    },
+  }
+}
+
+async function chamarModeloAtendimento(
+  system: string,
+  messages: Msg[],
+): Promise<ModelCallResult> {
+  const mainModel = process.env.WHATSAPP_ANTHROPIC_MODEL ?? 'claude-sonnet-4-6'
+
+  try {
+    return await chamarClaude(mainModel, system, messages)
+  } catch (mainError) {
+    console.error('[Agente Julmar] Erro Claude principal:', erroParaTexto(mainError))
+
+    if (isRateLimitError(mainError)) {
+      try {
+        return await chamarClaude(
+          'claude-haiku-4-5-20251001',
+          system,
+          messages.slice(-6),
+          true,
+        )
+      } catch (haikuError) {
+        console.error('[Agente Julmar] Erro Claude Haiku:', erroParaTexto(haikuError))
+      }
+    }
+
+    if (!erroDisponibilidadeProvedor(mainError)) throw mainError
+
+    try {
+      const fallback = await chamarOpenAIFallback(system, messages)
+      console.warn(
+        `[Agente Julmar] Fallback activo: ${fallback.provider}/${fallback.model}`,
+      )
+      return fallback
+    } catch (fallbackError) {
+      throw new Error(
+        `Claude indisponivel (${erroParaTexto(mainError)}); `
+        + `fallback OpenAI falhou (${erroParaTexto(fallbackError)})`,
+      )
+    }
+  }
 }
 
 // ─── Delay humano ─────────────────────────────────────────────────────────────
@@ -1132,12 +1203,18 @@ async function tratarConfirmacao(
 
 export interface SimulacaoRespostaAgenteJulmar {
   nivelServico: 'primary' | 'full'
+  provider: 'anthropic' | 'openai' | 'deterministic'
   modelo: string
+  fallbackUsed: boolean
   respostaOriginal: string
   respostaFinal: string
   safetyAdjusted: boolean
   action: 'reply' | 'escalate' | 'blocked-order'
   usedCompactMemory: boolean
+  usage?: {
+    inputTokens?: number
+    outputTokens?: number
+  }
 }
 
 export async function simularRespostaAgenteJulmar(
@@ -1163,7 +1240,22 @@ export async function simularRespostaAgenteJulmar(
   const memoriaCompacta = memoriaParaPrompt(memoriaConversa)
   const primeiraMensagemCliente = deveUsarSaudacaoAtiva(memoriaConversa)
   const nivelServico = obterNivelServicoAgenteJulmar()
-  const modelo = 'claude-sonnet-4-6'
+  const respostaHorario = respostaDeterministicaHorarioAutojulmar(mensagem)
+
+  if (respostaHorario) {
+    return {
+      nivelServico,
+      provider: 'deterministic',
+      modelo: 'autojulmar-business-rules',
+      fallbackUsed: false,
+      respostaOriginal: respostaHorario,
+      respostaFinal: respostaHorario,
+      safetyAdjusted: false,
+      action: 'reply',
+      usedCompactMemory: memoriaCompacta.length > 0,
+    }
+  }
+
   const systemPrompt = buildSystemPrompt(
     instrucoes,
     'cliente',
@@ -1174,29 +1266,34 @@ export async function simularRespostaAgenteJulmar(
     primeiraMensagemCliente,
     memoriaCompacta,
   )
-  const respostaOriginal = await chamarClaude(
-    modelo,
+  const modelResult = await chamarModeloAtendimento(
     systemPrompt,
     [{ role: 'user', content: mensagem }],
   )
-  const respostaFinal = aplicarPoliticaRespostaPrimaria(
-    nivelServico,
-    respostaOriginal,
+  const respostaFinal = aplicarGuardrailHorarioAutojulmar(
+    aplicarPoliticaRespostaPrimaria(
+      nivelServico,
+      modelResult.text,
+      mensagem,
+    ),
     mensagem,
   )
 
   return {
     nivelServico,
-    modelo,
-    respostaOriginal,
+    provider: modelResult.provider,
+    modelo: modelResult.model,
+    fallbackUsed: modelResult.fallbackUsed,
+    respostaOriginal: modelResult.text,
     respostaFinal,
-    safetyAdjusted: respostaFinal !== respostaOriginal,
+    safetyAdjusted: respostaFinal !== modelResult.text,
     action: respostaFinal.startsWith('[ESCALAR]')
       ? 'escalate'
       : respostaFinal.startsWith('[PEDIDO_PENDENTE]')
         ? 'blocked-order'
         : 'reply',
     usedCompactMemory: memoriaCompacta.length > 0,
+    usage: modelResult.usage,
   }
 }
 
@@ -1319,8 +1416,41 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   historico.push({ role: 'user', content: mensagem })
   if (historico.length > MAX_HISTORICO) historico.splice(0, historico.length - MAX_HISTORICO)
 
+  const respostaHorario = tipoUtilizador === 'cliente'
+    ? respostaDeterministicaHorarioAutojulmar(mensagem)
+    : null
+  if (respostaHorario) {
+    const respostaComIdentificacao = primeiraMensagemCliente
+      ? `Olá! Sou o assistente inteligente da Autojulmar. ${respostaHorario}`
+      : respostaHorario
+    const enviada = await enviarRespostaComDelaySemRepetir(
+      telefone,
+      respostaComIdentificacao,
+      historico,
+    )
+    if (enviada) historico.push({ role: 'assistant', content: respostaComIdentificacao })
+    await guardarSessao(tenant.id, telefone, {
+      step: 'conversando',
+      dados: descontoCupao > 0 ? { historico, descontoCupao } : { historico },
+    })
+    await registarTurnoAgenteJulmar(
+      tenant.id,
+      telefone,
+      mensagem,
+      enviada ? respostaComIdentificacao : undefined,
+      'conversando',
+      {
+        provider: 'deterministic',
+        model: 'autojulmar-business-rules',
+        fallbackUsed: false,
+      },
+    )
+    return
+  }
+
   // ── Chama Claude Sonnet ──────────────────────────────────────────────────
   let resposta: string
+  let modelResult: ModelCallResult
   const systemPrompt = buildSystemPrompt(
     instrucoes,
     tipoUtilizador,
@@ -1333,36 +1463,50 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   )
 
   try {
-    resposta = await chamarClaude('claude-sonnet-4-6', systemPrompt, historico)
+    modelResult = await chamarModeloAtendimento(systemPrompt, historico)
+    resposta = modelResult.text
   } catch (err) {
-    console.error('[Agente Julmar] Erro Claude Sonnet:', String(err))
-
-    if (isRateLimitError(err)) {
-      try {
-        resposta = await chamarClaude('claude-haiku-4-5-20251001', systemPrompt, historico.slice(-6))
-      } catch (fallbackErr) {
-        console.error('[Agente Julmar] Erro Claude Haiku fallback:', String(fallbackErr))
-        await notificarErroAgente(telefone, mensagem, fallbackErr)
-        await guardarSessao(tenant.id, telefone, { step: 'escalado', dados: { historico } })
-        const msgFallback = 'Recebemos a sua mensagem. Estamos com muito movimento neste momento, mas a nossa equipa vai acompanhar o seu pedido em breve.'
-        await enviarComDelay(telefone, msgFallback)
-        await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgFallback, 'escalado')
-        return
-      }
-    } else {
-      await notificarErroAgente(telefone, mensagem, err)
-      const msgErro = 'Problema tecnico. A nossa equipa contacta em breve.'
-      await enviarComDelay(telefone, msgErro)
-      await registarTurnoAgenteJulmar(tenant.id, telefone, mensagem, msgErro, sessao?.step ?? 'erro')
-      return
-    }
+    console.error('[Agente Julmar] Todos os modelos falharam:', String(err))
+    await notificarErroAgente(telefone, mensagem, err)
+    const msgErro = 'Recebemos a sua mensagem. A nossa equipa vai acompanhar o seu pedido em breve.'
+    const enviada = await enviarRespostaComDelaySemRepetir(
+      telefone,
+      msgErro,
+      historico,
+    )
+    if (enviada) historico.push({ role: 'assistant', content: msgErro })
+    await guardarSessao(tenant.id, telefone, {
+      step: 'escalado',
+      dados: { historico },
+    }, {
+      ttlSeconds: ttlEscalamentoSegundos(),
+    })
+    await registarTurnoAgenteJulmar(
+      tenant.id,
+      telefone,
+      mensagem,
+      enviada ? msgErro : undefined,
+      'escalado',
+      { providerError: true },
+    )
+    return
+  }
+  const modelMetadata = {
+    provider: modelResult.provider,
+    model: modelResult.model,
+    fallbackUsed: modelResult.fallbackUsed,
+    inputTokens: modelResult.usage?.inputTokens,
+    outputTokens: modelResult.usage?.outputTokens,
   }
 
   // ── Pedido pendente ──────────────────────────────────────────────────────
   if (tipoUtilizador === 'cliente') {
-    resposta = aplicarPoliticaRespostaPrimaria(
-      obterNivelServicoAgenteJulmar(),
-      resposta,
+    resposta = aplicarGuardrailHorarioAutojulmar(
+      aplicarPoliticaRespostaPrimaria(
+        obterNivelServicoAgenteJulmar(),
+        resposta,
+        mensagem,
+      ),
       mensagem,
     )
   }
@@ -1414,6 +1558,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       mensagem,
       textoLimpo,
       'conversando',
+      modelMetadata,
     )
     return
   }
@@ -1451,6 +1596,7 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       mensagem,
       enviada ? msgEscalar : undefined,
       'escalado',
+      modelMetadata,
     )
     return
   }
@@ -1483,5 +1629,6 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
     mensagem,
     enviada ? resposta : undefined,
     'conversando',
+    modelMetadata,
   )
 }
