@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  cancelarMencoesInternasExpiradas,
   cancelarMensagensAgenteExpiradas,
   cancelarMensagem,
   claimProximasMensagens,
@@ -112,7 +113,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const expiredCancelled = await cancelarMensagensAgenteExpiradas()
+  const [expiredAgentCancelled, expiredInternalCancelled] = await Promise.all([
+    cancelarMensagensAgenteExpiradas(),
+    cancelarMencoesInternasExpiradas(),
+  ])
   const max = limitePorExecucao()
   const claimed = await claimProximasMensagens(max)
   const results: Array<{ id: string; status: string; error?: string }> = []
@@ -134,7 +138,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     dryRun,
-    expiredCancelled,
+    expiredCancelled: expiredAgentCancelled + expiredInternalCancelled,
+    expiredAgentCancelled,
+    expiredInternalCancelled,
     claimed: claimed.length,
     max,
     results,

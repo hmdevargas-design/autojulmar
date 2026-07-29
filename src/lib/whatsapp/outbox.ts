@@ -145,6 +145,30 @@ export async function cancelarMensagensAgenteExpiradas(
   return data?.length ?? 0
 }
 
+export async function cancelarMencoesInternasExpiradas(
+  agora = new Date(),
+): Promise<number> {
+  const supabase = criarClienteAdmin()
+  const limite = new Date(
+    agora.getTime() - 2 * 60 * 60 * 1000,
+  ).toISOString()
+  const { data, error } = await supabase
+    .from('whatsapp_outbox')
+    .update({
+      status: 'cancelled',
+      locked_until: null,
+      last_error: 'cancelado: notificacao interna expirou antes do envio',
+    })
+    .is('source', null)
+    .eq('message_type', 'mentions')
+    .eq('status', 'pending')
+    .lt('created_at', limite)
+    .select('id')
+
+  if (error) throw error
+  return data?.length ?? 0
+}
+
 function normalizarNumero(para: string): string {
   return para.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '')
 }
