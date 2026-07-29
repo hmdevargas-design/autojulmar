@@ -1,5 +1,7 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  cancelarMensagensAgenteExpiradas,
   cancelarMensagem,
   claimProximasMensagens,
   envioRealPermitidoParaNumero,
@@ -30,8 +32,20 @@ function segredoValido(request: NextRequest): boolean {
   const bearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : ''
   const headerSecret = request.headers.get('x-whatsapp-worker-secret') ?? ''
   const querySecret = request.nextUrl.searchParams.get('secret') ?? ''
+  const candidatos = [bearer, headerSecret, querySecret].filter(Boolean)
 
-  return [bearer, headerSecret, querySecret].some(valor => secrets.includes(valor))
+  if (candidatos.some(valor => secrets.includes(valor))) return true
+
+  const legacyHash = process.env.WHATSAPP_OUTBOX_LEGACY_SECRET_SHA256
+    ?.trim()
+    .toLowerCase()
+  if (!legacyHash || !/^[a-f0-9]{64}$/.test(legacyHash)) return false
+
+  const esperado = Buffer.from(legacyHash, 'hex')
+  return candidatos.some(valor => {
+    const recebido = createHash('sha256').update(valor).digest()
+    return recebido.length === esperado.length && timingSafeEqual(recebido, esperado)
+  })
 }
 
 async function processarItem(item: WhatsappOutboxItem, dryRun: boolean): Promise<'sent' | 'dry-run' | 'blocked'> {
@@ -98,6 +112,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const expiredCancelled = await cancelarMensagensAgenteExpiradas()
   const max = limitePorExecucao()
   const claimed = await claimProximasMensagens(max)
   const results: Array<{ id: string; status: string; error?: string }> = []
@@ -119,6 +134,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     dryRun,
+    expiredCancelled,
     claimed: claimed.length,
     max,
     results,

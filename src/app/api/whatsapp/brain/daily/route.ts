@@ -15,7 +15,11 @@ interface ConversationLogRow {
 
 interface OutboxRow {
   to_number: string
+  message_type: string
+  payload: Record<string, unknown> | null
   status: string
+  source: string | null
+  idempotency_key: string | null
   last_error: string | null
   created_at: string
   sent_at: string | null
@@ -253,7 +257,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true }),
     supabase
       .from('whatsapp_outbox')
-      .select('to_number, status, last_error, created_at, sent_at')
+      .select('to_number, message_type, payload, status, source, idempotency_key, last_error, created_at, sent_at')
       .gte('created_at', sinceIso)
       .order('created_at', { ascending: false }),
     supabase
@@ -299,6 +303,13 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
       .map(o => ({
         toNumber: o.to_number,
+        messageType: o.message_type,
+        source: o.source,
+        idempotencyKey: o.idempotency_key,
+        payloadPreview: String(o.payload?.text ?? o.payload?.caption ?? '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 240),
         status: o.status,
         lastError: o.last_error,
         createdAt: o.created_at,

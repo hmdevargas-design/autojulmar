@@ -115,6 +115,36 @@ export function retryBackoffSegundos(attempts: number): number {
   return base + jitter
 }
 
+export function idadeMaximaMensagemAgenteSegundos(): number {
+  return Math.max(
+    5 * 60,
+    intEnv('WHATSAPP_AGENT_OUTBOX_MAX_AGE_SECONDS', 15 * 60),
+  )
+}
+
+export async function cancelarMensagensAgenteExpiradas(
+  agora = new Date(),
+): Promise<number> {
+  const supabase = criarClienteAdmin()
+  const limite = new Date(
+    agora.getTime() - idadeMaximaMensagemAgenteSegundos() * 1000,
+  ).toISOString()
+  const { data, error } = await supabase
+    .from('whatsapp_outbox')
+    .update({
+      status: 'cancelled',
+      locked_until: null,
+      last_error: 'cancelado: resposta do agente expirou antes do envio',
+    })
+    .eq('source', 'agente-julmar')
+    .eq('status', 'pending')
+    .lt('created_at', limite)
+    .select('id')
+
+  if (error) throw error
+  return data?.length ?? 0
+}
+
 function normalizarNumero(para: string): string {
   return para.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '')
 }

@@ -6,4 +6,5 @@ export {
   pausarBot as pausarAgenteJulmar,
   processarComAgente as processarComAgenteJulmar,
   simularRespostaAgenteJulmar,
+  testarConexaoClaudeJulmar,
 } from './agente'

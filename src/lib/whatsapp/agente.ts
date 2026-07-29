@@ -311,6 +311,31 @@ async function chamarClaude(
   }
 }
 
+export async function testarConexaoClaudeJulmar(): Promise<{
+  ok: true
+  provider: 'anthropic'
+  model: string
+  inputTokens?: number
+  outputTokens?: number
+}> {
+  const model = process.env.WHATSAPP_ANTHROPIC_MODEL ?? 'claude-sonnet-4-6'
+  const result = await chamarClaude(
+    model,
+    'Responde apenas com OK.',
+    [{ role: 'user', content: 'Teste de saude.' }],
+  )
+  if (result.text.trim().toUpperCase() !== 'OK') {
+    throw new Error(`Claude respondeu de forma inesperada: ${result.text.slice(0, 80)}`)
+  }
+  return {
+    ok: true,
+    provider: 'anthropic',
+    model: result.model,
+    inputTokens: result.usage?.inputTokens,
+    outputTokens: result.usage?.outputTokens,
+  }
+}
+
 async function chamarModeloAtendimento(
   system: string,
   messages: Msg[],

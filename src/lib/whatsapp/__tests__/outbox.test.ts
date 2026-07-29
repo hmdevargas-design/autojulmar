@@ -4,6 +4,7 @@ import {
   cooldownGlobalSegundos,
   delayInicialSegundos,
   envioRealPermitidoParaNumero,
+  idadeMaximaMensagemAgenteSegundos,
   limitePorExecucao,
   maxPorNumeroPorHora,
   numerosTesteWhatsapp,
@@ -69,6 +70,14 @@ describe('whatsapp outbox config', () => {
     expect(retryBackoffSegundos(1)).toBe(60)
     expect(retryBackoffSegundos(2)).toBe(120)
     expect(retryBackoffSegundos(20)).toBe(3600)
+  })
+
+  it('uses a safe minimum age before expiring agent replies', () => {
+    vi.stubEnv('WHATSAPP_AGENT_OUTBOX_MAX_AGE_SECONDS', '60')
+    expect(idadeMaximaMensagemAgenteSegundos()).toBe(5 * 60)
+
+    vi.stubEnv('WHATSAPP_AGENT_OUTBOX_MAX_AGE_SECONDS', '1200')
+    expect(idadeMaximaMensagemAgenteSegundos()).toBe(1200)
   })
 
   it('restricts real sends to test numbers when configured', () => {

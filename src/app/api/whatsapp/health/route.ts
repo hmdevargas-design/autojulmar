@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { testarConexaoClaudeJulmar } from '@/lib/whatsapp/agente-julmar'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -236,5 +237,29 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (request.nextUrl.searchParams.get('probe') === 'anthropic') {
+    if (!autorizado(request)) {
+      return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
+    }
+    try {
+      const result = await testarConexaoClaudeJulmar()
+      return NextResponse.json({
+        ok: true,
+        checkedAt: new Date().toISOString(),
+        probe: result,
+        sendsMessages: false,
+        writesSession: false,
+      })
+    } catch (error) {
+      return NextResponse.json({
+        ok: false,
+        checkedAt: new Date().toISOString(),
+        probe: { provider: 'anthropic' },
+        error: error instanceof Error ? error.message.slice(0, 500) : String(error),
+        sendsMessages: false,
+        writesSession: false,
+      }, { status: 502 })
+    }
+  }
   return GET(request)
 }
