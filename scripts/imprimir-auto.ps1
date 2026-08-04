@@ -127,6 +127,28 @@ function Test-PdfFile {
     }
 }
 
+function Get-PrinterProblem {
+    param([Parameter(Mandatory = $true)][string]$PrinterName)
+
+    $printer = Get-Printer -Name $PrinterName -ErrorAction Stop
+    $status = [string]$printer.PrinterStatus
+    if ($status -match 'Error|Offline|Paused|PaperProblem|NoToner|DoorOpen|OutOfMemory|PaperOut|UserIntervention') {
+        return "A impressora '$PrinterName' está no estado '$status'."
+    }
+
+    $problemJob = Get-PrintJob -PrinterName $PrinterName -ErrorAction SilentlyContinue |
+        Where-Object {
+            [string]$_.JobStatus -match 'Error|Blocked|Offline|PaperOut|UserIntervention'
+        } |
+        Select-Object -First 1
+
+    if ($problemJob) {
+        return "O trabalho $($problemJob.ID) ficou bloqueado no Windows: $($problemJob.JobStatus)."
+    }
+
+    return $null
+}
+
 function Invoke-PrintPedido {
     param(
         [Parameter(Mandatory = $true)]$Pedido,
@@ -138,14 +160,20 @@ function Invoke-PrintPedido {
 
     $pdfUrl = "$AppUrl/api/pedidos/$($Pedido.id)/pdf?formato=termica"
     $temporaryPdf = Join-Path $runtimeDir "pedido-$($Pedido.id).pdf"
+    $failedPdf = Join-Path $runtimeDir "falha-pedido-$($Pedido.id).pdf"
+    $printSucceeded = $false
 
     try {
+        $printerProblem = Get-PrinterProblem -PrinterName $PrinterName
+        if ($printerProblem) { throw $printerProblem }
+
         Invoke-WebRequest -Uri $pdfUrl -Headers $Headers -OutFile $temporaryPdf -UseBasicParsing
         if (-not (Test-PdfFile -Path $temporaryPdf)) {
             throw 'O servidor não devolveu um PDF válido. Confirme a chave de impressão.'
         }
 
-        $arguments = "-print-to `"$PrinterName`" -silent `"$temporaryPdf`""
+        $printSettings = 'fit,paper=80mm x 297mm,monochrome'
+        $arguments = "-print-to `"$PrinterName`" -print-settings `"$printSettings`" -silent `"$temporaryPdf`""
         $process = Start-Process -FilePath $SumatraPath -ArgumentList $arguments -PassThru -WindowStyle Hidden
         if (-not $process.WaitForExit(60000)) {
             try { $process.Kill() } catch { }
@@ -154,8 +182,19 @@ function Invoke-PrintPedido {
         if ($process.ExitCode -ne 0) {
             throw "O SumatraPDF terminou com o código $($process.ExitCode)."
         }
+
+        Start-Sleep -Seconds 3
+        $printerProblem = Get-PrinterProblem -PrinterName $PrinterName
+        if ($printerProblem) { throw $printerProblem }
+
+        $printSucceeded = $true
     } finally {
-        Remove-Item -LiteralPath $temporaryPdf -Force -ErrorAction SilentlyContinue
+        if ($printSucceeded) {
+            Remove-Item -LiteralPath $temporaryPdf -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $failedPdf -Force -ErrorAction SilentlyContinue
+        } elseif (Test-Path -LiteralPath $temporaryPdf) {
+            Move-Item -LiteralPath $temporaryPdf -Destination $failedPdf -Force
+        }
     }
 }
 

@@ -1,8 +1,9 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
-// SRP-350Plus III: área imprimível exacta = 72mm = 204pt
-// Margens 8pt → conteúdo útil = 188pt ≈ 66mm
+// SRP-350Plus III: área imprimível exacta = 72mm = 204pt.
+// A altura fica abaixo dos 297mm aceites pelo papel padrão do driver Windows.
 const L = 204
+const H = 800
 const M = 8
 
 const s = StyleSheet.create({
@@ -101,7 +102,7 @@ export default function DocumentoPedidoTermica(props: Props) {
 
   return (
     <Document>
-      <Page size={[L, 1000]} style={s.page}>
+      <Page size={[L, H]} style={s.page}>
 
         {/* Cabeçalho */}
         <Text style={s.empresa}>{props.nomeTenant}</Text>
