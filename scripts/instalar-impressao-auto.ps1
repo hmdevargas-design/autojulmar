@@ -32,6 +32,20 @@ $defaultUrl = if ($existing -and $existing.app_url) { [string]$existing.app_url 
 $defaultTenant = if ($existing -and $existing.tenant_id) { [string]$existing.tenant_id } else { '00000000-0000-0000-0000-000000000001' }
 $defaultPrinter = if ($existing -and $existing.impressora) { [string]$existing.impressora } else { 'auto' }
 $defaultSumatra = if ($existing -and $existing.sumatra) { [string]$existing.sumatra } else { '' }
+$defaultPollSeconds = if ($existing -and $existing.PSObject.Properties['intervalo_segundos']) {
+    [Math]::Max(10, [Math]::Min(300, [int]$existing.intervalo_segundos))
+} else {
+    30
+}
+$defaultBusinessHoursEnabled = if ($existing -and $existing.PSObject.Properties['horario_comercial_ativo']) {
+    [bool]$existing.horario_comercial_ativo
+} else {
+    $true
+}
+$defaultOpeningTime = if ($existing -and $existing.PSObject.Properties['hora_abertura']) { [string]$existing.hora_abertura } else { '09:30' }
+$defaultLunchStartTime = if ($existing -and $existing.PSObject.Properties['hora_almoco_inicio']) { [string]$existing.hora_almoco_inicio } else { '13:00' }
+$defaultLunchEndTime = if ($existing -and $existing.PSObject.Properties['hora_almoco_fim']) { [string]$existing.hora_almoco_fim } else { '15:00' }
+$defaultClosingTime = if ($existing -and $existing.PSObject.Properties['hora_fecho']) { [string]$existing.hora_fecho } else { '18:00' }
 
 $appUrlInput = Read-Host "Endereço do sistema [$defaultUrl]"
 $tenantInput = Read-Host "Tenant ID [$defaultTenant]"
@@ -87,6 +101,12 @@ Write-Host 'Ligação à API de impressão validada.' -ForegroundColor Green
     print_key = $printKey
     impressora = $printer
     sumatra = $sumatra
+    intervalo_segundos = $defaultPollSeconds
+    horario_comercial_ativo = $defaultBusinessHoursEnabled
+    hora_abertura = $defaultOpeningTime
+    hora_almoco_inicio = $defaultLunchStartTime
+    hora_almoco_fim = $defaultLunchEndTime
+    hora_fecho = $defaultClosingTime
 } | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
 
 if (Test-Path -LiteralPath $bundledKeyPath) {

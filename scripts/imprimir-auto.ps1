@@ -8,7 +8,7 @@ $configPath = Join-Path $PSScriptRoot 'impressao-config.json'
 $runtimeDir = Join-Path $env:LOCALAPPDATA 'Autojulmar\Impressao'
 $statePath = Join-Path $runtimeDir 'estado.json'
 $logPath = Join-Path $runtimeDir 'impressao.log'
-$pollSeconds = 5
+$defaultPollSeconds = 30
 $overlapMinutes = 2
 
 New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
@@ -207,6 +207,96 @@ $appUrl = ([string]$config.app_url).Trim().TrimEnd('/')
 $tenantId = ([string]$config.tenant_id).Trim()
 $printKey = ([string]$config.print_key).Trim()
 
+$rawPollSeconds = $env:AUTOJULMAR_PRINT_POLL_SECONDS
+if (-not $rawPollSeconds -and $config.PSObject.Properties['intervalo_segundos']) {
+    $rawPollSeconds = [string]$config.intervalo_segundos
+}
+
+function Resolve-TimeOfDay {
+    param(
+        [string]$Value,
+        [Parameter(Mandatory = $true)][TimeSpan]$Fallback
+    )
+
+    $parsed = [TimeSpan]::Zero
+    if (
+        $Value -and
+        [TimeSpan]::TryParse($Value, [Globalization.CultureInfo]::InvariantCulture, [ref]$parsed) -and
+        $parsed -ge [TimeSpan]::Zero -and
+        $parsed -lt [TimeSpan]::FromDays(1)
+    ) {
+        return $parsed
+    }
+
+    return $Fallback
+}
+
+function Test-BusinessHours {
+    param([Parameter(Mandatory = $true)][DateTime]$Now)
+
+    if (-not $businessHoursEnabled) { return $true }
+    if ($Now.DayOfWeek -in @([DayOfWeek]::Saturday, [DayOfWeek]::Sunday)) { return $false }
+
+    $time = $Now.TimeOfDay
+    return (
+        ($time -ge $openingTime -and $time -lt $lunchStartTime) -or
+        ($time -ge $lunchEndTime -and $time -lt $closingTime)
+    )
+}
+
+function Get-NextBusinessOpening {
+    param([Parameter(Mandatory = $true)][DateTime]$Now)
+
+    if (-not $businessHoursEnabled) { return $Now }
+
+    for ($dayOffset = 0; $dayOffset -le 7; $dayOffset++) {
+        $date = $Now.Date.AddDays($dayOffset)
+        if ($date.DayOfWeek -in @([DayOfWeek]::Saturday, [DayOfWeek]::Sunday)) { continue }
+
+        $morningOpening = $date.Add($openingTime)
+        if ($morningOpening -gt $Now) { return $morningOpening }
+
+        $afternoonOpening = $date.Add($lunchEndTime)
+        if ($afternoonOpening -gt $Now) { return $afternoonOpening }
+    }
+
+    throw 'Não foi possível calcular a próxima abertura da estação de impressão.'
+}
+$parsedPollSeconds = 0
+$pollSeconds = if (
+    $rawPollSeconds -and
+    [int]::TryParse($rawPollSeconds, [ref]$parsedPollSeconds)
+) {
+    [Math]::Max(10, [Math]::Min(300, $parsedPollSeconds))
+} else {
+    $defaultPollSeconds
+}
+
+$businessHoursEnabled = if ($config.PSObject.Properties['horario_comercial_ativo']) {
+    [bool]$config.horario_comercial_ativo
+} else {
+    $true
+}
+$openingValue = if ($config.PSObject.Properties['hora_abertura']) { [string]$config.hora_abertura } else { '' }
+$lunchStartValue = if ($config.PSObject.Properties['hora_almoco_inicio']) { [string]$config.hora_almoco_inicio } else { '' }
+$lunchEndValue = if ($config.PSObject.Properties['hora_almoco_fim']) { [string]$config.hora_almoco_fim } else { '' }
+$closingValue = if ($config.PSObject.Properties['hora_fecho']) { [string]$config.hora_fecho } else { '' }
+$openingTime = Resolve-TimeOfDay -Value $openingValue -Fallback ([TimeSpan]::FromHours(9.5))
+$lunchStartTime = Resolve-TimeOfDay -Value $lunchStartValue -Fallback ([TimeSpan]::FromHours(13))
+$lunchEndTime = Resolve-TimeOfDay -Value $lunchEndValue -Fallback ([TimeSpan]::FromHours(15))
+$closingTime = Resolve-TimeOfDay -Value $closingValue -Fallback ([TimeSpan]::FromHours(18))
+
+if (-not (
+    $openingTime -lt $lunchStartTime -and
+    $lunchStartTime -le $lunchEndTime -and
+    $lunchEndTime -lt $closingTime
+)) {
+    $openingTime = [TimeSpan]::FromHours(9.5)
+    $lunchStartTime = [TimeSpan]::FromHours(13)
+    $lunchEndTime = [TimeSpan]::FromHours(15)
+    $closingTime = [TimeSpan]::FromHours(18)
+}
+
 if (-not $appUrl -or -not $tenantId -or -not $printKey -or $printKey -match 'COLE_AQUI') {
     throw 'Configuração incompleta: app_url, tenant_id e print_key são obrigatórios.'
 }
@@ -224,9 +314,18 @@ if (-not $createdNew) {
 
 try {
     $state = Load-State
-    Write-PrintLog -Message "Estação ativa. Impressora: $printerName" -Color Green
+    Write-PrintLog -Message "Estação ativa. Impressora: $printerName. Consulta a cada $pollSeconds s." -Color Green
 
     while ($true) {
+        $now = Get-Date
+        if (-not (Test-BusinessHours -Now $now)) {
+            $nextOpening = Get-NextBusinessOpening -Now $now
+            $sleepSeconds = [Math]::Max(1, [Math]::Ceiling(($nextOpening - $now).TotalSeconds))
+            Write-PrintLog -Message "Fora do horário comercial. Próxima consulta: $($nextOpening.ToString('yyyy-MM-dd HH:mm'))." -Color DarkGray
+            Start-Sleep -Seconds $sleepSeconds
+            continue
+        }
+
         try {
             $pollUntil = (Get-Date).ToUniversalTime()
             $cursorDate = ([DateTime]::Parse([string]$state.cursor)).ToUniversalTime()

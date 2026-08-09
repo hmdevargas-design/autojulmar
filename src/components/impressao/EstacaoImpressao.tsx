@@ -1,16 +1,21 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  criarPedidoPoller,
+  IMPRESSAO_WEB_FALLBACK_DEFAULT_ENABLED,
+} from './poller'
 
 interface Pedido { id: string; numero_pedido: number }
 interface Entrada { id: string; numero: number; hora: string; estado: 'fila' | 'impresso' | 'erro' }
 
 export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
-  const [activa,            setActiva]            = useState(true)
+  const [activa,            setActiva]            = useState(IMPRESSAO_WEB_FALLBACK_DEFAULT_ENABLED)
   const [ultimaVerificacao, setUltimaVerificacao] = useState('—')
   const [log,               setLog]               = useState<Entrada[]>([])
   const desdeRef    = useRef(new Date().toISOString())
   const filaRef     = useRef<Pedido[]>([])
+  const vistosRef   = useRef(new Set<string>())
   const emCursoRef  = useRef(false)
 
   const imprimirPedido = useCallback((pedido: Pedido): Promise<void> => {
@@ -73,27 +78,47 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     if (!activa) return
 
-    const verificar = async () => {
-      try {
-        const url = `/api/pedidos/recentes?tenantId=${tenantId}&desde=${encodeURIComponent(desdeRef.current)}`
-        const res  = await fetch(url)
-        const novos: Pedido[] = await res.json()
+    const poller = criarPedidoPoller({
+      paginaOculta: () => document.hidden,
+      consultar: async (signal) => {
+        const ate = new Date().toISOString()
+        const parametros = new URLSearchParams({
+          tenantId,
+          desde: desdeRef.current,
+          ate,
+        })
+        const res = await fetch(`/api/pedidos/recentes?${parametros}`, {
+          cache: 'no-store',
+          signal,
+        })
+        if (!res.ok) throw new Error(`Consulta de pedidos falhou: ${res.status}`)
 
-        desdeRef.current = new Date().toISOString()
+        const novos: Pedido[] = await res.json()
+        desdeRef.current = ate
         setUltimaVerificacao(new Date().toLocaleTimeString('pt-PT'))
 
-        if (novos.length > 0) {
-          filaRef.current.push(...novos)
-          processarFila()
+        const aindaNaoVistos = novos.filter((pedido) => {
+          if (vistosRef.current.has(pedido.id)) return false
+          vistosRef.current.add(pedido.id)
+          return true
+        })
+        if (aindaNaoVistos.length > 0) {
+          filaRef.current.push(...aindaNaoVistos)
+          void processarFila()
         }
-      } catch {
-        // ignora erros de rede temporários
       }
+    })
+
+    const aoMudarVisibilidade = () => {
+      if (!document.hidden) poller.verificarAgora()
     }
 
-    verificar()
-    const intervalo = setInterval(verificar, 5000)
-    return () => clearInterval(intervalo)
+    document.addEventListener('visibilitychange', aoMudarVisibilidade)
+    poller.iniciar()
+    return () => {
+      document.removeEventListener('visibilitychange', aoMudarVisibilidade)
+      poller.parar()
+    }
   }, [activa, tenantId, processarFila])
 
   const estadoCor = { fila: 'text-gold', impresso: 'text-green-400', erro: 'text-red-400' }
@@ -107,11 +132,11 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className={`w-4 h-4 rounded-full ${activa ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
           <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {activa ? 'Estação activa' : 'Estação parada'}
+            {activa ? 'Contingência web ativa' : 'Agente local principal'}
           </span>
         </div>
         <p className="text-sm text-slate-400 mb-6">
-          {activa ? `Última verificação: ${ultimaVerificacao}` : 'Impressão automática suspensa'}
+          {activa ? `Última verificação: ${ultimaVerificacao}` : 'Sem consultas automáticas nesta página'}
         </p>
         <button
           onClick={() => setActiva(a => !a)}
@@ -121,7 +146,7 @@ export default function EstacaoImpressao({ tenantId }: { tenantId: string }) {
               : 'bg-gold hover:bg-gold-dark text-slate-900'
           }`}
         >
-          {activa ? 'Pausar' : 'Retomar'}
+          {activa ? 'Desativar contingência' : 'Ativar contingência'}
         </button>
       </div>
 
