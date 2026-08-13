@@ -31,7 +31,7 @@ describe('Agente Julmar service level', () => {
     'O seu pedido esta disponivel para levantamento.',
     'Tem 10% de desconto.',
   ])('escalates sensitive generated claims: %s', resposta => {
-    expect(aplicarPoliticaRespostaPrimaria('primary', resposta)).toMatch(/^\[ESCALAR\]/)
+    expect(aplicarPoliticaRespostaPrimaria('primary', resposta)).toMatch(/^\[ESCALAR(?::[A-Z_]+)?\]/)
   })
 
   it('prevents automatic order creation in primary mode', () => {

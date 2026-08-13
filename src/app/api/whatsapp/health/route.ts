@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { testarConexaoClaudeJulmar } from '@/lib/whatsapp/agente-julmar'
+import { versaoConhecimentoAutojulmar } from '@/lib/whatsapp/tenant-knowledge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -226,6 +227,12 @@ export async function GET(request: NextRequest) {
         openaiFallbackConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
         openaiFallbackModel:
           process.env.WHATSAPP_OPENAI_FALLBACK_MODEL ?? 'gpt-5.6-luna',
+      },
+      knowledge: {
+        tenant: 'autojulmar',
+        version: versaoConhecimentoAutojulmar(),
+        rollback: 'WHATSAPP_KNOWLEDGE_VERSION=disabled',
+        automaticPromotion: false,
       },
     })
   } catch (error) {

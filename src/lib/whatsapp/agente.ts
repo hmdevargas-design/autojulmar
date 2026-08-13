@@ -17,6 +17,7 @@ import {
   deveUsarSaudacaoAtiva,
   memoriaParaPrompt,
   obterMemoriaConversa,
+  registrarMensagemConversa,
   registrarTurnoConversa,
 } from './conversation-memory'
 import { resolverTenant }                                from '@/lib/tenant/resolver'
@@ -51,6 +52,18 @@ import {
   mensagemEhCortesia,
   respostaExisteNoHistorico,
 } from './response-dedupe'
+import {
+  classificarIntencaoEscalamento,
+  intencaoExigeHumanoAntesDoModelo,
+  interpretarEscalamento,
+  marcadorEscalamento,
+  mensagemClienteParaEscalamento,
+  tituloInternoEscalamento,
+  type IntencaoEscalamento,
+} from './escalation-intent'
+import {
+  conhecimentoAprovadoAutojulmarParaPrompt,
+} from './tenant-knowledge'
 
 export const AGENTE_JULMAR_NOME = 'Agente Julmar'
 
@@ -187,7 +200,11 @@ async function registarTurnoAgenteJulmar(
     userMessage,
     assistantMessage,
     state,
-    metadata: { source: AGENTE_JULMAR_SOURCE, ...metadata },
+    metadata: {
+      source: AGENTE_JULMAR_SOURCE,
+      learningEligible: !eAdmin(telefone),
+      ...metadata,
+    },
   })
 }
 
@@ -477,17 +494,6 @@ async function tratarContinuacaoEscalada(
     ].join('\n'))
   }
 
-  const resposta = cortesia
-    ? 'Combinado. O seu pedido ja esta com a equipa.'
-    : 'Obrigado, acrescentei esta informacao ao pedido que ja esta com a equipa.'
-  const enviada = await enviarRespostaComDelaySemRepetir(
-    telefone,
-    resposta,
-    historico,
-  )
-
-  if (enviada) historico.push({ role: 'assistant', content: resposta })
-
   await guardarSessao(tenantId, telefone, {
     step: 'escalado',
     dados: {
@@ -503,8 +509,61 @@ async function tratarContinuacaoEscalada(
     tenantId,
     telefone,
     mensagem,
-    enviada ? resposta : undefined,
+    undefined,
     'escalado',
+    {
+      autoReplyBlocked: true,
+      reason: 'already_escalated',
+      escalationIntent: sessao.dados?.intencaoEscalamento,
+    },
+  )
+}
+
+async function escalarCliente(
+  tenantId: string,
+  telefone: string,
+  mensagem: string,
+  historico: Msg[],
+  intent: IntencaoEscalamento,
+  motivo: string,
+  metadata: Record<string, unknown> = {},
+): Promise<void> {
+  const titulo = tituloInternoEscalamento(intent)
+  await notificarTodosAdmins(`${titulo}\nCliente: ${telefone}\n${motivo}`)
+
+  const respostaCliente = mensagemClienteParaEscalamento(intent)
+  let enviada = false
+  if (respostaCliente) {
+    enviada = await enviarRespostaComDelaySemRepetir(
+      telefone,
+      respostaCliente,
+      historico,
+    )
+    if (enviada) historico.push({ role: 'assistant', content: respostaCliente })
+  }
+
+  await guardarSessao(tenantId, telefone, {
+    step: 'escalado',
+    dados: {
+      historico,
+      motivoEscalamento: motivo,
+      intencaoEscalamento: intent,
+      escaladoEm: new Date().toISOString(),
+    },
+  }, {
+    ttlSeconds: ttlEscalamentoSegundos(),
+  })
+  await registarTurnoAgenteJulmar(
+    tenantId,
+    telefone,
+    mensagem,
+    enviada && respostaCliente ? respostaCliente : undefined,
+    'escalado',
+    {
+      ...metadata,
+      escalationIntent: intent,
+      autoReplyBlocked: !respostaCliente,
+    },
   )
 }
 
@@ -754,8 +813,11 @@ function buildSystemPrompt(
 
   const nivelServico = obterNivelServicoAgenteJulmar()
   const secaoNivelServico = instrucaoNivelPrimario(nivelServico, tipoUtilizador)
+  const conhecimentoAprovado = tipoUtilizador === 'cliente'
+    ? conhecimentoAprovadoAutojulmarParaPrompt()
+    : ''
 
-  return `${secaoUtilizador}${secaoPerfilCliente}${secaoMemoria}${secaoSaudacaoAtiva}${secaoCupao}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
+  return `${secaoUtilizador}${secaoPerfilCliente}${secaoMemoria}${secaoSaudacaoAtiva}${secaoCupao}${conhecimentoAprovado}Representas a ${nomeLoja}, loja de tapetes personalizados para automovel em Loures, Portugal.
 
 IDENTIDADE:
 - Es o assistente inteligente da ${nomeLoja}, um sistema criado para responder mais rapido, consultar contexto da loja e encaminhar para a equipa quando necessario.
@@ -816,18 +878,20 @@ ${secaoInstrucoes}REGRAS:
 4. Responde sempre em portugues de Portugal (nao PT-BR)
 5. Mantem transparencia: se for a primeira resposta da conversa, identifica-te como assistente inteligente da loja; se perguntarem directamente, explica que es um sistema de atendimento da Autojulmar.
 
-QUANDO ESCALAR — responder APENAS com [ESCALAR] motivo:
-Usa SEMPRE o formato: [ESCALAR] descricao do pedido do cliente
+QUANDO ESCALAR — responder APENAS com um marcador de intencao e o motivo:
+Usa o formato: [ESCALAR:INTENCAO] descricao do pedido do cliente
+Intencoes permitidas: ORCAMENTO, SERVICO_ESPECIAL, RECLAMACAO, ESTADO_PEDIDO, PAGAMENTO, ATENDIMENTO_HUMANO, FORA_ESCOPO ou GENERICO.
+Nunca uses uma mensagem de orcamento para pagamento, estado de pedido, reclamacao ou atendimento humano.
 
 Escala obrigatoriamente quando:
 - Cliente pede orcamento de MALA (que nao seja MALAS 3D — estas tem preco fixo)
-  Exemplo: [ESCALAR] Orcamento de mala — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
+  Exemplo: [ESCALAR:ORCAMENTO] Orcamento de mala — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
 - Cliente pede orcamento de REPARACAO
-  Exemplo: [ESCALAR] Orcamento reparacao — cliente: [nome] | avaria: [descricao] | contacto: [contacto]
+  Exemplo: [ESCALAR:SERVICO_ESPECIAL] Orcamento reparacao — cliente: [nome] | avaria: [descricao] | contacto: [contacto]
 - Cliente pede orcamento de CAPAS (banco, volante, etc.)
-  Exemplo: [ESCALAR] Orcamento capas — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
+  Exemplo: [ESCALAR:SERVICO_ESPECIAL] Orcamento capas — cliente: [nome] | viatura: [viatura] | contacto: [contacto]
 - Cliente pede orcamento de ACESSORIOS ou outros servicos sem preco fixo
-  Exemplo: [ESCALAR] Orcamento acessorio — cliente: [nome] | pedido: [descricao] | contacto: [contacto]
+  Exemplo: [ESCALAR:SERVICO_ESPECIAL] Orcamento acessorio — cliente: [nome] | pedido: [descricao] | contacto: [contacto]
 - Reclamacoes, devolucoes, reembolsos
 - Cliente pede para falar com pessoa
 - Situacao que nao consegues resolver
@@ -1281,6 +1345,27 @@ export async function simularRespostaAgenteJulmar(
     }
   }
 
+  const intencaoRestrita = classificarIntencaoEscalamento(mensagem)
+  if (intencaoExigeHumanoAntesDoModelo(intencaoRestrita)) {
+    const marcador = marcadorEscalamento(
+      intencaoRestrita,
+      `Mensagem encaminhada para atendimento humano: ${mensagem.slice(0, 300)}`,
+    )
+    const respostaSegura = mensagemClienteParaEscalamento(intencaoRestrita)
+      ?? '[SEM_RESPOSTA_AUTOMATICA]'
+    return {
+      nivelServico,
+      provider: 'deterministic',
+      modelo: 'autojulmar-escalation-policy',
+      fallbackUsed: false,
+      respostaOriginal: marcador,
+      respostaFinal: respostaSegura,
+      safetyAdjusted: true,
+      action: 'escalate',
+      usedCompactMemory: memoriaCompacta.length > 0,
+    }
+  }
+
   const systemPrompt = buildSystemPrompt(
     instrucoes,
     'cliente',
@@ -1312,7 +1397,7 @@ export async function simularRespostaAgenteJulmar(
     respostaOriginal: modelResult.text,
     respostaFinal,
     safetyAdjusted: respostaFinal !== modelResult.text,
-    action: respostaFinal.startsWith('[ESCALAR]')
+    action: interpretarEscalamento(respostaFinal, mensagem)
       ? 'escalate'
       : respostaFinal.startsWith('[PEDIDO_PENDENTE]')
         ? 'blocked-order'
@@ -1398,6 +1483,19 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
       await retomarBot(tenant.id, telefone)
     } else {
       console.log('[Agente Julmar] Takeover activo — ignorando mensagem de:', telefone)
+      await registrarMensagemConversa({
+        tenantId: tenant.id,
+        telefone,
+        direction: 'inbound',
+        content: mensagem,
+        actor: 'cliente',
+        state: 'takeover',
+        metadata: {
+          autoReplyBlocked: true,
+          reason: 'human_takeover',
+          shadowEligible: true,
+        },
+      })
       return
     }
   }
@@ -1415,6 +1513,34 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   if (sessao?.step === 'escalado' && !isOwner && !isAdmin) {
     await tratarContinuacaoEscalada(tenant.id, telefone, mensagem, sessao)
     return
+  }
+
+  // Categorias sensiveis continuam registadas para aprendizagem, mas nao
+  // passam pelo modelo nem recebem respostas factuais automaticas.
+  if (!isOwner && !isAdmin) {
+    const intent = classificarIntencaoEscalamento(mensagem)
+    if (intencaoExigeHumanoAntesDoModelo(intent)) {
+      const historicoRestrito: Msg[] = [
+        ...((sessao?.dados?.historico as Msg[] | undefined) ?? []),
+        { role: 'user' as const, content: mensagem },
+      ].slice(-MAX_HISTORICO)
+      await escalarCliente(
+        tenant.id,
+        telefone,
+        mensagem,
+        historicoRestrito,
+        intent,
+        `Mensagem encaminhada sem resposta factual automatica: ${mensagem.slice(0, 500)}`,
+        {
+          provider: 'deterministic',
+          model: 'autojulmar-escalation-policy',
+          fallbackUsed: false,
+          shadowEligible: true,
+          learningEligible: intent !== 'fora_escopo',
+        },
+      )
+      return
+    }
   }
 
   // ── Carrega historico, instrucoes e tabela de preços ────────────────────
@@ -1589,38 +1715,15 @@ export async function processarComAgente(telefone: string, mensagem: string): Pr
   }
 
   // ── Escalamento ──────────────────────────────────────────────────────────
-  if (resposta.startsWith('[ESCALAR]')) {
-    const motivo = resposta.replace('[ESCALAR]', '').trim()
-    await notificarTodosAdmins(`ORCAMENTO/ESCALAMENTO\nCliente: ${telefone}\n${motivo}`)
-    const msgEscalar = 'Vou passar o seu pedido a nossa equipa, que entra em contacto para confirmar o orcamento.'
-    const historicoDedupe = memoriaConversa?.lastAssistantMessage
-      ? [
-          ...historico,
-          { role: 'assistant' as const, content: memoriaConversa.lastAssistantMessage },
-        ]
-      : historico
-    const enviada = await enviarRespostaComDelaySemRepetir(
-      telefone,
-      msgEscalar,
-      historicoDedupe,
-    )
-    if (enviada) historico.push({ role: 'assistant', content: msgEscalar })
-    await guardarSessao(tenant.id, telefone, {
-      step: 'escalado',
-      dados: {
-        historico,
-        motivoEscalamento: motivo,
-        escaladoEm: new Date().toISOString(),
-      },
-    }, {
-      ttlSeconds: ttlEscalamentoSegundos(),
-    })
-    await registarTurnoAgenteJulmar(
+  const escalamento = interpretarEscalamento(resposta, mensagem)
+  if (escalamento) {
+    await escalarCliente(
       tenant.id,
       telefone,
       mensagem,
-      enviada ? msgEscalar : undefined,
-      'escalado',
+      historico,
+      escalamento.intent,
+      escalamento.reason || mensagem.slice(0, 500),
       modelMetadata,
     )
     return

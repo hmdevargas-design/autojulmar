@@ -1,3 +1,8 @@
+import {
+  classificarIntencaoEscalamento,
+  marcadorEscalamento,
+} from './escalation-intent'
+
 export type NivelServicoAgenteJulmar = 'primary' | 'full'
 
 export function obterNivelServicoAgenteJulmar(
@@ -20,8 +25,8 @@ NIVEL DE SERVICO: ATENDIMENTO PRIMARIO CONTROLADO
 - Nao cries pedidos nem uses [PEDIDO_PENDENTE] neste nivel.
 - Nao confirmes nem indiques precos, descontos, prazos, disponibilidade, stock, estado de pedido, levantamento ou conclusao de fabrico.
 - Nao uses valores ou promessas encontrados na memoria da conversa. A memoria serve apenas para evitar repeticao e recuperar dados fornecidos pelo cliente.
-- Quando ja tiveres os dados necessarios ou o pedido depender de informacao comercial/operacional, responde APENAS com [ESCALAR] e um resumo objectivo para a equipa.
-- Reclamar, cancelar, devolver, pedir capas/reparacoes, personalizacoes especiais, descontos, cotacoes anteriores, estado de pedido ou falar com uma pessoa exige [ESCALAR].
+- Quando ja tiveres os dados necessarios ou o pedido depender de informacao comercial/operacional, responde APENAS com [ESCALAR:ORCAMENTO] e um resumo objectivo para a equipa.
+- Usa [ESCALAR:RECLAMACAO], [ESCALAR:SERVICO_ESPECIAL], [ESCALAR:ESTADO_PEDIDO], [ESCALAR:PAGAMENTO] ou [ESCALAR:ATENDIMENTO_HUMANO] quando essa for a intencao. Nunca reutilizes a mensagem de orcamento para outra intencao.
 - Nunca afirmes que existe molde para uma viatura sem fonte confirmada.
 `
 }
@@ -58,11 +63,16 @@ export function aplicarPoliticaRespostaPrimaria(
       .trim()
   }
 
-  const indiceEscalamento = respostaSegura.indexOf('[ESCALAR]')
-  if (indiceEscalamento >= 0) return respostaSegura.slice(indiceEscalamento).trim()
+  const escalamento = respostaSegura.match(/\[ESCALAR(?::[A-Z_]+)?\][\s\S]*$/i)
+  if (escalamento?.index !== undefined) {
+    return respostaSegura.slice(escalamento.index).trim()
+  }
 
   if (respostaSegura.startsWith('[PEDIDO_PENDENTE]')) {
-    return '[ESCALAR] Cliente pretende avancar com o pedido; confirmar dados, preco e condicoes antes de criar.'
+    return marcadorEscalamento(
+      'orcamento',
+      'Cliente pretende avancar com o pedido; confirmar dados, preco e condicoes antes de criar.',
+    )
   }
 
   const lugaresMencionados = respostaSegura.match(/\b([789])\s+lugares\b/i)
@@ -74,7 +84,11 @@ export function aplicarPoliticaRespostaPrimaria(
   }
 
   if (PADROES_RESPOSTA_SENSIVEL.some(padrao => padrao.test(respostaSegura))) {
-    return '[ESCALAR] Atendimento primario detectou preco, prazo, disponibilidade ou estado que exige confirmacao humana.'
+    const intent = classificarIntencaoEscalamento(mensagemCliente, respostaSegura)
+    return marcadorEscalamento(
+      intent,
+      'Atendimento primario detectou informacao que exige confirmacao humana.',
+    )
   }
 
   return respostaSegura

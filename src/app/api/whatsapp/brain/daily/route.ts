@@ -46,10 +46,43 @@ function autorizado(request: NextRequest): boolean {
   return secrets.includes(bearer)
 }
 
-function inicioJanela(request: NextRequest): Date {
+interface JanelaRelatorio {
+  since: Date
+  until: Date
+  historical: boolean
+}
+
+export function resolverJanelaRelatorio(
+  request: Pick<NextRequest, 'nextUrl'>,
+  now = new Date(),
+): JanelaRelatorio {
+  const fromParam = request.nextUrl.searchParams.get('from')
+  const toParam = request.nextUrl.searchParams.get('to')
+
+  if (fromParam || toParam) {
+    if (!fromParam || !toParam) throw new Error('from e to devem ser informados em conjunto')
+    const since = new Date(fromParam)
+    const until = new Date(toParam)
+    if (!Number.isFinite(since.getTime()) || !Number.isFinite(until.getTime())) {
+      throw new Error('from/to invalidos')
+    }
+    const duration = until.getTime() - since.getTime()
+    if (duration <= 0 || duration > 31 * 24 * 60 * 60 * 1000) {
+      throw new Error('janela historica deve ter entre 1 segundo e 31 dias')
+    }
+    if (until.getTime() > now.getTime() + 5 * 60 * 1000) {
+      throw new Error('to nao pode estar no futuro')
+    }
+    return { since, until, historical: true }
+  }
+
   const hours = Number(request.nextUrl.searchParams.get('hours') ?? 24)
   const safeHours = Number.isFinite(hours) ? Math.min(Math.max(hours, 1), 168) : 24
-  return new Date(Date.now() - safeHours * 60 * 60 * 1000)
+  return {
+    since: new Date(now.getTime() - safeHours * 60 * 60 * 1000),
+    until: now,
+    historical: false,
+  }
 }
 
 function normalizarPergunta(texto: string): string {
@@ -95,6 +128,11 @@ function isHumano(log: ConversationLogRow): boolean {
 function isAgente(log: ConversationLogRow): boolean {
   const actor = actorLog(log)
   return actor === 'agente' || (log.direction === 'outbound' && actor !== 'humano')
+}
+
+function elegivelParaAprendizagem(log: ConversationLogRow): boolean {
+  return log.metadata?.learningEligible !== false
+    && log.metadata?.escalationIntent !== 'fora_escopo'
 }
 
 function contarTelefonesUnicos(logs: ConversationLogRow[]): number {
@@ -233,9 +271,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
 
+  let janela: JanelaRelatorio
+  try {
+    janela = resolverJanelaRelatorio(request)
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : String(error) },
+      { status: 400 },
+    )
+  }
+
   const supabase = criarClienteAdmin()
   const tenantSlug = process.env.WHATSAPP_TENANT_SLUG ?? 'autojulmar'
-  const since = inicioJanela(request)
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -247,24 +294,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'tenant not found' }, { status: 404 })
   }
 
-  const sinceIso = since.toISOString()
+  const sinceIso = janela.since.toISOString()
+  const untilIso = janela.until.toISOString()
   const [{ data: logs }, { data: outbox }, { data: memorias }] = await Promise.all([
     supabase
       .from('whatsapp_conversation_logs')
       .select('telefone, direction, event_type, content, metadata, created_at')
       .eq('tenant_id', tenant.id)
       .gte('created_at', sinceIso)
+      .lt('created_at', untilIso)
       .order('created_at', { ascending: true }),
     supabase
       .from('whatsapp_outbox')
       .select('to_number, message_type, payload, status, source, idempotency_key, last_error, created_at, sent_at')
       .gte('created_at', sinceIso)
+      .lt('created_at', untilIso)
       .order('created_at', { ascending: false }),
     supabase
       .from('whatsapp_conversation_memory')
       .select('telefone, state, message_count, summary, last_user_message, last_assistant_message, last_interaction_at')
       .eq('tenant_id', tenant.id)
       .gte('last_interaction_at', sinceIso)
+      .lt('last_interaction_at', untilIso)
       .order('last_interaction_at', { ascending: false })
       .limit(20),
   ])
@@ -272,6 +323,7 @@ export async function GET(request: NextRequest) {
   const logRows = (logs ?? []) as ConversationLogRow[]
   const outboxRows = (outbox ?? []) as OutboxRow[]
   const memoryRows = (memorias ?? []) as MemoryRow[]
+  const learningRows = logRows.filter(elegivelParaAprendizagem)
   const redundancias = detectarRedundancia(logRows)
   const takeoverRows = logRows.filter(l => l.event_type === 'human_takeover')
 
@@ -279,6 +331,8 @@ export async function GET(request: NextRequest) {
     ok: true,
     tenant: tenant.slug,
     since: sinceIso,
+    until: untilIso,
+    historical: janela.historical,
     metrics: {
       inbound: logRows.filter(l => l.direction === 'inbound').length,
       outbound: logRows.filter(l => l.direction === 'outbound').length,
@@ -294,10 +348,10 @@ export async function GET(request: NextRequest) {
       outboxFailed: outboxRows.filter(o => o.status === 'failed').length,
       outboxPending: outboxRows.filter(o => o.status === 'pending' || o.status === 'locked').length,
     },
-    candidateFaqs: topFaqs(logRows),
+    candidateFaqs: topFaqs(learningRows),
     possibleRedundancy: redundancias,
-    humanServiceExamples: exemplosAtendimentoHumano(logRows),
-    learningOpportunities: oportunidadesAprendizagem(logRows),
+    humanServiceExamples: exemplosAtendimentoHumano(learningRows),
+    learningOpportunities: oportunidadesAprendizagem(learningRows),
     outboxIssues: outboxRows
       .filter(o => o.status === 'failed' || o.status === 'pending' || o.status === 'locked')
       .slice(0, 10)
