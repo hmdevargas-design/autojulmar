@@ -53,7 +53,7 @@ interface JanelaRelatorio {
 }
 
 export function resolverJanelaRelatorio(
-  request: Pick<NextRequest, 'nextUrl'>,
+  request: { nextUrl: { searchParams: URLSearchParams } },
   now = new Date(),
 ): JanelaRelatorio {
   const fromParam = request.nextUrl.searchParams.get('from')
